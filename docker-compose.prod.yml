@@ -1,0 +1,21 @@
+services:
+  postgres:
+    env_file:
+      - ./postgres/.env.prod
+
+  web:
+    build:
+      target: production
+    env_file:
+      - ./web/.env.prod
+    # No volumes in production to ensure we use the built image
+    volumes: []
+
+  airflow-common:
+    env_file:
+      - ./airflow/.env.prod
+
+  nginx:
+    # Production Nginx setup (could include SSL etc. in the future)
+    build:
+      context: ./nginx

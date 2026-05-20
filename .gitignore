@@ -1,0 +1,35 @@
+# Secrets & Environments
+**/.env*
+!.env.template
+
+# Next.js / Node.js
+**/node_modules/
+**/.next/
+**/out/
+**/build/
+**/dist/
+.next/
+node_modules/
+
+# Python (Airflow)
+**/__pycache__/
+**/*.py[cod]
+**/*.$py.class
+**/venv/
+**/.venv/
+airflow/logs/
+airflow/plugins/
+
+# Docker / Database
+postgres-data/
+**/postgres-data/
+
+# SSL Certificates (Important!)
+nginx/ssl/*
+!nginx/ssl/.gitkeep
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.log
