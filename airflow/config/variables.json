@@ -1,0 +1,4 @@
+{
+  "discord_webhook_url": "https://discord.com/api/webhooks/your-webhook-id/your-webhook-token",
+  "discord_bot_name": "pm25-alert-bot"
+}
