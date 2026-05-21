@@ -12,8 +12,12 @@ import re
 import datetime as dt
 
 BASE_DIR = Path(__file__).resolve().parent
+# กำหนดที่เก็บไฟล์ output
+output_dir = Path(os.getenv("DUCKDB_DATA_DIR", str(BASE_DIR)))
+output_dir.mkdir(parents=True, exist_ok=True)
+
 INPUT_FILE = BASE_DIR / "hdc_report_raw_2569.csv"
-OUTPUT_FILE = BASE_DIR / "hdc_merged_long_2569.csv"
+OUTPUT_FILE = output_dir / "hdc_merged_long_2569.csv"
 
 # =========================
 # จังหวัด -> เขตสุขภาพ

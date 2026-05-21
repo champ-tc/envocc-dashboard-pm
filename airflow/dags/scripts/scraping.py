@@ -1242,7 +1242,11 @@ if __name__ == "__main__":
         print(final_df.head(20))
 
         BASE_DIR = Path(__file__).resolve().parent
-        raw_csv = BASE_DIR / f"hdc_report_raw_{year_label}.csv"
+        # กำหนดที่เก็บไฟล์ output
+        output_dir = Path(os.getenv("DUCKDB_DATA_DIR", str(BASE_DIR)))
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        raw_csv = output_dir / f"hdc_report_raw_{year_label}.csv"
         final_df.to_csv(raw_csv, index=False, encoding="utf-8-sig")
 
         logger.info(f"บันทึกไฟล์ raw csv สำเร็จ: {raw_csv}")

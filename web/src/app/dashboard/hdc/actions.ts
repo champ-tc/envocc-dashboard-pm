@@ -77,8 +77,9 @@ export async function getFilterOptions(): Promise<HDCOptions> {
     return new Promise((resolve, reject) => {
         try {
             const db: duckdbTypes.Database = new duckdb.Database(':memory:');
-            const parquetPath = path.join(process.cwd(), 'public', 'duckdb', 'hdc.parquet');
-            const pm25Path = path.join(process.cwd(), 'public', 'duckdb', 'pm25.csv');
+            const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
+            const parquetPath = path.join(dataDir, 'hdc.parquet');
+            const pm25Path = path.join(dataDir, 'pm25.csv');
             
             const query = `
                 WITH distinct_vals AS (
@@ -166,8 +167,9 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
     return new Promise((resolve, reject) => {
         try {
             const db: duckdbTypes.Database = new duckdb.Database(':memory:');
-            const parquetPath = path.join(process.cwd(), 'public', 'duckdb', 'hdc.parquet');
-            const pm25Path = path.join(process.cwd(), 'public', 'duckdb', 'pm25.csv');
+            const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
+            const parquetPath = path.join(dataDir, 'hdc.parquet');
+            const pm25Path = path.join(dataDir, 'pm25.csv');
             
             let scopeHdcFilter = '';
             let scopePm25Filter = '';
