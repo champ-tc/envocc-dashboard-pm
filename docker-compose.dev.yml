@@ -92,6 +92,12 @@ services:
     command: celery worker
     restart: always
 
+  # --- เพิ่ม Dag Processor สำหรับ Airflow 3.0 ---
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    restart: always
+
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
@@ -111,7 +117,10 @@ services:
     ports: ["80:80"]
     volumes:
       - ./nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on: [web, airflow-apiserver]
+    depends_on:
+      - web
+      - airflow-apiserver
+    restart: always
 
 volumes:
   postgres-db-volume:

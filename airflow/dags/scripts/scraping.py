@@ -14,6 +14,18 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import logging
+
+# ==============================================================================
+# LOGGING CONFIG
+# ==============================================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
 
 # ==============================================================================
 # AUTO INSTALL
@@ -68,8 +80,8 @@ URL = "https://hdc.moph.go.th/center/public/standard-report-detail/NL9idjvwQKjv6
 HEADLESS = True
 
 
-START_YEAR_THAI = 2567
-END_YEAR_THAI = 2567
+START_YEAR_THAI = 2569
+END_YEAR_THAI = 2569
 
 PROVINCE_ID_MAPPING = {
     "กรุงเทพมหานคร": "10",
@@ -165,27 +177,9 @@ def now_tag():
 def get_current_thai_year():
     return time.localtime().tm_year + 543
 
-# def get_target_years():
-#     current_thai_year = get_current_thai_year()
-#     if START_YEAR_THAI > current_thai_year:
-#         raise ValueError(
-#             f"START_YEAR_THAI ({START_YEAR_THAI}) มากกว่าปีปัจจุบัน ({current_thai_year})"
-#         )
-#     return [str(y) for y in range(START_YEAR_THAI, current_thai_year + 1)]
 
 def get_target_years():
     return [str(y) for y in range(START_YEAR_THAI, END_YEAR_THAI + 1)]
-
-def debug_dump(driver, name):
-    ts = now_tag()
-    try:
-        driver.save_screenshot(str(DEBUG_DIR / f"{ts}_{name}.png"))
-    except Exception:
-        pass
-    try:
-        (DEBUG_DIR / f"{ts}_{name}.html").write_text(driver.page_source, encoding="utf-8")
-    except Exception:
-        pass
 
 def create_driver():
     global CHROMEDRIVER_PATH
@@ -223,13 +217,11 @@ def create_driver():
     }
     options.add_experimental_option("prefs", prefs)
 
-    if not CHROMEDRIVER_PATH:
-        CHROMEDRIVER_PATH = ChromeDriverManager().install()
 
     driver = webdriver.Chrome(
-        service=Service(CHROMEDRIVER_PATH),
-        options=options
-    )
+    service=Service("/usr/bin/chromedriver"),
+    options=options
+)
 
     driver.set_page_load_timeout(60)
 
@@ -973,7 +965,6 @@ def click_view_report_and_wait(driver, province_name=None, year_value=None):
         wait_table_stable(driver, min_rounds=3, timeout=35)
 
     if not has_meaningful_table(driver):
-        debug_dump(driver, f"report_not_loaded_{province_name or 'unknown'}")
         raise RuntimeError("กดดูรายงานแล้ว แต่ยังไม่พบตารางที่พร้อมใช้งานจริง")
 
 # ==============================================================================
@@ -1125,13 +1116,11 @@ def scrape_one_province(driver, province_name, province_id, year_value):
 
     table_el = find_best_table_element(driver)
     if table_el is None:
-        debug_dump(driver, f"no_table_{province_name}")
         raise RuntimeError("ไม่พบตารางหลังจากกดดูรายงาน")
 
     payload = extract_table_payload(driver, table_el)
     df = build_dataframe_from_payload(payload)
     if df.empty:
-        debug_dump(driver, f"empty_table_{province_name}")
         raise RuntimeError("ตารางว่าง")
 
     df.insert(0, "provinceName", province_name)
@@ -1150,6 +1139,7 @@ if __name__ == "__main__":
     print(f"TARGET YEARS: {', '.join(target_years)}")
 
     all_frames = []
+    results_summary = []
     driver = None
     total_jobs = len(target_years) * len(PROVINCES)
     job_no = 0
@@ -1159,29 +1149,48 @@ if __name__ == "__main__":
         prepare_page_once(driver)
 
         for year_value in target_years:
-            print(f"\\n========== YEAR {year_value} ==========")
+            logger.info(f"========== YEAR {year_value} ==========")
 
             for province in PROVINCES:
                 job_no += 1
                 pid = PROVINCE_ID_MAPPING[province]
-                print(f"[{job_no}/{total_jobs}] ปี {year_value} | {province} ... ", end="")
+                logger.info(f"[{job_no}/{total_jobs}] กำลังดึงข้อมูล ปี {year_value} | {province} ...")
 
                 try:
                     df = scrape_one_province(driver, province, pid, year_value)
                     all_frames.append(df)
-                    print(f"OK | rows={df.shape[0]} | cols={df.shape[1]}")
+                    logger.info(f"    SUCCESS | {province} | rows={df.shape[0]} | cols={df.shape[1]}")
+                    results_summary.append({
+                        "year": year_value,
+                        "province": province,
+                        "status": "SUCCESS",
+                        "rows": df.shape[0],
+                        "detail": "OK"
+                    })
                 except Exception as e:
-                    print(f"FAIL ({type(e).__name__}: {e})")
-                    debug_dump(driver, f"fail_{year_value}_{province}")
+                    logger.warning(f"    FAIL ({type(e).__name__}: {e}) -> กำลังลองใหม่ (Retry)...")
 
                     try:
                         open_page(driver, hard=True)
                         df = scrape_one_province(driver, province, pid, year_value)
                         all_frames.append(df)
-                        print(f"    RETRY OK | rows={df.shape[0]} | cols={df.shape[1]}")
+                        logger.info(f"    RETRY SUCCESS | {province} | rows={df.shape[0]} | cols={df.shape[1]}")
+                        results_summary.append({
+                            "year": year_value,
+                            "province": province,
+                            "status": "SUCCESS (RETRY)",
+                            "rows": df.shape[0],
+                            "detail": "Fixed by retry"
+                        })
                     except Exception as e2:
-                        print(f"    RETRY FAIL ({type(e2).__name__}: {e2})")
-                        debug_dump(driver, f"retry_fail_{year_value}_{province}")
+                        logger.error(f"    RETRY FAIL ({type(e2).__name__}: {e2})")
+                        results_summary.append({
+                            "year": year_value,
+                            "province": province,
+                            "status": "FAILED",
+                            "rows": 0,
+                            "detail": str(e2)
+                        })
                         try:
                             open_page(driver, hard=True)
                         except Exception:
@@ -1194,20 +1203,54 @@ if __name__ == "__main__":
             except Exception:
                 pass
 
+    # ==============================================================================
+    # SUMMARY REPORT
+    # ==============================================================================
+    print("\n" + "="*80)
+    print(" SCRAPING SUMMARY REPORT")
+    print("="*80)
+    summary_df = pd.DataFrame(results_summary)
+    if not summary_df.empty:
+        # แสดงสรุปแบบสวยงามใน log
+        success_count = len(summary_df[summary_df['status'].str.contains('SUCCESS')])
+        fail_count = len(summary_df[summary_df['status'] == 'FAILED'])
+        print(f"Total Provinces Attempted: {len(summary_df)}")
+        print(f"Success: {success_count}")
+        print(f"Failed:  {fail_count}")
+        print("-" * 40)
+        
+        # แสดงรายการที่ล้มเหลว (ถ้ามี)
+        if fail_count > 0:
+            print("FAILED PROVINCES:")
+            print(summary_df[summary_df['status'] == 'FAILED'][['year', 'province', 'detail']])
+            print("-" * 40)
+        
+        # แสดงรายการทั้งหมดแบบสั้นๆ
+        print("DETAILED STATUS:")
+        for _, row in summary_df.iterrows():
+            status_icon = "✅" if "SUCCESS" in row['status'] else "❌"
+            print(f"{status_icon} [{row['year']}] {row['province']}: {row['status']} ({row['rows']} rows)")
+    else:
+        print("No provinces were processed.")
+    print("="*80 + "\n")
+
     if all_frames:
         final_df = pd.concat(all_frames, ignore_index=True)
         pd.set_option("display.max_columns", None)
         pd.set_option("display.width", 3000)
         pd.set_option("display.max_colwidth", 200)
 
-        print("\\n========== FINAL DATAFRAME head(20) ==========")
+        logger.info(f"========== FINAL DATAFRAME head(20) ==========")
         print(final_df.head(20))
 
-        raw_csv = f"hdc_report_raw_{year_label}.csv"
+        BASE_DIR = Path(__file__).resolve().parent
+        raw_csv = BASE_DIR / f"hdc_report_raw_{year_label}.csv"
         final_df.to_csv(raw_csv, index=False, encoding="utf-8-sig")
-        print(f"\\nบันทึกไฟล์ raw csv: {raw_csv}")
+
+        logger.info(f"บันทึกไฟล์ raw csv สำเร็จ: {raw_csv}")
     else:
-        print("ไม่มีข้อมูล")
+        logger.warning("ไม่มีข้อมูลที่สแครปได้สำเร็จเลย")
+
 
 
 # In[ ]:
