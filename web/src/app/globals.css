@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+    --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
+}
+
+.cloud {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    height: 180px;
+    aspect-ratio: 1.4;
+    color: #269af2;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.cloud::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    --g: radial-gradient(50% 50%, #000 98%, #0000) no-repeat;
+    mask: var(--g) 100% 100%/30% 70%, var(--g) 70% 0/50% 100%, var(--g) 0 100%/36% 68%, var(--g) 27% 30%/26% 40%, linear-gradient(#000 0 0) bottom/70% 45% no-repeat;
+    -webkit-mask: var(--g) 100% 100%/30% 70%, var(--g) 70% 0/50% 100%, var(--g) 0 100%/36% 68%, var(--g) 27% 30%/26% 40%, linear-gradient(#000 0 0) bottom/70% 45% no-repeat;
+    background: #ffffff;
+    transform: translateY(-5px);
+    transition: all 0.3s ease;
+}
+
+.cloud:hover::before {
+    background: #f1f5f9;
+    transform: translateY(-8px) scale(1.05);
+}
+
+.kanit-thin {
+    font-family: var(--font-kanit), sans-serif;
+    font-weight: 100;
+    font-style: normal;
+}
+
+.kanit-regular {
+    font-family: var(--font-kanit), sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
