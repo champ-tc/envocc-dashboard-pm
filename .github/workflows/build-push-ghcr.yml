@@ -12,24 +12,24 @@ env:
 jobs:
   web-lint:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./web
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # cache: 'npm'  # Temporarily disabled
-          # cache-dependency-path: '**/package-lock.json'
 
       - name: Install dependencies
         run: npm ci
+        working-directory: web
+      
       - name: Run Lint
         run: npm run lint
+        working-directory: web
+      
       - name: Run Type-check
         run: npx tsc --noEmit
+        working-directory: web
 
   airflow-lint:
     runs-on: ubuntu-latest
