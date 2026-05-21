@@ -182,8 +182,6 @@ def get_target_years():
     return [str(y) for y in range(START_YEAR_THAI, END_YEAR_THAI + 1)]
 
 def create_driver():
-    global CHROMEDRIVER_PATH
-
     options = webdriver.ChromeOptions()
 
     if HEADLESS:
