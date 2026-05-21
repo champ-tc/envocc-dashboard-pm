@@ -11,8 +11,9 @@ import pandas as pd
 import re
 import datetime as dt
 
-INPUT_FILE = Path("./hdc_report_raw_2569.csv")
-OUTPUT_FILE = Path("./hdc_merged_long_2569.csv")
+BASE_DIR = Path(__file__).resolve().parent
+INPUT_FILE = BASE_DIR / "hdc_report_raw_2569.csv"
+OUTPUT_FILE = BASE_DIR / "hdc_merged_long_2569.csv"
 
 # =========================
 # จังหวัด -> เขตสุขภาพ

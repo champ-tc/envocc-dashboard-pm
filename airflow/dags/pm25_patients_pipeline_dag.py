@@ -4,7 +4,7 @@ import pendulum
 from datetime import timedelta
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.providers.standard.operators.python import PythonOperator
 
 # ทำให้ import โฟลเดอร์ dags/ ได้
 DAGS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -60,38 +60,42 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
     print("=" * 80)
 
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             cmd,
             cwd=script_path,
             env=env,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            timeout=timeout_sec,
+            bufsize=1
         )
-    except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"Script Timeout ({script_name}) after {timeout_sec}s") from e
 
-    stdout = (result.stdout or "").strip()
-    stderr = (result.stderr or "").strip()
+        # Stream output line-by-line
+        for line in process.stdout:
+            print(line, end="", flush=True)
 
-    print(f">>> RETURN CODE: {result.returncode}")
-    print("--- STDOUT ---")
-    print(stdout[-8000:] if stdout else "(empty)")
-    print("--- STDERR ---")
-    print(stderr[-8000:] if stderr else "(empty)")
+        returncode = process.wait(timeout=timeout_sec)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        raise RuntimeError(f"Script Timeout ({script_name}) after {timeout_sec}s")
+    except Exception as e:
+        if 'process' in locals():
+            process.kill()
+        raise e
 
-    if result.returncode != 0:
-        msg = stderr or stdout or f"non-zero exit code {result.returncode}"
-        raise RuntimeError(f"Script Error ({script_name}): {msg}")
+    print(f"\n>>> RETURN CODE: {returncode}")
+    if returncode != 0:
+        raise RuntimeError(f"Script Error ({script_name}): non-zero exit code {returncode}")
 
     return f"{script_name} OK"
+
 
 # ==============================================================================
 # DAG
 # ==============================================================================
 # Set schedule based on environment (Disable in development)
 APP_ENV = os.getenv("APP_ENV", "development")
-dag_schedule = "0 1 * * 0" if APP_ENV == "production" else None
+dag_schedule = "0 3 * * *" if APP_ENV == "production" else None
 
 with DAG(
     dag_id="pm25_patients_pipeline_dag",
