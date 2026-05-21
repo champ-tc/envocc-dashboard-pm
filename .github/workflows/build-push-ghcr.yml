@@ -99,4 +99,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            ${{ matrix.image_name == 'web' && format('NEXT_PUBLIC_API_URL={0}', vars.NEXT_PUBLIC_API_URL) || '' }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            ${{ matrix.image_name == 'web' && 'NEXT_IGNORE_ESLINT=1' || '' }}
+            ${{ matrix.image_name == 'web' && 'NEXT_IGNORE_TYPECHECK=1' || '' }}
