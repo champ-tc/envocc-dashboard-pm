@@ -23,15 +23,19 @@ def main():
 
     hdc = pd.concat([pd.read_csv(file) for file in raw_files], ignore_index=True)
 
-    hdc.to_csv(BASE_DIR / "hdc.csv", index=False, encoding="utf-8-sig")
+    # กำหนดที่เก็บไฟล์ output
+    output_dir = Path(os.getenv("DUCKDB_DATA_DIR", str(BASE_DIR)))
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    hdc.to_csv(output_dir / "hdc.csv", index=False, encoding="utf-8-sig")
 
     try:
         hdc.to_parquet(
-            BASE_DIR / "hdc.parquet",
+            output_dir / "hdc.parquet",
             index=False,
             engine="pyarrow"
         )
-        print("Export completed: hdc.csv, hdc.parquet")
+        print(f"Export completed: {output_dir}/hdc.csv, {output_dir}/hdc.parquet")
     except ImportError:
         print("Export completed: hdc.csv")
         print("ข้ามการ export parquet เพราะไม่มี pyarrow")

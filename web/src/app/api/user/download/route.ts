@@ -59,7 +59,8 @@ export async function GET(request: Request) {
         }
 
         const ddb = new duckdb.Database(':memory:');
-        const parquetPath = path.join(process.cwd(), 'public', 'duckdb', 'hdc.parquet');
+        const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
+        const parquetPath = path.join(dataDir, 'hdc.parquet');
         
         // Construct query - Using make_date for precise filtering
         const query = `
