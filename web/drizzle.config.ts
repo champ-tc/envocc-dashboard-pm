@@ -1,0 +1,11 @@
+import { defineConfig } from "drizzle-kit";
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+export default defineConfig({
+    schema: "./src/db/schema.ts", // ชี้ไปที่ไฟล์ schema ใน src
+    dialect: "postgresql", // ใช้ dialect แทน driver สำหรับเวอร์ชันใหม่
+    dbCredentials: {
+        url: process.env.DATABASE_URL as string,
+    }
+});

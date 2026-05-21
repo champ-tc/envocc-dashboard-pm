@@ -1,0 +1,25 @@
+FROM node:20-bookworm-slim
+
+# ติดตั้งเครื่องมือคอมไพล์
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# คัดลอกแค่ไฟล์ตั้งต้น
+COPY package*.json ./
+
+# ติดตั้ง dependencies โดยบังคับสถาปัตยกรรม Linux ARM64 (สำหรับ Mac M1/M2/M3)
+RUN npm install --platform=linux --arch=arm64
+
+# คัดลอกโค้ด (โดยจะข้าม node_modules เพราะมี .dockerignore แล้ว)
+COPY . .
+
+EXPOSE 3000
+
+# รันแบบไม่ใช้ Turbo หากยังมีปัญหาเรื่อง Native Modules
+CMD ["npx", "next", "dev", "-H", "0.0.0.0"]
