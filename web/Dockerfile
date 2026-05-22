@@ -24,7 +24,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
-# บังคับ rebuild duckdb เพื่อความชัวร์ใน stage นี้
+# บังคับ rebuild duckdb เพื่อความชัวร์ใน linux architecture
 RUN npm rebuild duckdb
 RUN npm run build
 
@@ -38,15 +38,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 nextjs
 
-# คัดลอกไฟล์ที่จำเป็น
+# คัดลอกไฟล์ที่จำเป็นจากขั้นตอนการ Build
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 
-# สำคัญ: คัดลอก duckdb binary ที่ rebuild แล้วมาไว้ใน standalone node_modules
-# ป้องกันปัญหา MODULE_NOT_FOUND
-RUN mkdir -p node_modules/duckdb && \
-    cp -r /app/node_modules/duckdb/* node_modules/duckdb/
+# สำคัญ: คัดลอก duckdb binary จาก builder stage มาไว้ใน standalone node_modules
+# ป้องกันปัญหา MODULE_NOT_FOUND เนื่องจาก standalone mode อาจจะไม่ trace native module
+COPY --from=builder --chown=nextjs:nextjs /app/node_modules/duckdb ./node_modules/duckdb
 
 USER nextjs
 
