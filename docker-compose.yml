@@ -1,76 +1,57 @@
 name: pm25
 
 services:
-  # --- Shared Redis ---
   redis:
     image: redis:7.2-bookworm
-    expose:
-      - 6379
+    restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 30s
       retries: 50
-      start_period: 30s
-    restart: always
 
-  # --- Airflow Metadata DB ---
   postgres:
     image: postgres:16
-    env_file:
-      - .env
+    env_file: [.env]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-airflow_system}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-airflow}
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
+    volumes: [postgres-db-volume:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-airflow_system}"]
       interval: 10s
       retries: 5
-      start_period: 5s
     restart: always
 
-  # --- ETL Dashboard DB ---
   postgres-etl:
     image: postgres:16
     environment:
       POSTGRES_USER: ${ETL_POSTGRES_USER:-etl_user}
       POSTGRES_PASSWORD: ${ETL_POSTGRES_PASSWORD}
       POSTGRES_DB: ${ETL_POSTGRES_DB:-etl_db}
-    ports:
-      - "${ETL_POSTGRES_PORT:-15432}:5432"
-    volumes:
-      - postgres-etl-volume:/var/lib/postgresql/data
+    ports: ["${ETL_POSTGRES_PORT:-15432}:5432"]
+    volumes: [postgres-etl-volume:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${ETL_POSTGRES_USER:-etl_user}"]
       interval: 10s
       retries: 5
-      start_period: 5s
     restart: always
 
-  # --- Web Application ---
   web:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-champ}/envocc-dashboard-pm-web:latest
-    env_file:
-      - .env
+    build: ./web  # เปลี่ยนมา build ในเครื่องแทนการ pull
+    env_file: [.env]
     environment:
       DUCKDB_DATA_DIR: /shared-data
-    expose:
-      - "3000"
+    expose: ["3000"]
     depends_on:
-      postgres-etl:
-        condition: service_healthy
-    volumes:
-      - ./data/duckdb:/shared-data
+      postgres-etl: { condition: service_healthy }
+    volumes: ["./data/duckdb:/shared-data"]
     restart: always
 
-  # --- Airflow Common Block ---
   airflow-common: &airflow-common
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-champ}/envocc-dashboard-pm-airflow:latest
-    env_file:
-      - .env
+    build: ./airflow  # เปลี่ยนมา build ในเครื่อง
+    env_file: [.env]
     environment: &airflow-common-env
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-airflow_system}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB:-airflow}
@@ -78,13 +59,8 @@ services:
       AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-      AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
       AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW__WEBSERVER__BASE_URL}
-      # ETL Database Connection
       DB_HOST: postgres-etl
-      DB_PORT: 5432
-      DB_NAME: ${ETL_POSTGRES_DB:-etl_db}
-      DB_USER: ${ETL_POSTGRES_USER:-etl_user}
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -94,60 +70,30 @@ services:
       - ./data/duckdb:/shared-data
     user: "${AIRFLOW_UID:-501}:0"
     depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
+      redis: { condition: service_healthy }
+      postgres: { condition: service_healthy }
 
   airflow-apiserver:
     <<: *airflow-common
     command: api-server --proxy-headers
-    ports:
-      - "${AIRFLOW_WEB_PORT:-8080}:8080"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/version"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+    ports: ["${AIRFLOW_WEB_PORT:-8080}:8080"]
     restart: always
     depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      airflow-init:
-        condition: service_completed_successfully
+      airflow-init: { condition: service_completed_successfully }
 
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
     restart: always
     depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      airflow-init:
-        condition: service_completed_successfully
+      airflow-init: { condition: service_completed_successfully }
 
   airflow-worker:
     <<: *airflow-common
     command: celery worker
     restart: always
     depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      airflow-init:
-        condition: service_completed_successfully
+      airflow-init: { condition: service_completed_successfully }
 
   airflow-init:
     <<: *airflow-common
@@ -158,28 +104,25 @@ services:
         if [[ -z "$${AIRFLOW_UID}" ]]; then export AIRFLOW_UID=$$(id -u); fi
         mkdir -v -p /opt/airflow/{logs,dags,plugins,config}
         chown -R "$${AIRFLOW_UID}:0" /opt/airflow/
-        /entrypoint airflow version
+        # สร้าง User สำหรับ Airflow UI
+        airflow db migrate
+        airflow users create \
+            --username admin \
+            --password "${_AIRFLOW_WWW_USER_PASSWORD:-admin}" \
+            --firstname Admin \
+            --lastname User \
+            --role Admin \
+            --email admin@example.com || true
     environment:
       <<: *airflow-common-env
-      _AIRFLOW_DB_MIGRATE: 'true'
-      _AIRFLOW_WWW_USER_CREATE: 'true'
-      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
-      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD}
     user: "0:0"
 
-  # --- Nginx Gateway ---
   nginx:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-champ}/envocc-dashboard-pm-nginx:latest
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/ssl:/etc/nginx/ssl/live:ro
+    build: ./nginx  # เปลี่ยนมา build ในเครื่อง
+    ports: ["80:80", "443:443"]
+    volumes: ["./nginx/ssl:/etc/nginx/ssl/live:ro"]
     depends_on:
-      web:
-        condition: service_started
-      airflow-apiserver:
-        condition: service_healthy
+      web: { condition: service_started }
     restart: always
 
 volumes:
