@@ -63,6 +63,7 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW__WEBSERVER__BASE_URL}
+      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'true'
       DB_HOST: postgres-etl
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
     volumes:
@@ -110,8 +111,8 @@ services:
         # สร้าง User สำหรับ Airflow UI
         airflow db migrate
         airflow users create \
-            --username admin \
-            --password "${_AIRFLOW_WWW_USER_PASSWORD:-admin}" \
+            --username "${_AIRFLOW_WWW_USER_USERNAME}" \
+            --password "${_AIRFLOW_WWW_USER_PASSWORD}" \
             --firstname Admin \
             --lastname User \
             --role Admin \
