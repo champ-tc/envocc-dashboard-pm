@@ -39,7 +39,7 @@ services:
     restart: always
 
   web:
-    build: ./web  # เปลี่ยนมา build ในเครื่องแทนการ pull
+    image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
     env_file: [.env]
     environment:
       DUCKDB_DATA_DIR: /shared-data
@@ -50,7 +50,7 @@ services:
     restart: always
 
   airflow-common: &airflow-common
-    build: ./airflow  # เปลี่ยนมา build ในเครื่อง
+    image: ghcr.io/champ-tc/envocc-dashboard-pm-airflow:latest
     env_file: [.env]
     environment: &airflow-common-env
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
@@ -59,6 +59,7 @@ services:
       AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW__WEBSERVER__BASE_URL}
       DB_HOST: postgres-etl
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
@@ -118,7 +119,7 @@ services:
     user: "0:0"
 
   nginx:
-    build: ./nginx  # เปลี่ยนมา build ในเครื่อง
+    image: ghcr.io/champ-tc/envocc-dashboard-pm-nginx:latest
     ports: ["80:80", "443:443"]
     volumes: ["./nginx/ssl:/etc/nginx/ssl/live:ro"]
     depends_on:

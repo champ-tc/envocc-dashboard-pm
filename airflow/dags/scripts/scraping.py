@@ -183,12 +183,15 @@ def get_target_years():
     return [str(y) for y in range(START_YEAR_THAI, END_YEAR_THAI + 1)]
 
 def create_driver():
+    logger.info("Initializing Chrome driver...")
     options = webdriver.ChromeOptions()
 
     if HEADLESS:
+        logger.info("Running in HEADLESS mode")
         options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
     else:
+        logger.info("Running in HEADED mode")
         options.add_argument("--start-maximized")
 
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -236,14 +239,17 @@ def create_driver():
     except Exception:
         pass
 
+    logger.info("Chrome driver initialized successfully")
     return driver
 
 def wait_ready(driver, timeout=20):
+    logger.debug(f"Waiting for page to be ready (timeout={timeout})...")
     WebDriverWait(driver, timeout, poll_frequency=0.2).until(
         lambda d: d.execute_script("return document.readyState") == "complete"
     )
 
 def install_ajax_hook(driver):
+    logger.debug("Installing AJAX hook...")
     try:
         driver.execute_script("""
             if (!window.__chatgptAjaxHookInstalled) {
@@ -274,6 +280,7 @@ def install_ajax_hook(driver):
         pass
 
 def wait_network_idle(driver, timeout=12, idle_rounds=2, poll=0.25):
+    logger.debug(f"Waiting for network idle (timeout={timeout})...")
     end = time.time() + timeout
     stable = 0
     while time.time() < end:
@@ -384,6 +391,7 @@ def click_page_blank(driver):
     time.sleep(0.15)
 
 def wait_spinner(driver, timeout=25, poll=0.25):
+    logger.debug(f"Waiting for spinner to disappear (timeout={timeout})...")
     end = time.time() + timeout
     while time.time() < end:
         try:
@@ -419,6 +427,7 @@ def wait_spinner(driver, timeout=25, poll=0.25):
         time.sleep(poll)
 
 def wait_processing_message_done(driver, timeout=90):
+    logger.debug(f"Waiting for 'Processing' message to disappear (timeout={timeout})...")
     processing_seen = False
     end = time.time() + timeout
 
@@ -465,7 +474,10 @@ def wait_processing_message_done(driver, timeout=90):
 # ==============================================================================
 def open_page(driver, hard=False):
     if hard:
+        logger.info(f"Hard reloading page: {URL}")
         driver.get("about:blank")
+    else:
+        logger.info(f"Opening page: {URL}")
     driver.get(URL)
     wait_ready(driver, 20)
     install_ajax_hook(driver)
@@ -556,6 +568,7 @@ def current_filter_snapshot(driver):
     }
 
 def open_dropdown(driver, label_text):
+    logger.debug(f"Opening dropdown for: {label_text}")
     box = find_field_box(driver, label_text)
     safe_click(driver, box)
     time.sleep(0.2)
@@ -721,12 +734,15 @@ def commit_dropdown_selection(driver):
 
 def select_dropdown_value(driver, label_text, target_value, retries=3):
     target_value = norm_text(target_value)
+    logger.info(f"Selecting dropdown value: {label_text} = {target_value}")
     if ensure_value_applied(driver, label_text, target_value, timeout=1.5):
+        logger.debug(f"Value {target_value} already applied for {label_text}")
         return
 
     last_options = []
 
-    for _ in range(retries):
+    for i in range(retries):
+        logger.debug(f"Attempt {i+1}/{retries} to select {target_value} for {label_text}")
         close_popup(driver)
         open_dropdown(driver, label_text)
 
@@ -758,6 +774,7 @@ def select_dropdown_value(driver, label_text, target_value, retries=3):
         commit_dropdown_selection(driver)
 
         if ensure_value_applied(driver, label_text, target_value, timeout=2.5):
+            logger.debug(f"Successfully selected {target_value} for {label_text}")
             close_dropdown(driver)
             return
 
@@ -866,6 +883,7 @@ def has_meaningful_table(driver):
     return bool(snap and snap.get("score", 0) >= 120 and snap.get("rows", 0) >= 1)
 
 def wait_table_stable(driver, min_rounds=3, timeout=35):
+    logger.info(f"Waiting for table to stabilize (timeout={timeout})...")
     end = time.time() + timeout
     stable = 0
     last_fp = None
@@ -876,13 +894,16 @@ def wait_table_stable(driver, min_rounds=3, timeout=35):
             if fp and fp == last_fp:
                 stable += 1
                 if stable >= min_rounds:
+                    logger.debug(f"Table stable for {min_rounds} rounds.")
                     return
             else:
                 stable = 0
                 last_fp = fp
+                logger.debug("Table changed, resetting stability count.")
         else:
             stable = 0
             last_fp = None
+            logger.debug("No meaningful table found yet.")
 
         time.sleep(0.5)
 
@@ -928,6 +949,7 @@ def force_click_report_button(driver, btn):
     driver.execute_script("arguments[0].click();", btn)
 
 def click_view_report_and_wait(driver, province_name=None, year_value=None):
+    logger.info(f"Clicking 'View Report' for {province_name} ({year_value})...")
     close_popup(driver)
 
     verify_filters_before_submit(driver, province_name, year_value)
@@ -951,6 +973,7 @@ def click_view_report_and_wait(driver, province_name=None, year_value=None):
     after_rows = get_main_table_row_count(driver)
 
     if (after_fp == before_fp and after_rows == before_rows) or after_rows <= 0:
+        logger.warning("Table didn't seem to change or is empty. Retrying click...")
         btn = find_report_button(driver)
         force_click_report_button(driver, btn)
 
@@ -965,6 +988,8 @@ def click_view_report_and_wait(driver, province_name=None, year_value=None):
 
     if not has_meaningful_table(driver):
         raise RuntimeError("กดดูรายงานแล้ว แต่ยังไม่พบตารางที่พร้อมใช้งานจริง")
+    
+    logger.info(f"Report loaded successfully. Rows: {get_main_table_row_count(driver)}")
 
 # ==============================================================================
 # TABLE EXTRACTION
@@ -1004,6 +1029,7 @@ def find_best_table_element(driver):
     """)
 
 def extract_table_payload(driver, table_el):
+    logger.info("Extracting table payload...")
     return driver.execute_script("""
         const t = arguments[0];
         function norm(s){ return (s || '').replace(/\\s+/g, ' ').trim(); }
@@ -1097,6 +1123,7 @@ def reset_page_if_needed(driver):
         pass
 
 def scrape_one_province(driver, province_name, province_id, year_value):
+    logger.info(f"Scraping data for: {province_name} ({province_id}), Year: {year_value}")
     reset_page_if_needed(driver)
 
     select_year(driver, year_value)
@@ -1125,6 +1152,7 @@ def scrape_one_province(driver, province_name, province_id, year_value):
     df.insert(0, "provinceName", province_name)
     df.insert(1, "provinceId", province_id)
     df.insert(2, "yearThai", year_value)
+    logger.info(f"Successfully scraped {len(df)} rows for {province_name}")
     return df
 
 # ==============================================================================
@@ -1205,33 +1233,36 @@ if __name__ == "__main__":
     # ==============================================================================
     # SUMMARY REPORT
     # ==============================================================================
-    print("\n" + "="*80)
-    print(" SCRAPING SUMMARY REPORT")
-    print("="*80)
+    logger.info("\n" + "="*80)
+    logger.info(" SCRAPING SUMMARY REPORT")
+    logger.info("="*80)
     summary_df = pd.DataFrame(results_summary)
     if not summary_df.empty:
         # แสดงสรุปแบบสวยงามใน log
         success_count = len(summary_df[summary_df['status'].str.contains('SUCCESS')])
         fail_count = len(summary_df[summary_df['status'] == 'FAILED'])
-        print(f"Total Provinces Attempted: {len(summary_df)}")
-        print(f"Success: {success_count}")
-        print(f"Failed:  {fail_count}")
-        print("-" * 40)
+        logger.info(f"Total Provinces Attempted: {len(summary_df)}")
+        logger.info(f"Success: {success_count}")
+        logger.info(f"Failed:  {fail_count}")
+        logger.info("-" * 40)
         
         # แสดงรายการที่ล้มเหลว (ถ้ามี)
         if fail_count > 0:
-            print("FAILED PROVINCES:")
-            print(summary_df[summary_df['status'] == 'FAILED'][['year', 'province', 'detail']])
-            print("-" * 40)
+            logger.info("FAILED PROVINCES:")
+            # We can't easily use logger.info with a dataframe like print(df)
+            # but we can format it
+            for _, row in summary_df[summary_df['status'] == 'FAILED'].iterrows():
+                logger.info(f"  - {row['year']} {row['province']}: {row['detail']}")
+            logger.info("-" * 40)
         
         # แสดงรายการทั้งหมดแบบสั้นๆ
-        print("DETAILED STATUS:")
+        logger.info("DETAILED STATUS:")
         for _, row in summary_df.iterrows():
             status_icon = "✅" if "SUCCESS" in row['status'] else "❌"
-            print(f"{status_icon} [{row['year']}] {row['province']}: {row['status']} ({row['rows']} rows)")
+            logger.info(f"{status_icon} [{row['year']}] {row['province']}: {row['status']} ({row['rows']} rows)")
     else:
-        print("No provinces were processed.")
-    print("="*80 + "\n")
+        logger.info("No provinces were processed.")
+    logger.info("="*80 + "\n")
 
     if all_frames:
         final_df = pd.concat(all_frames, ignore_index=True)

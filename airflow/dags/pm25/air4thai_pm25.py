@@ -35,6 +35,11 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from zoneinfo import ZoneInfo
 
+try:
+    from notify.discord_notify import send_custom_discord_message
+except ImportError:
+    send_custom_discord_message = None
+
 
 # =========================
 # URLs / Headers
@@ -506,6 +511,23 @@ def run(timeout: int = 30):
     # 6) keep only required columns
     keep_cols = ["station_id_new", "air4_time", "pm25", "pm10", "o3", "co", "no2", "so2"]
     df = df[keep_cols].replace({pd.NA: None})
+
+    # === เพิ่มเงื่อนไขแจ้งเตือน PM2.5 > 100 ===
+    if send_custom_discord_message:
+        # แปลงเป็นตัวเลขเผื่อมีค่าเป็น String เพื่อความปลอดภัยในการเปรียบเทียบ
+        pm25_numeric = pd.to_numeric(df["pm25"], errors="coerce")
+        high_pm25_df = df[pm25_numeric > 100]
+        
+        if not high_pm25_df.empty:
+            msg = "🚨 **[แจ้งเตือน] พบค่าฝุ่น PM2.5 เกิน 100 µg/m³!** 🚨\n"
+            for _, r in high_pm25_df.iterrows():
+                # จัด Format เวลาให้แสดงผลสวยงาม
+                t_str = r['air4_time'].tz_convert('Asia/Bangkok').strftime('%Y-%m-%d %H:%M') if pd.notnull(r['air4_time']) else '-'
+                msg += f"📍 รหัสสถานี: `{r['station_id_new']}` | 😷 PM2.5: **{r['pm25']}** | 🕒 เวลา: {t_str}\n"
+            
+            # ส่งแจ้งเตือน (ใช้ key เดียวกับตัวแปลของ DAG)
+            send_custom_discord_message("air4thai_pm25_hourly", msg)
+            print(f"[ALERT] Sent Discord notification for {len(high_pm25_df)} stations with PM2.5 > 100")
 
     # 7) upsert
     sql_upsert = text("""
