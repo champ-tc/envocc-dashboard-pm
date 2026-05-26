@@ -3,6 +3,7 @@ name: pm25
 services:
   redis:
     image: redis:7.2-bookworm
+    platform: linux/amd64
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -12,28 +13,30 @@ services:
 
   postgres:
     image: postgres:16
+    platform: linux/amd64
     env_file: [.env]
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-airflow_system}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-airflow}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes: [postgres-db-volume:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-airflow_system}"]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
       interval: 10s
       retries: 5
     restart: always
 
   postgres-etl:
     image: postgres:16
+    platform: linux/amd64
     environment:
-      POSTGRES_USER: ${ETL_POSTGRES_USER:-etl_user}
+      POSTGRES_USER: ${ETL_POSTGRES_USER}
       POSTGRES_PASSWORD: ${ETL_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${ETL_POSTGRES_DB:-etl_db}
+      POSTGRES_DB: ${ETL_POSTGRES_DB}
     ports: ["${ETL_POSTGRES_PORT:-15432}:5432"]
     volumes: [postgres-etl-volume:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${ETL_POSTGRES_USER:-etl_user}"]
+      test: ["CMD", "pg_isready", "-U", "${ETL_POSTGRES_USER}"]
       interval: 10s
       retries: 5
     restart: always
@@ -56,8 +59,8 @@ services:
     env_file: [.env]
     environment: &airflow-common-env
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-airflow_system}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB:-airflow}
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER:-airflow_system}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB:-airflow}
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
       AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -66,8 +69,8 @@ services:
       AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'true'
       AIRFLOW__WEBSERVER__PREFERRED_URL_SCHEME: 'https'
       AIRFLOW__WEBSERVER__COOKIE_SECURE: 'True'
-      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
       AIRFLOW__WEBSERVER__SESSION_COOKIE_SECURE: 'True'
+      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
       DB_HOST: postgres-etl
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
     volumes:
@@ -111,7 +114,6 @@ services:
         if [[ -z "$${AIRFLOW_UID}" ]]; then export AIRFLOW_UID=$$(id -u); fi
         mkdir -v -p /opt/airflow/{logs,dags,plugins,config}
         chown -R "$${AIRFLOW_UID}:0" /opt/airflow/
-        # สร้าง User สำหรับ Airflow UI
         airflow db migrate
         airflow users create \
             --username "${_AIRFLOW_WWW_USER_USERNAME}" \
