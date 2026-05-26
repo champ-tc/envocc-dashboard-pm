@@ -64,6 +64,10 @@ services:
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW__WEBSERVER__BASE_URL}
       AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'true'
+      AIRFLOW__WEBSERVER__PREFERRED_URL_SCHEME: 'https'
+      AIRFLOW__WEBSERVER__COOKIE_SECURE: 'True'
+      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
+      AIRFLOW__WEBSERVER__SESSION_COOKIE_SECURE: 'True'
       DB_HOST: postgres-etl
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
     volumes:
