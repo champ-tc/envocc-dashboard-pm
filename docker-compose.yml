@@ -40,6 +40,7 @@ services:
 
   web:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    platform: linux/amd64
     env_file: [.env]
     environment:
       DUCKDB_DATA_DIR: /shared-data
@@ -51,6 +52,7 @@ services:
 
   airflow-common: &airflow-common
     image: ghcr.io/champ-tc/envocc-dashboard-pm-airflow:latest
+    platform: linux/amd64
     env_file: [.env]
     environment: &airflow-common-env
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
@@ -116,10 +118,12 @@ services:
             --email admin@example.com || true
     environment:
       <<: *airflow-common-env
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
     user: "0:0"
 
   nginx:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-nginx:latest
+    platform: linux/amd64
     ports: ["80:80", "443:443"]
     volumes: ["./nginx/ssl:/etc/nginx/ssl/live:ro"]
     depends_on:
