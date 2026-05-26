@@ -66,6 +66,16 @@ def discord_failure_callback(variable_key: str):
     return _callback
 
 
+def send_custom_discord_message(variable_key: str, message: str):
+    """ส่งข้อความแจ้งเตือนแบบกำหนดเองไปยัง Discord"""
+    try:
+        webhook_url = _get_webhook(variable_key)
+        if not webhook_url:
+            return
+        _post_discord(webhook_url, message)
+    except Exception as e:
+        print(f"❌ send_custom_discord_message failed: {type(e).__name__}: {e}")
+
 def discord_success_callback(variable_key: str):
     def _callback(context):
         return  # ปิดแจ้งเตือนสำเร็จทั้งหมด
