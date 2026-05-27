@@ -52,14 +52,16 @@ services:
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__LOGGING_LEVEL: INFO
-      # Airflow 3.0 UI & Auth Fixes
-      AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET:-insecure_key_for_dev_32_chars_min_}
-      AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
-      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
-      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'False'
+      # Airflow 3.0 Security & Auth
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.session,airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
       AIRFLOW__API__HOST: 0.0.0.0
       AIRFLOW__API__PORT: 8080
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET:-this_is_a_very_long_secret_key_32_characters_minimum}
+      AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
+      AIRFLOW__WEBSERVER__COOKIE_SECURE: 'False'
+      AIRFLOW__WEBSERVER__SESSION_COOKIE_SECURE: 'False'
+      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
       DB_HOST: postgres-etl
       DB_USER: ${ETL_POSTGRES_USER}
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
