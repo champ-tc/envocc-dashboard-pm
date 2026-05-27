@@ -53,13 +53,16 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__LOGGING_LEVEL: INFO
       # Airflow 3.0 Fixes
-      AIRFLOW__WEBSERVER__SECRET_KEY: "this_is_a_very_long_and_secure_secret_key_for_airflow_3_0_production"
-      AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.session,airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
-      AIRFLOW__API__HOST: 0.0.0.0
-      AIRFLOW__API__PORT: 8080
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET:-secret_key_airflow_3}
+      AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
       AIRFLOW__WEBSERVER__COOKIE_SECURE: 'False'
       AIRFLOW__WEBSERVER__SESSION_COOKIE_SECURE: 'False'
+      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
+      AIRFLOW__WEBSERVER__WTF_CSRF_ENABLED: 'False'
+      AIRFLOW__API__HOST: 0.0.0.0
+      AIRFLOW__API__PORT: 8080
       DB_HOST: postgres-etl
       DB_USER: ${ETL_POSTGRES_USER}
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
@@ -102,10 +105,14 @@ services:
       - -c
       - |
         airflow db migrate
+        # พยายามสร้าง User ถ้ามีอยู่แล้วให้ Reset Password เพื่อความชัวร์
         airflow fab users create \
             --username "${_AIRFLOW_WWW_USER_USERNAME}" \
             --password "${_AIRFLOW_WWW_USER_PASSWORD}" \
-            --firstname Admin --lastname User --role Admin --email admin@example.com || true
+            --firstname Admin --lastname User --role Admin --email admin@example.com || \
+        airflow fab users reset-password \
+            --username "${_AIRFLOW_WWW_USER_USERNAME}" \
+            --password "${_AIRFLOW_WWW_USER_PASSWORD}"
     user: "0:0"
     depends_on:
       postgres: { condition: service_healthy }
