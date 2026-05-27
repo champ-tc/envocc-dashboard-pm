@@ -52,11 +52,14 @@ services:
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__LOGGING_LEVEL: INFO
-      # Airflow 3.0 Config Updates
-      AIRFLOW__API__AUTH_BACKENDS: airflow.providers.fab.auth_manager.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+      # Airflow 3.0 UI & Auth Fixes
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET:-insecure_key_for_dev_32_chars_min_}
+      AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
+      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
+      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'False'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.session,airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
       AIRFLOW__API__HOST: 0.0.0.0
       AIRFLOW__API__PORT: 8080
-      AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET:-insecure_key_for_dev}
       DB_HOST: postgres-etl
       DB_USER: ${ETL_POSTGRES_USER}
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
@@ -74,11 +77,6 @@ services:
     command: api-server
     ports:
       - "8080:8080"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
     restart: always
     depends_on:
       postgres: { condition: service_healthy }
