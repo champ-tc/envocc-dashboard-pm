@@ -52,17 +52,18 @@ services:
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__LOGGING_LEVEL: INFO
-      # Airflow 3.0 Fixes
+      # Airflow 3.0 Stable Config
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.session,airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
-      AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET:-secret_key_airflow_3}
+      AIRFLOW__API__HOST: 0.0.0.0
+      AIRFLOW__API__PORT: 8080
+      AIRFLOW__API__ENABLE_GZIP: 'True'
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET:-secret_key_airflow_3_must_be_long_enough}
       AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
       AIRFLOW__WEBSERVER__COOKIE_SECURE: 'False'
       AIRFLOW__WEBSERVER__SESSION_COOKIE_SECURE: 'False'
       AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
       AIRFLOW__WEBSERVER__WTF_CSRF_ENABLED: 'False'
-      AIRFLOW__API__HOST: 0.0.0.0
-      AIRFLOW__API__PORT: 8080
       DB_HOST: postgres-etl
       DB_USER: ${ETL_POSTGRES_USER}
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
@@ -82,21 +83,21 @@ services:
       - "8080:8080"
     restart: always
     depends_on:
-      postgres: { condition: service_healthy }
+      airflow-init: { condition: service_completed_successfully }
 
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
     restart: always
     depends_on:
-      postgres: { condition: service_healthy }
+      airflow-init: { condition: service_completed_successfully }
 
   airflow-worker:
     <<: *airflow-common
     command: celery worker
     restart: always
     depends_on:
-      postgres: { condition: service_healthy }
+      airflow-init: { condition: service_completed_successfully }
 
   airflow-init:
     <<: *airflow-common
@@ -105,12 +106,12 @@ services:
       - -c
       - |
         airflow db migrate
-        # พยายามสร้าง User ถ้ามีอยู่แล้วให้ Reset Password เพื่อความชัวร์
-        airflow fab users create \
+        # Airflow 3.0: use 'users' directly without 'fab' prefix
+        airflow users create \
             --username "${_AIRFLOW_WWW_USER_USERNAME}" \
             --password "${_AIRFLOW_WWW_USER_PASSWORD}" \
             --firstname Admin --lastname User --role Admin --email admin@example.com || \
-        airflow fab users reset-password \
+        airflow users reset-password \
             --username "${_AIRFLOW_WWW_USER_USERNAME}" \
             --password "${_AIRFLOW_WWW_USER_PASSWORD}"
     user: "0:0"
