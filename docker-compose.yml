@@ -54,18 +54,15 @@ services:
       AIRFLOW__CORE__LOGGING_LEVEL: INFO
       # --- Airflow 3.0 Core Security Fixes ---
       AIRFLOW__CORE__AUTH_MANAGER: 'airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager'
-      AIRFLOW__API__AUTH_BACKENDS: 'airflow.providers.fab.auth_manager.api.auth.backend.session'
+      AIRFLOW__FAB__AUTH_BACKENDS: 'airflow.providers.fab.auth_manager.api.auth.backend.session'
       AIRFLOW__API__ALLOW_ORIGINS: '*'
       AIRFLOW__API__HOST: 0.0.0.0
       AIRFLOW__API__PORT: 8080
-      # --- Webserver / Cookie Fixes ---
-      AIRFLOW__WEBSERVER__SECRET_KEY: 'fixed_secret_key_airflow_3_stable_access_2026'
-      AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
-      AIRFLOW__WEBSERVER__COOKIE_SECURE: 'False'
-      AIRFLOW__WEBSERVER__SESSION_COOKIE_SECURE: 'False'
-      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
-      AIRFLOW__WEBSERVER__WTF_CSRF_ENABLED: 'False'
-      AIRFLOW__WEBSERVER__SESSION_COOKIE_NAME: 'airflow_session'
+      AIRFLOW__API__BASE_URL: ${AIRFLOW__API__BASE_URL:-${AIRFLOW__WEBSERVER__BASE_URL}}
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW__API__SECRET_KEY:-fixed_secret_key_airflow_3_stable_access_2026}
+      # --- FAB / Cookie Fixes ---
+      AIRFLOW__FAB__COOKIE_SECURE: ${AIRFLOW__FAB__COOKIE_SECURE:-False}
+      AIRFLOW__FAB__COOKIE_SAMESITE: ${AIRFLOW__FAB__COOKIE_SAMESITE:-Lax}
       # --- DB Connection ---
       DB_HOST: postgres-etl
       DB_USER: ${ETL_POSTGRES_USER}
@@ -135,6 +132,9 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl/live:ro
     restart: always
+    depends_on:
+      - web
+      - airflow-webserver
 
 volumes:
   postgres-db-volume:
