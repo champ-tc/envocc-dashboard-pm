@@ -52,20 +52,20 @@ services:
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__LOGGING_LEVEL: INFO
-      # --- Airflow 3.0 API & UI Fixes ---
+      # --- Airflow 3.0 Core Security Fixes ---
       AIRFLOW__CORE__AUTH_MANAGER: 'airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager'
-      AIRFLOW__API__AUTH_BACKENDS: 'airflow.providers.fab.auth_manager.api.auth.backend.session,airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
-      AIRFLOW__API__ALLOW_ORIGINS: 'http://192.168.110.5:8080,http://localhost:8080'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.providers.fab.auth_manager.api.auth.backend.session'
+      AIRFLOW__API__ALLOW_ORIGINS: '*'
       AIRFLOW__API__HOST: 0.0.0.0
       AIRFLOW__API__PORT: 8080
-      AIRFLOW__API__ENABLE_GZIP: 'True'
       # --- Webserver / Cookie Fixes ---
-      AIRFLOW__WEBSERVER__SECRET_KEY: 'permanent_secret_key_airflow_3_0_stable_session_fix'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'fixed_secret_key_airflow_3_stable_access_2026'
       AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
       AIRFLOW__WEBSERVER__COOKIE_SECURE: 'False'
       AIRFLOW__WEBSERVER__SESSION_COOKIE_SECURE: 'False'
       AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
       AIRFLOW__WEBSERVER__WTF_CSRF_ENABLED: 'False'
+      AIRFLOW__WEBSERVER__SESSION_COOKIE_NAME: 'airflow_session'
       # --- DB Connection ---
       DB_HOST: postgres-etl
       DB_USER: ${ETL_POSTGRES_USER}
