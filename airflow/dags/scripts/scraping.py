@@ -81,7 +81,7 @@ URL = "https://hdc.moph.go.th/center/public/standard-report-detail/NL9idjvwQKjv6
 HEADLESS = True
 
 
-START_YEAR_THAI = 2569
+START_YEAR_THAI = 2568
 END_YEAR_THAI = 2569
 
 PROVINCE_ID_MAPPING = {
