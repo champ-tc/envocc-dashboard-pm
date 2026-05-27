@@ -15,6 +15,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes: [postgres-db-volume:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
 
   postgres-etl:
@@ -46,8 +51,11 @@ services:
       AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__CORE__LOGGING_LEVEL: INFO
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET:-insecure_key_for_dev}
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
       AIRFLOW__WEBSERVER__WEB_SERVER_HOST: 0.0.0.0
+      AIRFLOW__WEBSERVER__WEB_SERVER_PORT: 8080
       DB_HOST: postgres-etl
       DB_USER: ${ETL_POSTGRES_USER}
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
@@ -59,26 +67,34 @@ services:
       - ./airflow/config:/opt/airflow/config
       - ./airflow/plugins:/opt/airflow/plugins
     user: "${AIRFLOW_UID:-1000}:0"
-    depends_on:
-      redis: { condition: service_started }
-      postgres: { condition: service_started }
 
   airflow-webserver:
     <<: *airflow-common
     command: webserver
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     restart: always
+    depends_on:
+      postgres: { condition: service_healthy }
 
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
     restart: always
+    depends_on:
+      postgres: { condition: service_healthy }
 
   airflow-worker:
     <<: *airflow-common
     command: celery worker
     restart: always
+    depends_on:
+      postgres: { condition: service_healthy }
 
   airflow-init:
     <<: *airflow-common
@@ -92,6 +108,8 @@ services:
             --password "${_AIRFLOW_WWW_USER_PASSWORD}" \
             --firstname Admin --lastname User --role Admin --email admin@example.com || true
     user: "0:0"
+    depends_on:
+      postgres: { condition: service_healthy }
 
   nginx:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-nginx:latest
