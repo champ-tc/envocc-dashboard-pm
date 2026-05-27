@@ -52,18 +52,16 @@ services:
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__LOGGING_LEVEL: INFO
-      # --- Airflow 3.0 Core Security Fixes ---
+      # --- Airflow 3.0 Fixes ---
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.session,airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
       AIRFLOW__API__HOST: 0.0.0.0
       AIRFLOW__API__PORT: 8080
-      AIRFLOW__API__ENABLE_GZIP: 'True'
-      # --- Webserver / Cookie Fixes ---
-      AIRFLOW__WEBSERVER__SECRET_KEY: 'fixed_secret_key_airflow_3_production_64_chars_long_xxxxxxxxxxxx'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'this_is_a_very_long_secure_key_for_airflow_3_0_production_64_chars'
       AIRFLOW__WEBSERVER__BASE_URL: http://192.168.110.5:8080
       AIRFLOW__WEBSERVER__COOKIE_SECURE: 'False'
       AIRFLOW__WEBSERVER__SESSION_COOKIE_SECURE: 'False'
-      AIRFLOW__WEBSERVER__COOKIE_SAMESITE: 'Lax'
+      AIRFLOW__WEBSERVER__SESSION_COOKIE_SAMESITE: 'Lax'
       AIRFLOW__WEBSERVER__WTF_CSRF_ENABLED: 'False'
       # --- DB Connection ---
       DB_HOST: postgres-etl
@@ -110,14 +108,17 @@ services:
       - -c
       - |
         airflow db migrate
-        # ทดสอบด้วย Username และรหัสผ่านที่แน่นอน (Hardcoded) เพื่อตัดประเด็นรหัสผิด
-        airflow users create \
-            --username admin \
-            --password admin_PM25_2026 \
-            --firstname Admin --lastname User --role Admin --email admin@example.com || \
-        airflow users reset-password \
-            --username admin \
-            --password admin_PM25_2026
+        # ตรวจสอบก่อนว่ามี User หรือยัง ถ้าไม่มีค่อยสร้าง ถ้ามีแล้วให้ Reset Password
+        if ! airflow users list | grep -q "admin"; then
+          airflow users create \
+              --username admin \
+              --password admin_PM25_2026 \
+              --firstname Admin --lastname User --role Admin --email admin@example.com
+        else
+          airflow users reset-password \
+              --username admin \
+              --password admin_PM25_2026
+        fi
     user: "0:0"
     depends_on:
       postgres: { condition: service_healthy }
