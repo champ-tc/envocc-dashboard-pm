@@ -113,9 +113,13 @@ services:
         set -euo pipefail
         : "$${_AIRFLOW_WWW_USER_USERNAME:?Set _AIRFLOW_WWW_USER_USERNAME in .env}"
         : "$${_AIRFLOW_WWW_USER_PASSWORD:?Set _AIRFLOW_WWW_USER_PASSWORD in .env}"
+        airflow version
+        airflow config get-value core auth_manager
         airflow db migrate
-        airflow fab-db migrate
-        if ! airflow users list | grep -q "$${_AIRFLOW_WWW_USER_USERNAME}"; then
+        if airflow fab-db --help >/dev/null 2>&1; then
+          airflow fab-db migrate
+        fi
+        if ! airflow users list -o plain | awk '{print $$1}' | grep -Fxq "$${_AIRFLOW_WWW_USER_USERNAME}"; then
           airflow users create \
               --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
               --password "$${_AIRFLOW_WWW_USER_PASSWORD}" \
