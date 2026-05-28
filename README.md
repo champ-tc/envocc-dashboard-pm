@@ -47,6 +47,7 @@ docker compose -f docker-compose.dev.yml up -d --build
    cp .env.template .env
    nano .env
    ```
+   ค่า Airflow ที่ต้องตั้งอย่างน้อยคือ `AIRFLOW__CORE__FERNET_KEY`, `AIRFLOW__API__SECRET_KEY`, `AIRFLOW__API_AUTH__JWT_SECRET` และ `_AIRFLOW_WWW_USER_PASSWORD`
 
 3. **เตรียมไฟล์ Docker Compose**
    นำไฟล์ `docker-compose.yml` วางไว้ในโฟลเดอร์เดียวกันกับ `.env`
@@ -69,6 +70,17 @@ docker compose up -d
 หากพบปัญหา Nginx หา IP ของ Airflow หรือ Web ไม่เจอ (502 Bad Gateway) หลังจากการเปิดคอนเทนเนอร์ใหม่ ให้สั่ง Restart Nginx:
 ```bash
 docker compose restart nginx
+```
+
+หาก Airflow เข้าไม่ได้หลังแก้ `.env` หรือเปลี่ยนรหัสผ่าน admin ให้รัน init แล้วเปิด service ใหม่:
+```bash
+docker compose up airflow-init
+docker compose up -d airflow-webserver airflow-scheduler airflow-worker nginx
+```
+
+ตรวจ log Airflow บน server:
+```bash
+docker compose logs --tail=100 airflow-init airflow-webserver airflow-scheduler airflow-worker
 ```
 
 ---
