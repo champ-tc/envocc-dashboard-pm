@@ -114,6 +114,7 @@ services:
         : "$${_AIRFLOW_WWW_USER_USERNAME:?Set _AIRFLOW_WWW_USER_USERNAME in .env}"
         : "$${_AIRFLOW_WWW_USER_PASSWORD:?Set _AIRFLOW_WWW_USER_PASSWORD in .env}"
         airflow db migrate
+        airflow fab-db migrate
         if ! airflow users list | grep -q "$${_AIRFLOW_WWW_USER_USERNAME}"; then
           airflow users create \
               --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
