@@ -119,7 +119,15 @@ services:
         if airflow fab-db --help >/dev/null 2>&1; then
           airflow fab-db migrate
         fi
-        if ! airflow users list -o plain | awk '{print $$1}' | grep -Fxq "$${_AIRFLOW_WWW_USER_USERNAME}"; then
+        if airflow users list -o plain | awk '{print $$1}' | grep -Fxq "$${_AIRFLOW_WWW_USER_USERNAME}"; then
+          airflow users reset-password \
+              --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
+              --password "$${_AIRFLOW_WWW_USER_PASSWORD}"
+        elif airflow users list -o plain | grep -Fq "$${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}"; then
+          echo "Airflow user email $${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com} already exists; set _AIRFLOW_WWW_USER_EMAIL to a unique email or keep the existing username."
+          airflow users list
+          exit 1
+        else
           airflow users create \
               --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
               --password "$${_AIRFLOW_WWW_USER_PASSWORD}" \
@@ -127,10 +135,6 @@ services:
               --lastname "$${_AIRFLOW_WWW_USER_LASTNAME:-User}" \
               --role "$${_AIRFLOW_WWW_USER_ROLE:-Admin}" \
               --email "$${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}"
-        else
-          airflow users reset-password \
-              --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
-              --password "$${_AIRFLOW_WWW_USER_PASSWORD}"
         fi
     user: "0:0"
     depends_on:
