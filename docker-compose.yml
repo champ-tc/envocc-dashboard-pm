@@ -38,6 +38,11 @@ services:
     platform: linux/amd64
     expose: ["3000"]
     env_file: [.env]
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     restart: always
 
   airflow-common: &airflow-common
@@ -84,6 +89,11 @@ services:
     user: "0:0"
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://127.0.0.1:8080/airflow/ || curl --fail http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     restart: always
     depends_on:
       airflow-init: { condition: service_completed_successfully }
@@ -150,8 +160,8 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl/live:ro
     restart: always
     depends_on:
-      - web
-      - airflow-webserver
+      web: { condition: service_healthy }
+      airflow-webserver: { condition: service_healthy }
 
 volumes:
   postgres-db-volume:
