@@ -124,9 +124,8 @@ services:
               --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
               --password "$${_AIRFLOW_WWW_USER_PASSWORD}"
         elif airflow users list -o plain | grep -Fq "$${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}"; then
-          echo "Airflow user email $${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com} already exists; set _AIRFLOW_WWW_USER_EMAIL to a unique email or keep the existing username."
+          echo "Airflow user email $${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com} already exists; keeping the existing user and skipping create."
           airflow users list
-          exit 1
         else
           airflow users create \
               --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
