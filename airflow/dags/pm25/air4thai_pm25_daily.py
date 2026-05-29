@@ -24,15 +24,13 @@ def compute_daily_summary() -> None:
     print(f"Target Date: {today_th.date()}")
 
     # ===== 2) Extract (ดึงเฉพาะของวันนี้) =====
-    sql = text(
-        """
+    sql = """
         SELECT station_id_new, air4_time, pm25, pm10, o3, co, no2, so2
         FROM pm25_hourly
         WHERE air4_time >= :start_dt AND air4_time < :end_dt
           AND station_id_new IS NOT NULL
           AND btrim(station_id_new) <> ''
         """
-    )
 
     with ENGINE.connect() as cx:
         hourly = pd.read_sql(sql, cx, params={"start_dt": today_th, "end_dt": next_day_th})

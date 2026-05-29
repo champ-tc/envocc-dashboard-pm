@@ -1,11 +1,14 @@
+import os
 import sys
 import traceback
 from pathlib import Path
 from datetime import datetime, timedelta
+from urllib.parse import quote_plus
 
 import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from sqlalchemy import create_engine, text
 
 # ให้ import โมดูลใน dags ได้แน่นอน
 DAGS_DIR = Path(__file__).resolve().parent
@@ -27,6 +30,51 @@ default_args = {
 }
 
 local_tz = pendulum.timezone("Asia/Bangkok")
+
+
+def _must_env(name: str) -> str:
+    value = os.getenv(name)
+    if value is None or str(value).strip() == "":
+        raise RuntimeError(f"Missing required env var: {name}")
+    return value.strip()
+
+
+def _db_engine():
+    user = _must_env("DB_USER")
+    password = _must_env("DB_PASSWORD")
+    host = _must_env("DB_HOST")
+    port = _must_env("DB_PORT")
+    dbname = _must_env("DB_NAME")
+
+    url = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{dbname}"
+    return create_engine(url, pool_pre_ping=True)
+
+
+def ensure_pm25_hourly_table():
+    engine = _db_engine()
+    with engine.begin() as conn:
+        conn.execute(text("SET TIME ZONE 'Asia/Bangkok'"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS pm25_hourly (
+                station_id_new TEXT NOT NULL,
+                air4_time TIMESTAMPTZ NOT NULL,
+                pm25 DOUBLE PRECISION,
+                pm10 DOUBLE PRECISION,
+                o3 DOUBLE PRECISION,
+                co DOUBLE PRECISION,
+                no2 DOUBLE PRECISION,
+                so2 DOUBLE PRECISION
+            )
+        """))
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_pm25_hourly_station_time
+            ON pm25_hourly (station_id_new, air4_time)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_pm25_hourly_air4_time
+            ON pm25_hourly (air4_time)
+        """))
+    print("[OK] pm25_hourly table/indexes are ready")
 
 
 def run_air4thai_job(**context):
@@ -66,4 +114,9 @@ with DAG(
         # ❌ ไม่ต้องใช้ provide_context ใน Airflow รุ่นนี้แล้ว
     )
 
-    t_check_db >> t_fetch_and_upsert
+    t_ensure_pm25_hourly_table = PythonOperator(
+        task_id="ensure_pm25_hourly_table",
+        python_callable=ensure_pm25_hourly_table,
+    )
+
+    t_check_db >> t_ensure_pm25_hourly_table >> t_fetch_and_upsert
