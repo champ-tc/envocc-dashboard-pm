@@ -42,6 +42,7 @@ default_args = {
 def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
     import subprocess
     import sys
+    import shutil
     
     full_script_path = os.path.join(script_path, script_name)
 
@@ -57,7 +58,29 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
     print(f">>> RUN: {script_name}")
     print(f">>> CWD: {script_path}")
     print(f">>> TIMEOUT: {timeout_sec}s")
+    print(f">>> PYTHON: {sys.executable}")
+    print(f">>> SCRIPT EXISTS: {os.path.exists(full_script_path)}")
+    print(f">>> CHROMIUM: {shutil.which('chromium') or shutil.which('chromium-browser') or '(missing)'}")
+    print(f">>> CHROMEDRIVER: {shutil.which('chromedriver') or '(missing)'}")
+    print(f">>> FILES: {sorted(os.listdir(script_path))[:30]}")
     print("=" * 80)
+
+    preflight = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import pandas, selenium, lxml, html5lib, openpyxl; print('dependency preflight OK')",
+        ],
+        cwd=script_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    print(preflight.stdout.strip() or "(dependency preflight produced no stdout)")
+    if preflight.returncode != 0:
+        print(preflight.stderr.strip())
+        raise RuntimeError("Dependency preflight failed")
 
     try:
         process = subprocess.Popen(
