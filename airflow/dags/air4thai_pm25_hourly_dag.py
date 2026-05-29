@@ -1,3 +1,4 @@
+import importlib
 import os
 import sys
 import traceback
@@ -16,7 +17,6 @@ if str(DAGS_DIR) not in sys.path:
     sys.path.insert(0, str(DAGS_DIR))
 
 from check_db.check_db import check_db
-import pm25.air4thai_pm25 as job
 from notify.discord_notify import discord_failure_callback
 
 DISCORD_VAR_KEY = "air4thai_pm25_hourly"
@@ -80,10 +80,13 @@ def ensure_pm25_hourly_table():
 def run_air4thai_job(**context):
     """Wrapper เพื่อให้เห็น traceback เต็ม ๆ ใน Airflow log"""
     try:
+        import pm25.air4thai_pm25 as job
+
         # context จะมีหรือไม่มีก็ไม่เป็นไร เราแค่พิมพ์เท่าที่มี
         print("[DEBUG] run_id:", context.get("run_id"))
         print("[DEBUG] task_id:", getattr(context.get("task"), "task_id", None))
 
+        job = importlib.reload(job)
         job.run(timeout=30)
 
     except Exception as e:
