@@ -78,7 +78,10 @@ services:
       DB_NAME: ${ETL_POSTGRES_DB}
       DB_PORT: 5432
     volumes:
+      - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/config:/opt/airflow/config
+      - ./airflow/plugins:/opt/airflow/plugins
 
   airflow-webserver:
     <<: *airflow-common
