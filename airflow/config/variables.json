@@ -3,7 +3,5 @@
   "air4thai_pm25_daily": "https://discord.com/api/webhooks/1509834653291249695/R2Ev2rvHuEi3BNC7wL81c5o-41akWyxpRsMPizCyg71GiEve-FLYf9z4Jn0cU_9nV2Uk",
   "air4thai_station": "https://discord.com/api/webhooks/1509834653291249695/R2Ev2rvHuEi3BNC7wL81c5o-41akWyxpRsMPizCyg71GiEve-FLYf9z4Jn0cU_9nV2Uk",
   "pm25_pipeline": "https://discord.com/api/webhooks/1509834653291249695/R2Ev2rvHuEi3BNC7wL81c5o-41akWyxpRsMPizCyg71GiEve-FLYf9z4Jn0cU_9nV2Uk",
-  "hdc_service": "https://discord.com/api/webhooks/1509834653291249695/R2Ev2rvHuEi3BNC7wL81c5o-41akWyxpRsMPizCyg71GiEve-FLYf9z4Jn0cU_9nV2Uk",
-  "discord_webhook_url": "https://discord.com/api/webhooks/1509834653291249695/R2Ev2rvHuEi3BNC7wL81c5o-41akWyxpRsMPizCyg71GiEve-FLYf9z4Jn0cU_9nV2Uk",
-  "discord_bot_name": "pm25-alert-bot"
+  "hdc_service": "https://discord.com/api/webhooks/1509834653291249695/R2Ev2rvHuEi3BNC7wL81c5o-41akWyxpRsMPizCyg71GiEve-FLYf9z4Jn0cU_9nV2Uk"
 }
