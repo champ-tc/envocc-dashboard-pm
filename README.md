@@ -75,12 +75,12 @@ docker compose restart nginx
 หาก Airflow เข้าไม่ได้หลังแก้ `.env` หรือเปลี่ยนรหัสผ่าน admin ให้รัน init แล้วเปิด service ใหม่:
 ```bash
 docker compose up airflow-init
-docker compose up -d airflow-webserver airflow-scheduler airflow-dag-processor airflow-worker nginx
+docker compose up -d airflow-webserver airflow-scheduler airflow-worker nginx
 ```
 
 ตรวจ log Airflow บน server:
 ```bash
-docker compose logs --tail=100 airflow-init airflow-webserver airflow-scheduler airflow-dag-processor airflow-worker
+docker compose logs --tail=100 airflow-init airflow-webserver airflow-scheduler airflow-worker
 ```
 
 ---
