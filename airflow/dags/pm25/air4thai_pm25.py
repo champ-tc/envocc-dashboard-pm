@@ -386,7 +386,7 @@ def load_station_map(engine) -> pd.DataFrame:
     has_created_at = _has_column(engine, "stations", "created_at")
 
     if has_created_at:
-        sql = text("""
+        sql = """
           SELECT DISTINCT ON (station_id)
             station_id, station_id_new
           FROM stations
@@ -394,9 +394,9 @@ def load_station_map(engine) -> pd.DataFrame:
             AND station_id_new IS NOT NULL
             AND btrim(station_id_new) <> ''
           ORDER BY station_id, created_at DESC NULLS LAST
-        """)
+        """
     else:
-        sql = text("""
+        sql = """
           SELECT DISTINCT ON (station_id)
             station_id, station_id_new
           FROM (
@@ -417,7 +417,7 @@ def load_station_map(engine) -> pd.DataFrame:
               AND btrim(station_id_new) <> ''
           ) s
           ORDER BY station_id, score DESC
-        """)
+        """
 
     with engine.begin() as cx:
         mp = pd.read_sql(sql, cx)
