@@ -63,7 +63,7 @@ services:
       AIRFLOW__API__ALLOW_ORIGINS: '*'
       AIRFLOW__API__HOST: 0.0.0.0
       AIRFLOW__API__PORT: 8080
-      AIRFLOW__API__BASE_URL: ${AIRFLOW__API__BASE_URL:-${AIRFLOW__WEBSERVER__BASE_URL}}
+      AIRFLOW__API__BASE_URL: ${AIRFLOW__API__BASE_URL:-https://pm25-patients.ddc.moph.go.th/airflow}
       AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-webserver:8080/execution/
       AIRFLOW__API__SECRET_KEY: ${AIRFLOW__API__SECRET_KEY:-fixed_secret_key_airflow_3_stable_access_2026}
       AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-fixed_jwt_secret_airflow_3_stable_access_2026}
