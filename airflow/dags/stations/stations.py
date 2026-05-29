@@ -63,6 +63,21 @@ COLS = [
     "health_region",
 ]
 DB_COLS = COLS + ["created_at"]
+STATIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS stations (
+    station_id TEXT,
+    station_id_new TEXT,
+    station_name TEXT,
+    station_type TEXT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    province TEXT,
+    district TEXT,
+    subdistrict TEXT,
+    health_region TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+)
+"""
 
 
 # ------------------------- env helpers -------------------------
@@ -83,6 +98,26 @@ def make_db_engine():
     url = f"postgresql://{user}:{quote_plus(pwd)}@{host}:{port}/{dbname}"
     print("DB =", f"{host}:{port}/{dbname} (user={user})")
     return create_engine(url, pool_pre_ping=True)
+
+
+def ensure_stations_table(eng):
+    with eng.begin() as c:
+        c.execute(text("SET TIME ZONE 'Asia/Bangkok'"))
+        c.execute(text(STATIONS_TABLE_SQL))
+
+        # Keep older deployments working if the table was created before these fields existed.
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS station_id_new TEXT"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS station_name TEXT"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS station_type TEXT"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS province TEXT"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS district TEXT"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS subdistrict TEXT"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS health_region TEXT"))
+        c.execute(text("ALTER TABLE stations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now()"))
+        c.execute(text("CREATE INDEX IF NOT EXISTS idx_stations_station_id ON stations (station_id)"))
+        c.execute(text("CREATE INDEX IF NOT EXISTS idx_stations_station_id_new ON stations (station_id_new)"))
 
 
 # ------------------------- small safe utils -------------------------
@@ -556,6 +591,7 @@ def upsert_history(df_new: pd.DataFrame, eng):
 # ------------------------- Airflow entrypoint -------------------------
 def run():
     eng = make_db_engine()
+    ensure_stations_table(eng)
     province_map = load_province_map()
     df = fetch_air4thai_df(province_map)
     df = cleanup_incoming(df)
