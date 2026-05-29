@@ -154,13 +154,10 @@ services:
               --role "$${_AIRFLOW_WWW_USER_ROLE:-Admin}" \
               --email "$${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}"
         fi
-        if [ -n "$${DISCORD_WEBHOOK_URL:-}" ]; then
-          for key in air4thai_pm25_hourly air4thai_pm25_daily air4thai_station pm25_pipeline hdc_service discord_webhook_url; do
-            airflow variables set "$${key}" "$${DISCORD_WEBHOOK_URL}"
-          done
-          airflow variables set discord_bot_name "$${DISCORD_BOT_NAME:-pm25-alert-bot}"
+        if [ -f /opt/airflow/config/variables.json ]; then
+          airflow variables import /opt/airflow/config/variables.json
         else
-          echo "DISCORD_WEBHOOK_URL is empty; skipping Discord Airflow Variable seed."
+          echo "Airflow Variables seed file not found: /opt/airflow/config/variables.json"
         fi
     user: "0:0"
     depends_on:
