@@ -420,7 +420,8 @@ def load_station_map(engine) -> pd.DataFrame:
         """
 
     with engine.begin() as cx:
-        mp = pd.read_sql(sql, cx)
+        rows = cx.execute(text(sql)).mappings().all()
+        mp = pd.DataFrame.from_records([dict(row) for row in rows], columns=["station_id", "station_id_new"])
 
     if mp.empty:
         return mp

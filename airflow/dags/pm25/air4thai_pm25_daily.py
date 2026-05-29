@@ -33,7 +33,14 @@ def compute_daily_summary() -> None:
         """
 
     with ENGINE.connect() as cx:
-        hourly = pd.read_sql(sql, cx, params={"start_dt": today_th, "end_dt": next_day_th})
+        rows = cx.execute(
+            text(sql),
+            {"start_dt": today_th, "end_dt": next_day_th},
+        ).mappings().all()
+        hourly = pd.DataFrame.from_records(
+            [dict(row) for row in rows],
+            columns=["station_id_new", "air4_time", "pm25", "pm10", "o3", "co", "no2", "so2"],
+        )
 
     if hourly.empty:
         print("[info] No data found for today yet.")
