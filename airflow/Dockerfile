@@ -13,3 +13,6 @@ RUN pip install --no-cache-dir "apache-airflow-providers-fab>=1.0.0"
 
 COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
+
+COPY dags /opt/airflow/dags
+COPY config /opt/airflow/config
