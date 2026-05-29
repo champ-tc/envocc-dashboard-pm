@@ -14,5 +14,8 @@ RUN pip install --no-cache-dir "apache-airflow-providers-fab>=1.0.0"
 COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
 
-COPY dags /opt/airflow/dags
-COPY config /opt/airflow/config
+COPY --chown=airflow:0 dags/ /opt/airflow/dags/
+COPY --chown=airflow:0 config/ /opt/airflow/config/
+RUN test -f /opt/airflow/dags/air4thai_pm25_daily_dag.py \
+    && test -f /opt/airflow/dags/scripts/hdc.parquet \
+    && find /opt/airflow/dags -type f | head
