@@ -32,6 +32,9 @@ export default function Sidebar({
 
     if (isSuperAdmin) {
         menuItems.push({ label: 'จัดการผู้ใช้', href: '/admin/users' });
+        menuItems.push({ label: 'จัดการสถานี', href: '/admin/stations' });
+        menuItems.push({ label: 'จัดการค่าฝุ่นรายชั่วโมง', href: '/admin/pm25-hourly' });
+        menuItems.push({ label: 'จัดการค่าฝุ่นรายวัน', href: '/admin/pm25-daily' });
     }
 
     return (

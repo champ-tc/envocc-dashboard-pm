@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import EditablePagination from '@/components/EditablePagination';
 
 export default function UserManagementPage() {
     const [users, setUsers] = useState<any[]>([]);
@@ -86,16 +87,6 @@ export default function UserManagementPage() {
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery]);
-
-    let startPage = Math.max(1, currentPage - 1);
-    let endPage = Math.min(totalPages, startPage + 2);
-    if (endPage - startPage < 2) {
-        startPage = Math.max(1, endPage - 2);
-    }
-    const paginationGroup = [];
-    for (let i = startPage; i <= endPage; i++) {
-        paginationGroup.push(i);
-    }
 
     return (
         <div className="w-full">
@@ -195,41 +186,7 @@ export default function UserManagementPage() {
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                             แสดง {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredUsers.length)} จาก {filteredUsers.length} รายการ
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button 
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(1)}
-                                className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
-                                title="หน้าแรก"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            </button>
-                            
-                            <div className="flex items-center gap-1.5 px-2">
-                                {paginationGroup.map(page => (
-                                    <button
-                                        key={page}
-                                        onClick={() => setCurrentPage(page)}
-                                        className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-all ${
-                                            currentPage === page 
-                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 ring-2 ring-blue-500/20' 
-                                                : 'bg-white border border-slate-200 text-slate-600 hover:border-blue-500 hover:text-blue-600 shadow-sm'
-                                        }`}
-                                    >
-                                        {page}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <button 
-                                disabled={currentPage === totalPages || totalPages === 0}
-                                onClick={() => setCurrentPage(totalPages)}
-                                className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm rotate-180"
-                                title="หน้าสุดท้าย"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            </button>
-                        </div>
+                        <EditablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                     </div>
                 )}
             </div>

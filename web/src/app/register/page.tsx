@@ -31,10 +31,12 @@ const SectionTitle = ({ icon: Icon, num, title }: { icon: any, num: string, titl
     </div>
 );
 
-const FormInput = ({ label, icon: Icon, ...props }: any) => (
+const FormInput = ({ label, icon: Icon, required, ...props }: any) => (
     <div className="form-control w-full">
         <label className="label px-1">
-            <span className="label-text font-bold text-slate-600 uppercase tracking-wider text-[10px]">{label}</span>
+            <span className="label-text font-bold text-slate-600 uppercase tracking-wider text-[10px]">
+                {label}{required && <span className="text-rose-500"> *</span>}
+            </span>
         </label>
         <div className="relative group">
             {Icon && (
@@ -42,19 +44,23 @@ const FormInput = ({ label, icon: Icon, ...props }: any) => (
             )}
             <input
                 {...props}
+                required={required}
                 className={`input input-bordered w-full ${Icon ? 'pl-11' : 'pl-4'} bg-white border-slate-200 focus:border-blue-500 text-slate-800 rounded-xl transition-all h-12 text-sm`}
             />
         </div>
     </div>
 );
 
-const FormSelect = ({ label, options, ...props }: any) => (
+const FormSelect = ({ label, options, required, ...props }: any) => (
     <div className="form-control w-full">
         <label className="label px-1">
-            <span className="label-text font-bold text-slate-600 uppercase tracking-wider text-[10px]">{label}</span>
+            <span className="label-text font-bold text-slate-600 uppercase tracking-wider text-[10px]">
+                {label}{required && <span className="text-rose-500"> *</span>}
+            </span>
         </label>
         <select
             {...props}
+            required={required}
             className="select select-bordered w-full bg-white border-slate-200 focus:border-blue-500 text-slate-800 rounded-xl transition-all h-12 text-sm"
         >
             {options}
@@ -149,7 +155,7 @@ export default function RegisterPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    username: form.username,
+                    username: form.username.trim(),
                     email: form.email,
                     idCard: form.idCard
                 })
@@ -233,6 +239,7 @@ export default function RegisterPage() {
                                 <div className="grid grid-cols-3 gap-4">
                                     <FormSelect
                                         label="คำนำหน้า"
+                                        required
                                         value={ui.otherPrefix ? 'อื่นๆ' : form.prefix}
                                         onChange={(e: any) => {
                                             const val = e.target.value;
@@ -304,10 +311,11 @@ export default function RegisterPage() {
                                     <FormInput
                                         label="ชื่อผู้ใช้งาน (Username)"
                                         placeholder="ตั้งชื่อผู้ใช้งาน (ภาษาอังกฤษ/ตัวเลข)"
-                                        minLength={5}
+                                        minLength={4}
                                         required
                                         value={form.username}
                                         onChange={(e: any) => handleInputChange('username', e.target.value)}
+                                        onBlur={(e: any) => handleInputChange('username', e.target.value.trim())}
                                     />
                                     <div className="relative group">
                                         <FormInput
@@ -337,6 +345,7 @@ export default function RegisterPage() {
 
                                 <FormSelect
                                     label="สังกัด/ประเภทสถานที่ทำงาน"
+                                    required
                                     value={form.workplaceType}
                                     onChange={(e: any) => {
                                         handleInputChange('workplaceType', e.target.value);
@@ -365,6 +374,7 @@ export default function RegisterPage() {
                                 {activeWp?.requireProvince && (
                                     <FormSelect
                                         label="จังหวัด (ที่ทำงาน)"
+                                        required
                                         value={form.workplaceProvince}
                                         onChange={(e: any) => handleInputChange('workplaceProvince', e.target.value)}
                                         options={
@@ -379,6 +389,7 @@ export default function RegisterPage() {
                                 {activeWp?.requireDdcRegion && (
                                     <FormSelect
                                         label="สำนักงานเขต (สคร.)"
+                                        required
                                         value={form.ddcRegion}
                                         onChange={(e: any) => handleInputChange('ddcRegion', e.target.value)}
                                         options={
@@ -393,12 +404,14 @@ export default function RegisterPage() {
                                 <div className="grid grid-cols-3 gap-3">
                                     <FormSelect
                                         label="จังหวัด"
+                                        required
                                         value={form.province}
                                         onChange={(e: any) => handleProvinceChange(e.target.value)}
                                         options={<><option value="">เลือก</option>{location.provinces.map(p => <option key={p.id} value={p.name_th}>{p.name_th}</option>)}</>}
                                     />
                                     <FormSelect
                                         label="เขต/อำเภอ"
+                                        required
                                         value={form.district}
                                         disabled={!form.province}
                                         onChange={(e: any) => handleAmphureChange(e.target.value)}
@@ -406,6 +419,7 @@ export default function RegisterPage() {
                                     />
                                     <FormSelect
                                         label="ตำบล"
+                                        required
                                         value={form.subDistrict}
                                         disabled={!form.district}
                                         onChange={(e: any) => handleInputChange('subDistrict', e.target.value)}
@@ -416,6 +430,7 @@ export default function RegisterPage() {
                                 <div className="space-y-4 pt-4 border-t border-slate-100">
                                     <FormSelect
                                         label="ประเภทบุคลากร"
+                                        required
                                         value={form.personnelType}
                                         onChange={(e: any) => {
                                             handleInputChange('personnelType', e.target.value);
@@ -427,6 +442,7 @@ export default function RegisterPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <FormSelect
                                             label="ตำแหน่ง"
+                                            required
                                             value={ui.otherPos ? 'อื่นๆ' : form.position}
                                             onChange={(e: any) => {
                                                 const val = e.target.value;
@@ -447,6 +463,7 @@ export default function RegisterPage() {
                                         {form.personnelType === 'ข้าราชการ' && (
                                             <FormSelect
                                                 label="ระดับ"
+                                                required
                                                 value={form.level}
                                                 onChange={(e: any) => handleInputChange('level', e.target.value)}
                                                 options={

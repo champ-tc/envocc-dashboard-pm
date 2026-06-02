@@ -13,8 +13,47 @@ ENGINE = create_engine(
 
 POLS = ["pm25", "pm10", "o3", "co", "no2", "so2"]
 
+
+def ensure_pm25_daily_table() -> None:
+    with ENGINE.begin() as cx:
+        cx.execute(text("""
+            CREATE TABLE IF NOT EXISTS pm25_daily (
+              air4_date DATE NOT NULL,
+              station_id_new TEXT NOT NULL,
+              pm25_max DOUBLE PRECISION,
+              pm25_min DOUBLE PRECISION,
+              pm25_avg DOUBLE PRECISION,
+              pm10_max DOUBLE PRECISION,
+              pm10_min DOUBLE PRECISION,
+              pm10_avg DOUBLE PRECISION,
+              o3_max DOUBLE PRECISION,
+              o3_min DOUBLE PRECISION,
+              o3_avg DOUBLE PRECISION,
+              co_max DOUBLE PRECISION,
+              co_min DOUBLE PRECISION,
+              co_avg DOUBLE PRECISION,
+              no2_max DOUBLE PRECISION,
+              no2_min DOUBLE PRECISION,
+              no2_avg DOUBLE PRECISION,
+              so2_max DOUBLE PRECISION,
+              so2_min DOUBLE PRECISION,
+              so2_avg DOUBLE PRECISION
+            )
+        """))
+        cx.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_pm25_daily_station_date
+            ON pm25_daily (station_id_new, air4_date)
+        """))
+        cx.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_pm25_daily_air4_date
+            ON pm25_daily (air4_date)
+        """))
+    print("[OK] pm25_daily table/indexes are ready")
+
+
 def compute_daily_summary() -> None:
     print("--- Start Daily Summary ETL (No Truncate) ---")
+    ensure_pm25_daily_table()
     
     # ===== 1) กำหนดช่วงเวลาของ "วันนี้" (00:00:00 ถึงปัจจุบัน) =====
     # ใช้การตัดเวลาให้เหลือแค่วันที่ แล้วเริ่มที่ 00:00:00

@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
     const publicAuthRoutes = ['/login', '/register'];
     const isAdminRoute = pathname.startsWith('/admin');
     const isUserRoute = pathname.startsWith('/user');
-    const isSuperadminRoute = pathname.startsWith('/admin/users');
+    const isSuperadminRoute = pathname.startsWith('/admin/users') || pathname.startsWith('/admin/stations') || pathname.startsWith('/admin/pm25-hourly') || pathname.startsWith('/admin/pm25-daily');
 
     // ถ้าไม่มี Token แต่พยายามเข้าหน้า Protected
     if (!token) {

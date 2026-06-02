@@ -7,7 +7,8 @@ import { eq } from 'drizzle-orm';
 
 export async function POST(request: Request) {
     try {
-        const { username, password } = await request.json();
+        const { username: rawUsername, password } = await request.json();
+        const username = typeof rawUsername === 'string' ? rawUsername.trim() : rawUsername;
         const result = await db.select().from(users).where(eq(users.username, username));
         const user = result[0];
         const isPasswordCorrect = user && await bcrypt.compare(password, user.password);

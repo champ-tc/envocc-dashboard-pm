@@ -6,7 +6,8 @@ import { or, eq } from 'drizzle-orm';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { username, email, idCard } = body;
+        const username = typeof body.username === 'string' ? body.username.trim() : body.username;
+        const { email, idCard } = body;
 
         const conditions = [];
         if (username) conditions.push(eq(users.username, username));

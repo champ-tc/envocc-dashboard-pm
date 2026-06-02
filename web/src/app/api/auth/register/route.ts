@@ -4,29 +4,51 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq, or } from 'drizzle-orm';
 import { z } from 'zod';
+import { WORKPLACE_TYPES } from '@/lib/constants';
 
 // --- Validation Schema ---
+const requiredText = (message: string) => z.string().trim().min(1, message);
 const registerSchema = z.object({
-    prefix: z.string().optional(),
-    name: z.string().min(2, "ชื่อต้องมีอย่างน้อย 2 ตัวอักษร"),
+    prefix: requiredText("กรุณาระบุคำนำหน้า"),
+    name: z.string().trim().min(2, "ชื่อต้องมีอย่างน้อย 2 ตัวอักษร"),
     phone: z.string().regex(/^0\d{9}$/, "เบอร์โทรศัพท์ไม่ถูกต้อง"),
     email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง"),
     idCard: z.string().length(13, "เลขบัตรประชาชนต้องมี 13 หลัก"),
-    username: z.string()
-        .min(5, "ชื่อผู้ใช้งานต้องมีอย่างน้อย 5 ตัวอักษร")
+    username: z.string().trim()
+        .min(4, "ชื่อผู้ใช้งานต้องมีอย่างน้อย 4 ตัวอักษร")
         .max(20, "ชื่อผู้ใช้งานต้องไม่เกิน 20 ตัวอักษร")
         .regex(/^[a-zA-Z0-9._\-@#$%]+$/, "ชื่อผู้ใช้งานประกอบด้วย a-z, A-Z, 0-9 และ . _ - @ # $ % เท่านั้น"),
     password: z.string()
         .min(12, "รหัสผ่านต้องมีอย่างน้อย 12 ตัวอักษร")
         .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "รหัสผ่านต้องประกอบด้วยตัวเลข ตัวอักษรพิมพ์เล็ก และพิมพ์ใหญ่"),
-    province: z.string().optional(),
-    district: z.string().optional(),
-    subDistrict: z.string().optional(),
-    workplaceType: z.string().optional(),
-    workplace: z.string().optional(),
-    personnelType: z.string().optional(),
-    position: z.string().optional(),
-    level: z.string().optional(),
+    province: requiredText("กรุณาระบุจังหวัด"),
+    district: requiredText("กรุณาระบุเขตหรืออำเภอ"),
+    subDistrict: requiredText("กรุณาระบุตำบล"),
+    workplaceType: requiredText("กรุณาระบุสังกัดหรือประเภทสถานที่ทำงาน"),
+    workplace: z.string().trim().optional(),
+    workplaceProvince: z.string().trim().optional(),
+    ddcRegion: z.string().trim().optional(),
+    personnelType: requiredText("กรุณาระบุประเภทบุคลากร"),
+    position: requiredText("กรุณาระบุตำแหน่ง"),
+    level: z.string().trim().optional(),
+}).superRefine((data, context) => {
+    const workplaceType = WORKPLACE_TYPES.find((item) => item.label === data.workplaceType);
+
+    if (!workplaceType) {
+        context.addIssue({ code: 'custom', path: ['workplaceType'], message: "ประเภทสถานที่ทำงานไม่ถูกต้อง" });
+    }
+    if (workplaceType?.requireName && !data.workplace) {
+        context.addIssue({ code: 'custom', path: ['workplace'], message: "กรุณาระบุชื่อสถานที่ทำงาน" });
+    }
+    if (workplaceType?.requireProvince && !data.workplaceProvince) {
+        context.addIssue({ code: 'custom', path: ['workplaceProvince'], message: "กรุณาระบุจังหวัดที่ทำงาน" });
+    }
+    if (workplaceType?.requireDdcRegion && !data.ddcRegion) {
+        context.addIssue({ code: 'custom', path: ['ddcRegion'], message: "กรุณาระบุสำนักงานเขต (สคร.)" });
+    }
+    if (data.personnelType === 'ข้าราชการ' && !data.level) {
+        context.addIssue({ code: 'custom', path: ['level'], message: "กรุณาระบุระดับ" });
+    }
 });
 
 export async function POST(request: Request) {
