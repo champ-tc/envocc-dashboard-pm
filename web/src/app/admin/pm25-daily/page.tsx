@@ -51,6 +51,11 @@ function emptyForm(): DailyForm {
     return form;
 }
 
+function formatPollutantValue(value: number | null) {
+    if (value === null) return '-';
+    return Number(value.toFixed(2)).toString();
+}
+
 async function getErrorMessage(response: Response) {
     const body = await response.json().catch(() => null);
     return body?.error || 'เกิดข้อผิดพลาดในการดำเนินการ';
@@ -217,8 +222,8 @@ export default function Pm25DailyManagementPage() {
                                         <div className="font-bold text-slate-800">{row.stationName || row.stationIdNew}</div>
                                         <div className="text-xs text-slate-400">{row.stationIdNew} {row.province ? `· ${row.province}` : ''}</div>
                                     </td>
-                                    <td className="px-4 py-4 text-sm font-bold text-blue-600">{row.pm25Max ?? '-'} / {row.pm25Min ?? '-'} / {row.pm25Avg ?? '-'}</td>
-                                    {pollutants.slice(1).map((pollutant) => <td key={pollutant.key} className="px-4 py-4 text-sm text-slate-600">{row[valueKey(pollutant.key, 'Avg')] ?? '-'}</td>)}
+                                    <td className="px-4 py-4 text-sm font-bold text-blue-600">{formatPollutantValue(row.pm25Max)} / {formatPollutantValue(row.pm25Min)} / {formatPollutantValue(row.pm25Avg)}</td>
+                                    {pollutants.slice(1).map((pollutant) => <td key={pollutant.key} className="px-4 py-4 text-sm text-slate-600">{formatPollutantValue(row[valueKey(pollutant.key, 'Avg')])}</td>)}
                                     <td className="px-5 py-4">
                                         <div className="flex justify-center gap-2">
                                             <button onClick={() => openEditForm(row)} className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-100">แก้ไข</button>
@@ -271,7 +276,7 @@ export default function Pm25DailyManagementPage() {
                                                 return (
                                                     <label key={key}>
                                                         <span className="mb-1 block text-xs font-bold text-slate-400">{statistic}</span>
-                                                        <input type="number" step="any" value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
+                                                        <input type="number" step="0.01" value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
                                                     </label>
                                                 );
                                             })}

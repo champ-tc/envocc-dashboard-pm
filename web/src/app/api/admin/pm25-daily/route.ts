@@ -16,7 +16,7 @@ const optionalNumber = z.union([z.number(), z.string(), z.null(), z.undefined()]
             context.addIssue({ code: 'custom', message: 'ค่ามลพิษต้องเป็นตัวเลข' });
             return z.NEVER;
         }
-        return parsed;
+        return Math.round((parsed + Number.EPSILON) * 100) / 100;
     });
 const dailySchema = z.object({
     air4Date: dateSchema,

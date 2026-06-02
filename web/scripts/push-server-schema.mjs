@@ -72,26 +72,48 @@ try {
       create table if not exists pm25_daily (
         air4_date date not null,
         station_id_new text not null,
-        pm25_max double precision,
-        pm25_min double precision,
-        pm25_avg double precision,
-        pm10_max double precision,
-        pm10_min double precision,
-        pm10_avg double precision,
-        o3_max double precision,
-        o3_min double precision,
-        o3_avg double precision,
-        co_max double precision,
-        co_min double precision,
-        co_avg double precision,
-        no2_max double precision,
-        no2_min double precision,
-        no2_avg double precision,
-        so2_max double precision,
-        so2_min double precision,
-        so2_avg double precision
+        pm25_max numeric(12, 2),
+        pm25_min numeric(12, 2),
+        pm25_avg numeric(12, 2),
+        pm10_max numeric(12, 2),
+        pm10_min numeric(12, 2),
+        pm10_avg numeric(12, 2),
+        o3_max numeric(12, 2),
+        o3_min numeric(12, 2),
+        o3_avg numeric(12, 2),
+        co_max numeric(12, 2),
+        co_min numeric(12, 2),
+        co_avg numeric(12, 2),
+        no2_max numeric(12, 2),
+        no2_min numeric(12, 2),
+        no2_avg numeric(12, 2),
+        so2_max numeric(12, 2),
+        so2_min numeric(12, 2),
+        so2_avg numeric(12, 2)
       )
     `;
+
+    await transaction.unsafe(`
+      alter table pm25_daily
+        alter column pm25_max type numeric(12, 2) using round(pm25_max::numeric, 2),
+        alter column pm25_min type numeric(12, 2) using round(pm25_min::numeric, 2),
+        alter column pm25_avg type numeric(12, 2) using round(pm25_avg::numeric, 2),
+        alter column pm10_max type numeric(12, 2) using round(pm10_max::numeric, 2),
+        alter column pm10_min type numeric(12, 2) using round(pm10_min::numeric, 2),
+        alter column pm10_avg type numeric(12, 2) using round(pm10_avg::numeric, 2),
+        alter column o3_max type numeric(12, 2) using round(o3_max::numeric, 2),
+        alter column o3_min type numeric(12, 2) using round(o3_min::numeric, 2),
+        alter column o3_avg type numeric(12, 2) using round(o3_avg::numeric, 2),
+        alter column co_max type numeric(12, 2) using round(co_max::numeric, 2),
+        alter column co_min type numeric(12, 2) using round(co_min::numeric, 2),
+        alter column co_avg type numeric(12, 2) using round(co_avg::numeric, 2),
+        alter column no2_max type numeric(12, 2) using round(no2_max::numeric, 2),
+        alter column no2_min type numeric(12, 2) using round(no2_min::numeric, 2),
+        alter column no2_avg type numeric(12, 2) using round(no2_avg::numeric, 2),
+        alter column so2_max type numeric(12, 2) using round(so2_max::numeric, 2),
+        alter column so2_min type numeric(12, 2) using round(so2_min::numeric, 2),
+        alter column so2_avg type numeric(12, 2) using round(so2_avg::numeric, 2)
+    `);
 
     await transaction`
       create unique index if not exists uq_pm25_daily_station_date

@@ -20,30 +20,40 @@ def ensure_pm25_daily_table() -> None:
             CREATE TABLE IF NOT EXISTS pm25_daily (
               air4_date DATE NOT NULL,
               station_id_new TEXT NOT NULL,
-              pm25_max DOUBLE PRECISION,
-              pm25_min DOUBLE PRECISION,
-              pm25_avg DOUBLE PRECISION,
-              pm10_max DOUBLE PRECISION,
-              pm10_min DOUBLE PRECISION,
-              pm10_avg DOUBLE PRECISION,
-              o3_max DOUBLE PRECISION,
-              o3_min DOUBLE PRECISION,
-              o3_avg DOUBLE PRECISION,
-              co_max DOUBLE PRECISION,
-              co_min DOUBLE PRECISION,
-              co_avg DOUBLE PRECISION,
-              no2_max DOUBLE PRECISION,
-              no2_min DOUBLE PRECISION,
-              no2_avg DOUBLE PRECISION,
-              so2_max DOUBLE PRECISION,
-              so2_min DOUBLE PRECISION,
-              so2_avg DOUBLE PRECISION
+              pm25_max NUMERIC(12, 2),
+              pm25_min NUMERIC(12, 2),
+              pm25_avg NUMERIC(12, 2),
+              pm10_max NUMERIC(12, 2),
+              pm10_min NUMERIC(12, 2),
+              pm10_avg NUMERIC(12, 2),
+              o3_max NUMERIC(12, 2),
+              o3_min NUMERIC(12, 2),
+              o3_avg NUMERIC(12, 2),
+              co_max NUMERIC(12, 2),
+              co_min NUMERIC(12, 2),
+              co_avg NUMERIC(12, 2),
+              no2_max NUMERIC(12, 2),
+              no2_min NUMERIC(12, 2),
+              no2_avg NUMERIC(12, 2),
+              so2_max NUMERIC(12, 2),
+              so2_min NUMERIC(12, 2),
+              so2_avg NUMERIC(12, 2)
             )
         """))
         cx.execute(text("""
             CREATE UNIQUE INDEX IF NOT EXISTS uq_pm25_daily_station_date
             ON pm25_daily (station_id_new, air4_date)
         """))
+        numeric_columns = [
+            f"{pol}_{stat}"
+            for pol in POLS
+            for stat in ["max", "min", "avg"]
+        ]
+        alter_columns = ", ".join(
+            f"ALTER COLUMN {column} TYPE NUMERIC(12, 2) USING ROUND({column}::numeric, 2)"
+            for column in numeric_columns
+        )
+        cx.execute(text(f"ALTER TABLE pm25_daily {alter_columns}"))
         cx.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_pm25_daily_air4_date
             ON pm25_daily (air4_date)
@@ -99,6 +109,7 @@ def compute_daily_summary() -> None:
     for col in POLS:
         new_cols.extend([f"{col}_max", f"{col}_min", f"{col}_avg"])
     daily_agg.columns = new_cols
+    daily_agg[new_cols[1:]] = daily_agg[new_cols[1:]].round(2)
     
     daily_agg["air4_date"] = today_th.date()
     daily_result = daily_agg.where(pd.notnull(daily_agg), None)
