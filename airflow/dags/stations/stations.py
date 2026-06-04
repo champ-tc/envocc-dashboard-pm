@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 import requests
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
 
 # ---------------------------------------------------------
 # CONFIGURATION & CONSTANTS
@@ -51,7 +50,7 @@ def _must_env(name: str) -> str:
         raise RuntimeError(f"Missing required environment variable: {name}")
     return val.strip()
 
-def make_db_engine() -> Engine:
+def make_db_engine() -> Any:
     """Creates a SQLAlchemy engine using environment variables."""
     try:
         url = (
@@ -63,7 +62,7 @@ def make_db_engine() -> Engine:
         logger.error(f"Failed to create database engine: {e}")
         raise
 
-def ensure_stations_table(eng: Engine) -> None:
+def ensure_stations_table(eng: Any) -> None:
     """Ensures the stations table and all required columns/indexes exist."""
     create_sql = """
     CREATE TABLE IF NOT EXISTS stations (
@@ -199,7 +198,7 @@ def _station_label(record: Dict[str, Any]) -> str:
     return f"{station_id} ({station_name})"
 
 
-def sync_to_db(df_new: pd.DataFrame, eng: Engine) -> Dict[str, Any]:
+def sync_to_db(df_new: pd.DataFrame, eng: Any) -> Dict[str, Any]:
     """Performs intelligent upsert to track station history."""
     now = datetime.now(ZoneInfo("Asia/Bangkok"))
 
