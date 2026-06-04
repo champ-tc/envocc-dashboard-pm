@@ -2,53 +2,166 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Workflow: air4thai_station</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Deep Dive: air4thai_station</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .back-link { display: inline-block; margin-bottom: 20px; color: #2980b9; text-decoration: none; }
-        h1 { color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 10px; }
-        .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; }
-        .task-flow { display: flex; align-items: center; justify-content: center; margin: 20px 0; font-weight: bold; }
-        .task { background: #ecf0f1; padding: 10px 15px; border-radius: 5px; border: 1px solid #bdc3c7; }
-        .arrow { margin: 0 15px; font-size: 1.5rem; color: #7f8c8d; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #f8f9fa; }
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #2ecc71;
+            --info: #4895ef;
+            --dark: #2b2d42;
+            --light: #f8f9fa;
+            --bg: #f0f2f5;
+            --border: #e2e8f0;
+        }
+        body { font-family: 'Prompt', sans-serif; background-color: var(--bg); color: var(--dark); margin: 0; padding: 0; }
+        .navbar { background: white; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .back-btn { text-decoration: none; color: var(--primary); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .dag-name { font-weight: 600; color: var(--dark); margin: 0; }
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        
+        .section-title { display: flex; align-items: center; gap: 12px; margin-top: 40px; margin-bottom: 20px; color: var(--dark); border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .section-title i { color: var(--primary); }
+
+        .timeline { position: relative; padding: 20px 0; }
+        .timeline::before { content: ''; position: absolute; left: 30px; top: 0; bottom: 0; width: 4px; background: var(--border); border-radius: 2px; }
+        .timeline-item { position: relative; margin-bottom: 30px; padding-left: 80px; }
+        .timeline-dot { position: absolute; left: 18px; top: 5px; width: 28px; height: 28px; background: white; border: 4px solid var(--primary); border-radius: 50%; z-index: 2; }
+        
+        .task-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .task-card h3 { margin: 0 0 10px 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        
+        .variable-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; margin-bottom: 30px; }
+        .variable-table th, .variable-table td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        .variable-table th { background: var(--primary); color: white; font-weight: 500; }
+        .var-name { font-family: monospace; font-weight: bold; color: #e11d48; background: #fff1f2; padding: 2px 6px; border-radius: 4px; }
+
+        .data-flow-box { background: #1e293b; color: #f1f5f9; border-radius: 15px; padding: 25px; margin-top: 20px; }
+        .flow-diagram { display: flex; align-items: center; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; gap: 20px; }
+        .flow-node { background: #334155; padding: 15px; border-radius: 10px; border: 1px solid #475569; text-align: center; min-width: 140px; }
+        .flow-node i { display: block; font-size: 1.5rem; margin-bottom: 8px; color: var(--success); }
+
+        .info-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid var(--info); }
+        .file-path { font-family: monospace; color: #2563eb; }
     </style>
 </head>
 <body>
-    <a href="index.html" class="back-link">← กลับไปหน้าหลัก</a>
-    <h1>Workflow: air4thai_station</h1>
-    
-    <div class="section">
-        <h2>วัตถุประสงค์</h2>
-        <p>ซิงค์ข้อมูลรายละเอียดสถานีตรวจวัดคุณภาพอากาศ (ชื่อสถานี, ตำแหน่งละติจูด/ลองจิจูด, พื้นที่ติดตั้ง) จาก Air4Thai เพื่อรักษาฐานข้อมูล Master Data ของสถานีให้เป็นปัจจุบัน</p>
+    <div class="navbar">
+        <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> กลับหน้าหลัก</a>
+        <h2 class="dag-name">air4thai_station</h2>
     </div>
 
-    <div class="section">
-        <h2>ลำดับการทำงาน (Task Flow)</h2>
-        <div class="task-flow">
-            <div class="task">check_db</div>
-            <div class="arrow">→</div>
-            <div class="task">sync_stations</div>
-            <div class="arrow">→</div>
-            <div class="task">notify_station_changes</div>
-        </div>
-        <ul>
-            <li><strong>check_db:</strong> ตรวจสอบการเชื่อมต่อฐานข้อมูล</li>
-            <li><strong>sync_stations:</strong> ดึงข้อมูลสถานีล่าสุดและอัปเดตลงตารางสถานี พร้อมทั้งบันทึกจำนวนสถานีที่เพิ่มใหม่หรือถูกอัปเดตลงใน XCom</li>
-            <li><strong>notify_station_changes:</strong> ตรวจสอบ XCom หากมีการเปลี่ยนแปลง (มีสถานีเพิ่ม/อัปเดต) จะส่งข้อความแจ้งเตือนสรุปผลเข้า Discord</li>
-        </ul>
-    </div>
+    <div class="container">
+        <h1>Technical Deep Dive: Station Sync</h1>
+        <p style="color: #64748b;">เจาะลึกการทำงานของระบบซิงค์ข้อมูลสถานีตรวจวัดคุณภาพอากาศ (Master Data Management)</p>
 
-    <div class="section">
-        <h2>เงื่อนไขการทำงาน</h2>
-        <table>
-            <tr><th>หัวข้อ</th><th>รายละเอียด</th></tr>
-            <tr><td>ตารางเวลา (Schedule)</td><td>เวลา 06:20 ของทุกวัน (<code>20 6 * * *</code>)</td></tr>
-            <tr><td>เงื่อนไขการแจ้งเตือน</td><td>จะส่ง Discord เฉพาะเมื่อมีการเปลี่ยนแปลงข้อมูลสถานีจริงเท่านั้น</td></tr>
-            <tr><td>ความล้มเหลว (Failure)</td><td>พยายามใหม่ 2 ครั้ง เว้นระยะ 3 นาที</td></tr>
+        <h2 class="section-title"><i class="fas fa-project-diagram"></i> ข้อมูลและตัวแปรที่เกี่ยวข้อง (Variables & Secrets)</h2>
+        
+        <h3>1. Airflow Variables</h3>
+        <table class="variable-table">
+            <thead>
+                <tr><th>Key</th><th>Description</th><th>Usage</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="var-name">air4thai_station</span></td>
+                    <td>Discord Webhook URL</td>
+                    <td>ใช้ในการส่งข้อความแจ้งเตือนผลการซิงค์ข้อมูลเข้าห้อง Discord</td>
+                </tr>
+            </tbody>
         </table>
+
+        <h3>2. Environment Variables</h3>
+        <p>ตัวแปรเหล่านี้ต้องถูกตั้งค่าในระบบ (เช่น ใน Docker หรือ Airflow Connection) เพื่อใช้ในการเชื่อมต่อฐานข้อมูล:</p>
+        <table class="variable-table">
+            <thead>
+                <tr><th>Variable Name</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><span class="var-name">DB_USER</span> / <span class="var-name">DB_PASSWORD</span></td><td>User และ Password สำหรับเข้าใช้งาน PostgreSQL</td></tr>
+                <tr><td><span class="var-name">DB_HOST</span> / <span class="var-name">DB_PORT</span></td><td>ที่อยู่ของ Database Server และ Port (Default: 5432)</td></tr>
+                <tr><td><span class="var-name">DB_NAME</span></td><td>ชื่อฐานข้อมูลเป้าหมาย</td></tr>
+                <tr><td><span class="var-name">PROVINCE_XLSX_PATH</span></td><td>ตำแหน่งไฟล์ <span class="file-path">resources/Province.xlsx</span> สำหรับ Map เขตสุขภาพ</td></tr>
+            </tbody>
+        </table>
+
+        <h2 class="section-title"><i class="fas fa-exchange-alt"></i> การไหลของข้อมูล (Data Flow)</h2>
+        <div class="data-flow-box">
+            <div class="flow-diagram">
+                <div class="flow-node">
+                    <i class="fas fa-cloud-download-alt"></i>
+                    <span>Air4Thai API</span>
+                    <small style="display:block; opacity: 0.7;">Source JSON</small>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+                <div class="flow-node">
+                    <i class="fas fa-file-excel"></i>
+                    <span>Province.xlsx</span>
+                    <small style="display:block; opacity: 0.7;">Mapping Region</small>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+                <div class="flow-node">
+                    <i class="fas fa-database"></i>
+                    <span>PostgreSQL</span>
+                    <small style="display:block; opacity: 0.7;">Table: stations</small>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+                <div class="flow-node">
+                    <i class="fab fa-discord"></i>
+                    <span>Discord</span>
+                    <small style="display:block; opacity: 0.7;">Notify Result</small>
+                </div>
+            </div>
+            <p style="font-size: 0.9rem; margin-top: 20px; text-align: center; color: #94a3b8;">
+                * ระบบใช้เทคนิค <strong>Upsert History</strong>: หากข้อมูลสถานีเปลี่ยน (เช่น ย้ายที่ตั้ง) จะทำการ Insert เรคคอร์ดใหม่เพื่อเก็บประวัติ
+            </p>
+        </div>
+
+        <h2 class="section-title"><i class="fas fa-tasks"></i> รายละเอียดขั้นตอน (Detailed Tasks)</h2>
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="task-card">
+                    <h3>1. check_db</h3>
+                    <p>รันฟังก์ชันจาก <span class="file-path">check_db/check_db.py</span> เพื่อทดสอบการ Ping ฐานข้อมูล</p>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="task-card">
+                    <h3>2. sync_stations</h3>
+                    <p>รันสคริปต์ <span class="file-path">stations/stations.py</span>:</p>
+                    <ul style="font-size: 0.9rem; color: #475569;">
+                        <li>ดึง JSON จาก Air4Thai</li>
+                        <li>Normalize ชื่อจังหวัด (เช่น กาฬสิน -> กาฬสินธุ์)</li>
+                        <li>Map <code>health_region</code> จากไฟล์ Excel</li>
+                        <li>เปรียบเทียบข้อมูลเดิมในตาราง <code>stations</code></li>
+                        <li>ส่งค่า <code>inserted_count</code> และ <code>updated_count</code> ผ่าน <strong>XCom</strong></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot" style="border-color: var(--success);"></div>
+                <div class="task-card">
+                    <h3>3. notify_station_changes</h3>
+                    <p>ดึงค่าจาก XCom มาตรวจสอบ:</p>
+                    <ul style="font-size: 0.9rem; color: #475569;">
+                        <li>ถ้ามีการเปลี่ยนแปลง -> เรียกใช้ฟังก์ชันกลาง <span class="file-path">notify/discord_notify.py</span> เพื่อส่งข้อความ</li>
+                        <li>ถ้าไม่มีการเปลี่ยนแปลง -> Skip การส่งข้อความ</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box" style="margin-top: 30px;">
+            <h4><i class="fas fa-info-circle"></i> ข้อมูลเพิ่มเติม</h4>
+            <p style="font-size: 0.9rem; margin: 0;">
+                ตาราง <strong>stations</strong> มีการใช้ Index ในคอลัมน์ <code>station_id</code> และ <code>station_id_new</code> เพื่อประสิทธิภาพในการค้นหาและเปรียบเทียบข้อมูลที่รวดเร็ว
+            </p>
+        </div>
     </div>
 </body>
 </html>
