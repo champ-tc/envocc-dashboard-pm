@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Workflow: air4thai_pm25_daily</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #2980b9; text-decoration: none; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 10px; }
+        .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; }
+        .task-flow { display: flex; align-items: center; justify-content: center; margin: 20px 0; font-weight: bold; }
+        .task { background: #ecf0f1; padding: 10px 15px; border-radius: 5px; border: 1px solid #bdc3c7; }
+        .arrow { margin: 0 15px; font-size: 1.5rem; color: #7f8c8d; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← กลับไปหน้าหลัก</a>
+    <h1>Workflow: air4thai_pm25_daily</h1>
+    
+    <div class="section">
+        <h2>วัตถุประสงค์</h2>
+        <p>คำนวณสรุปค่าเฉลี่ยรายวัน (Daily Aggregate) ของข้อมูล PM2.5 และมลพิษอื่น ๆ โดยดึงข้อมูลจากตารางรายชั่วโมง (<code>pm25_hourly</code>) มาประมวลผลและเก็บลงในตารางรายวัน (<code>pm25_daily</code>)</p>
+    </div>
+
+    <div class="section">
+        <h2>ลำดับการทำงาน (Task Flow)</h2>
+        <div class="task-flow">
+            <div class="task">check_db</div>
+            <div class="arrow">→</div>
+            <div class="task">compute_pm25_daily</div>
+        </div>
+        <ul>
+            <li><strong>check_db:</strong> ตรวจสอบการเชื่อมต่อฐานข้อมูล</li>
+            <li><strong>compute_pm25_daily:</strong> เรียกใช้สคริปต์ <code>pm25/air4thai_pm25_daily.py</code> เพื่อรันคำสั่ง SQL ในการทำ Group By รายวันและ Upsert ลงตารางเป้าหมาย</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>เงื่อนไขการทำงาน</h2>
+        <table>
+            <tr><th>หัวข้อ</th><th>รายละเอียด</th></tr>
+            <tr><td>ตารางเวลา (Schedule)</td><td>เวลา 23:40 ของทุกวัน (<code>40 23 * * *</code>)</td></tr>
+            <tr><td>ความล้มเหลว (Failure)</td><td>พยายามใหม่ 2 ครั้ง เว้นระยะ 3 นาที</td></tr>
+            <tr><td>การจัดการข้อมูลซ้ำ</td><td>ใช้ระบบ Upsert เพื่อให้ข้อมูลรายวันเป็นปัจจุบันเสมอหากมีการแก้ไขข้อมูลรายชั่วโมงย้อนหลัง</td></tr>
+            <tr><td>การแจ้งเตือน</td><td>ส่งข้อความเข้า Discord เมื่อ Workflow ล้มเหลว</td></tr>
+        </table>
+    </div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airflow Workflows Overview</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
+        .card-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 30px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .card h2 { margin-top: 0; color: #2980b9; font-size: 1.25rem; }
+        .card p { font-size: 0.9rem; color: #666; }
+        .tag { display: inline-block; background: #e1f5fe; color: #0288d1; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-right: 5px; }
+        .btn { display: inline-block; margin-top: 15px; padding: 8px 15px; background: #2980b9; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9rem; }
+        .btn:hover { background: #3498db; }
+    </style>
+</head>
+<body>
+    <h1>ภาพรวมระบบ Airflow Workflows</h1>
+    <p style="text-align: center;">เอกสารอธิบายการทำงานของ Pipeline ทั้งหมดในระบบ Envocc Dashboard</p>
+
+    <div class="card-container">
+        <!-- Air4Thai Hourly -->
+        <div class="card">
+            <h2>air4thai_pm25_hourly</h2>
+            <p>ดึงข้อมูลคุณภาพอากาศรายชั่วโมงจาก API Air4Thai และบันทึกลงฐานข้อมูล</p>
+            <div>
+                <span class="tag">Schedule: รายชั่วโมง</span>
+                <span class="tag">Source: Air4Thai</span>
+            </div>
+            <a href="air4thai_pm25_hourly.html" class="btn">ดูรายละเอียด</a>
+        </div>
+
+        <!-- Air4Thai Daily -->
+        <div class="card">
+            <h2>air4thai_pm25_daily</h2>
+            <p>ประมวลผลสรุปค่าเฉลี่ยรายวันจากข้อมูลรายชั่วโมง</p>
+            <div>
+                <span class="tag">Schedule: 23:40 ทุกวัน</span>
+                <span class="tag">Process: Aggregation</span>
+            </div>
+            <a href="air4thai_pm25_daily.html" class="btn">ดูรายละเอียด</a>
+        </div>
+
+        <!-- Air4Thai Station -->
+        <div class="card">
+            <h2>air4thai_station</h2>
+            <p>ตรวจสอบและอัปเดตข้อมูลสถานีตรวจวัดคุณภาพอากาศ (Master Data)</p>
+            <div>
+                <span class="tag">Schedule: 06:20 ทุกวัน</span>
+                <span class="tag">Notify: Discord</span>
+            </div>
+            <a href="air4thai_station.html" class="btn">ดูรายละเอียด</a>
+        </div>
+
+        <!-- Patient Pipeline -->
+        <div class="card">
+            <h2>pm25_patients_pipeline_dag</h2>
+            <p>Pipeline ดึงข้อมูลสถิติผู้ป่วยจากระบบ HDC (MOPH) ผ่านการ Scraping</p>
+            <div>
+                <span class="tag">Schedule: 03:00 ทุกวัน (Prod)</span>
+                <span class="tag">Complex: Scraping + ETL</span>
+            </div>
+            <a href="pm25_patients_pipeline.html" class="btn">ดูรายละเอียด</a>
+        </div>
+    </div>
+</body>
+</html>

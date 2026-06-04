@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Documentation: pm25_patients_pipeline_dag</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 3px solid #8e44ad; padding-bottom: 10px; margin-top: 0; }
+        h2 { color: #2980b9; margin-top: 25px; border-left: 5px solid #2980b9; padding-left: 10px; }
+        .workflow-diagram { display: flex; align-items: center; justify-content: center; margin: 30px 0; font-weight: bold; overflow-x: auto; padding: 10px; }
+        .task { background: #8e44ad; color: white; padding: 12px 20px; border-radius: 6px; min-width: 150px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .arrow { margin: 0 15px; font-size: 24px; color: #7f8c8d; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table th, .details-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .details-table th { background-color: #f2f2f2; color: #2c3e50; width: 30%; }
+        .script-info { background: #f8f9fa; border-radius: 6px; padding: 15px; border: 1px dashed #bdc3c7; margin-bottom: 10px; }
+        .script-name { font-family: 'Courier New', Courier, monospace; font-weight: bold; color: #c0392b; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
+        .back-link:hover { text-decoration: underline; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+        .status-prod { background: #e74c3c; color: white; }
+        .status-dev { background: #f1c40f; color: #333; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← กลับสู่หน้าหลักภาพรวม</a>
+    
+    <div class="container">
+        <h1>Workflow: pm25_patients_pipeline_dag</h1>
+        <p><strong>คำอธิบาย:</strong> Pipeline สำหรับการรวบรวมข้อมูลผู้ป่วยที่เกี่ยวข้องกับฝุ่น PM2.5 โดยครอบคลุมขั้นตอนการ Scraping ข้อมูลจากระบบ HDC, การเตรียมข้อมูล (Merging) และการรวมข้อมูลเป็นชุดเดียว (Concatenation)</p>
+
+        <h2>1. ภาพรวมลำดับการทำงาน (Workflow Sequence)</h2>
+        <div class="workflow-diagram">
+            <div class="task">scrape_hdc_data</div>
+            <div class="arrow">➜</div>
+            <div class="task">merge_hdc_data</div>
+            <div class="arrow">➜</div>
+            <div class="task">concatenate_hdc_data</div>
+        </div>
+
+        <h2>2. รายละเอียดแต่ละ Task</h2>
+        
+        <div class="script-info">
+            <h3>Task 1: scrape_hdc_data</h3>
+            <p><strong>สคริปต์ที่รัน:</strong> <span class="script-name">scraping.py</span></p>
+            <p><strong>หน้าที่:</strong> เข้าไปที่เว็บไซต์ HDC (MOPH) เพื่อดึงข้อมูลรายงานสถิติจำนวนผู้ป่วยรายจังหวัด โดยใช้ Selenium และ Chromium ในโหมด Headless</p>
+            <p><strong>เงื่อนไข:</strong> ใช้เวลาทำงานได้สูงสุด 4 ชั่วโมง (14,400 วินาที) มีระบบตรวจสอบ Dependency (pandas, selenium, ฯลฯ) ก่อนเริ่มงาน</p>
+        </div>
+
+        <div class="script-info">
+            <h3>Task 2: merge_hdc_data</h3>
+            <p><strong>สคริปต์ที่รัน:</strong> <span class="script-name">merged.py</span></p>
+            <p><strong>หน้าที่:</strong> นำไฟล์ข้อมูลดิบที่ได้จากการ Scrape มาทำการจัดโครงสร้างข้อมูลใหม่ (Pivot/Reshape) ให้อยู่ในรูปแบบ Long Format ที่พร้อมสำหรับการวิเคราะห์</p>
+            <p><strong>เงื่อนไข:</strong> ทำงานหลังจาก Task แรกสำเร็จเท่านั้น มี Timeout 10 นาที</p>
+        </div>
+
+        <div class="script-info">
+            <h3>Task 3: concatenate_hdc_data</h3>
+            <p><strong>สคริปต์ที่รัน:</strong> <span class="script-name">cell.py</span></p>
+            <p><strong>หน้าที่:</strong> รวมไฟล์ข้อมูลที่ประมวลผลแล้วจากหลายปีเข้าด้วยกันเป็นไฟล์สุดท้าย (Final Dataset) เพื่อใช้ในการแสดงผลบน Dashboard</p>
+            <p><strong>เงื่อนไข:</strong> เป็นขั้นตอนสุดท้ายของ Pipeline มี Timeout 5 นาที</p>
+        </div>
+
+        <h2>3. เงื่อนไขและกำหนดการ (Execution Policy)</h2>
+        <table class="details-table">
+            <tr>
+                <th>หัวข้อ</th>
+                <th>รายละเอียด</th>
+            </tr>
+            <tr>
+                <td><strong>กำหนดการ (Schedule)</strong></td>
+                <td>
+                    <span class="status-badge status-prod">Production:</span> 03:00 น. ของทุกวัน (0 3 * * *)<br>
+                    <span class="status-badge status-dev">Development:</span> ไม่มีการรันอัตโนมัติ (Manual Trigger Only)
+                </td>
+            </tr>
+            <tr>
+                <td><strong>การลองใหม่ (Retry)</strong></td>
+                <td>หากล้มเหลว จะพยายามรันใหม่ 1 ครั้ง หลังจากผ่านไป 5 นาที</td>
+            </tr>
+            <tr>
+                <td><strong>การแจ้งเตือน (Notifications)</strong></td>
+                <td>ส่งข้อความผ่าน <strong>Discord Webhook</strong> (pm25_pipeline) เมื่องานสำเร็จหรือล้มเหลว</td>
+            </tr>
+            <tr>
+                <td><strong>Environment</strong></td>
+                <td>รันผ่านระบบ Subprocess โดยมีการตั้งค่า <code>PYTHONUNBUFFERED=1</code> เพื่อให้เห็น Log แบบ Real-time</td>
+            </tr>
+        </table>
+
+        <h2>4. ข้อควรระวัง</h2>
+        <ul>
+            <li>Task <strong>scrape_hdc_data</strong> ใช้ทรัพยากรสูงและใช้เวลานาน ต้องตรวจสอบพื้นที่จัดเก็บไฟล์ Log และไฟล์ CSV ชั่วคราวสม่ำเสมอ</li>
+            <li>หากโครงสร้างหน้าเว็บ HDC เปลี่ยนแปลง สคริปต์ <span class="script-name">scraping.py</span> อาจทำงานผิดพลาด</li>
+            <li>ไฟล์ผลลัพธ์สุดท้ายจะถูกเก็บไว้ในโฟลเดอร์ <code>dags/scripts/</code></li>
+        </ul>
+    </div>
+</body>
+</html>
