@@ -59,8 +59,8 @@ def air4thai_station_sync_dag():
             print("No summary received")
             return
 
-        new_count = int(sync_summary.get("inserted_count") or 0)
-        updated_count = int(sync_summary.get("updated_count") or 0)
+        new_count = int(sync_summary.get("inserted") or 0)
+        updated_count = int(sync_summary.get("updated") or 0)
 
         if new_count == 0 and updated_count == 0:
             print("No station changes -> skip notify")

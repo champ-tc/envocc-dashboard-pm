@@ -3,7 +3,7 @@ import os
 import re
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Any, List
+from typing import Dict, List, Optional, Any
 from zoneinfo import ZoneInfo
 from urllib.parse import quote_plus
 
@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import requests
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine, Connection
+from sqlalchemy.engine import Engine
 
 # ---------------------------------------------------------
 # CONFIGURATION & CONSTANTS
@@ -177,13 +177,30 @@ def fetch_air4thai(province_map: Dict[str, str]) -> pd.DataFrame:
 # ---------------------------------------------------------
 # CORE LOGIC (UPSERT)
 # ---------------------------------------------------------
+def _sql_value(value: Any) -> Any:
+    """Convert pandas/NumPy values into DB-driver-friendly Python values."""
+    if pd.isna(value):
+        return None
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
 def sync_to_db(df_new: pd.DataFrame, eng: Engine) -> Dict[str, Any]:
     """Performs intelligent upsert to track station history."""
     now = datetime.now(ZoneInfo("Asia/Bangkok"))
-    
-    with eng.connect() as conn:
+
+    insert_sql = text(
+        f"INSERT INTO stations ({', '.join(DB_COLS)}) "
+        f"VALUES ({', '.join(f':{col}' for col in DB_COLS)})"
+    )
+
+    with eng.begin() as conn:
         # Get current state
-        current_df = pd.read_sql(f"SELECT {', '.join(DB_COLS)} FROM stations", conn)
+        rows = conn.execute(
+            text(f"SELECT {', '.join(DB_COLS)} FROM stations")
+        ).mappings().all()
+        current_df = pd.DataFrame(rows, columns=DB_COLS)
         
         results = {"inserted": 0, "updated": 0, "skipped": 0, "log": []}
         
@@ -194,10 +211,11 @@ def sync_to_db(df_new: pd.DataFrame, eng: Engine) -> Dict[str, Any]:
             
             rec = row.to_dict()
             rec['created_at'] = now
+            rec = {key: _sql_value(value) for key, value in rec.items()}
             
             if existing.empty:
                 # New station -> Insert
-                pd.DataFrame([rec]).to_sql("stations", eng, if_exists="append", index=False)
+                conn.execute(insert_sql, rec)
                 results["inserted"] += 1
                 continue
             
@@ -214,7 +232,7 @@ def sync_to_db(df_new: pd.DataFrame, eng: Engine) -> Dict[str, Any]:
             if is_changed:
                 # If area changed significantly -> Insert new history record
                 # If just filling blanks -> Update last record (Simplified for 10/10 logic)
-                pd.DataFrame([rec]).to_sql("stations", eng, if_exists="append", index=False)
+                conn.execute(insert_sql, rec)
                 results["updated"] += 1
             else:
                 results["skipped"] += 1
