@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { getPasswordValidationError, PASSWORD_MIN_LENGTH } from '@/lib/password';
 
 /**
  * ฟอร์มแก้ไขข้อมูลส่วนตัว (Profile Form)
@@ -20,10 +21,12 @@ export default function ProfileForm({ user }: { user: any }) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // ตรวจสอบความปลอดภัยเบื้องต้น
-        if (password && password.length < 6) {
-            toast.error('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
-            return;
+        if (password) {
+            const passwordError = getPasswordValidationError(password);
+            if (passwordError) {
+                toast.error(passwordError);
+                return;
+            }
         }
 
         setIsLoading(true);
@@ -104,9 +107,13 @@ export default function ProfileForm({ user }: { user: any }) {
                         </label>
                         <input 
                             type="password" value={password} onChange={e => setPassword(e.target.value)} 
-                            placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัว)" 
+                            minLength={PASSWORD_MIN_LENGTH}
+                            placeholder={`กรอกรหัสผ่านใหม่ (อย่างน้อย ${PASSWORD_MIN_LENGTH} ตัว)`}
                             className="input input-bordered input-primary w-full" 
                         />
+                        <p className="text-xs opacity-60 mt-2">
+                            ต้องมีอักษรพิมพ์ใหญ่ พิมพ์เล็ก และตัวเลขอย่างน้อย 1 ตัว
+                        </p>
                     </div>
                 </div>
                 

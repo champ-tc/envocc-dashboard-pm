@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcrypt';
+import { getPasswordValidationError } from '@/lib/password';
 
 export async function POST(request: Request) {
     try {
@@ -33,8 +34,9 @@ export async function POST(request: Request) {
 
         // เช็คว่ามีการขอเปลี่ยนรหัสผ่านหรือไม่
         if (password) {
-            if (password.length < 6) {
-                return NextResponse.json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' }, { status: 400 });
+            const passwordError = getPasswordValidationError(password);
+            if (passwordError) {
+                return NextResponse.json({ error: passwordError }, { status: 400 });
             }
             updateData.password = await bcrypt.hash(password, 10);
         }

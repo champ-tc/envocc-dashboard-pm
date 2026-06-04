@@ -5,6 +5,7 @@ import { users } from '@/db/schema';
 import { eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { WORKPLACE_TYPES } from '@/lib/constants';
+import { passwordSchema } from '@/lib/password';
 
 // --- Validation Schema ---
 const requiredText = (message: string) => z.string().trim().min(1, message);
@@ -18,9 +19,7 @@ const registerSchema = z.object({
         .min(4, "ชื่อผู้ใช้งานต้องมีอย่างน้อย 4 ตัวอักษร")
         .max(20, "ชื่อผู้ใช้งานต้องไม่เกิน 20 ตัวอักษร")
         .regex(/^[a-zA-Z0-9._\-@#$%]+$/, "ชื่อผู้ใช้งานประกอบด้วย a-z, A-Z, 0-9 และ . _ - @ # $ % เท่านั้น"),
-    password: z.string()
-        .min(12, "รหัสผ่านต้องมีอย่างน้อย 12 ตัวอักษร")
-        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "รหัสผ่านต้องประกอบด้วยตัวเลข ตัวอักษรพิมพ์เล็ก และพิมพ์ใหญ่"),
+    password: passwordSchema,
     province: requiredText("กรุณาระบุจังหวัด"),
     district: requiredText("กรุณาระบุเขตหรืออำเภอ"),
     subDistrict: requiredText("กรุณาระบุตำบล"),

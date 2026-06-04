@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node scripts/dev-with-server-db.mjs",
     "db:push:server": "node scripts/push-server-schema.mjs",
+    "db:seed": "node scripts/seed-users.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
