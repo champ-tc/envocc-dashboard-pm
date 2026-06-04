@@ -36,6 +36,7 @@ COLS = [
     "health_region",
 ]
 DB_COLS = COLS + ["created_at"]
+LOCATION_COLS = ["latitude", "longitude", "province", "district", "subdistrict"]
 
 # Setup Logging
 logger = logging.getLogger(__name__)
@@ -186,6 +187,18 @@ def _sql_value(value: Any) -> Any:
     return value
 
 
+def _display_value(value: Any) -> str:
+    """Return a stable, human-readable value for comparisons and notifications."""
+    value = _sql_value(value)
+    return "-" if value is None or str(value).strip() == "" else str(value)
+
+
+def _station_label(record: Dict[str, Any]) -> str:
+    station_id = _display_value(record.get("station_id"))
+    station_name = _display_value(record.get("station_name"))
+    return f"{station_id} ({station_name})"
+
+
 def sync_to_db(df_new: pd.DataFrame, eng: Engine) -> Dict[str, Any]:
     """Performs intelligent upsert to track station history."""
     now = datetime.now(ZoneInfo("Asia/Bangkok"))
@@ -202,7 +215,13 @@ def sync_to_db(df_new: pd.DataFrame, eng: Engine) -> Dict[str, Any]:
         ).mappings().all()
         current_df = pd.DataFrame(rows, columns=DB_COLS)
         
-        results = {"inserted": 0, "updated": 0, "skipped": 0, "log": []}
+        results = {
+            "inserted": 0,
+            "updated": 0,
+            "skipped": 0,
+            "changes": [],
+            "missing_subdistrict": [],
+        }
         
         for _, row in df_new.iterrows():
             sid = row['station_id']
@@ -217,25 +236,52 @@ def sync_to_db(df_new: pd.DataFrame, eng: Engine) -> Dict[str, Any]:
                 # New station -> Insert
                 conn.execute(insert_sql, rec)
                 results["inserted"] += 1
+                results["changes"].append({
+                    "station": _station_label(rec),
+                    "type": "เพิ่มสถานีใหม่",
+                    "location": {
+                        key: _display_value(rec.get(key))
+                        for key in LOCATION_COLS
+                    },
+                })
                 continue
             
             last_rec = existing.iloc[0].to_dict()
             
-            # Check if critical info changed (Ignore subdistrict if it was blank)
-            is_changed = False
-            for k in COLS:
-                if k == "subdistrict" and not last_rec.get(k): continue # Fill blank subdistrict is an update
-                if str(last_rec.get(k)) != str(rec.get(k)):
-                    is_changed = True
-                    break
+            changed_fields = {
+                key: {
+                    "old": _display_value(last_rec.get(key)),
+                    "new": _display_value(rec.get(key)),
+                }
+                for key in COLS
+                if _display_value(last_rec.get(key)) != _display_value(rec.get(key))
+            }
             
-            if is_changed:
+            if changed_fields:
                 # If area changed significantly -> Insert new history record
                 # If just filling blanks -> Update last record (Simplified for 10/10 logic)
                 conn.execute(insert_sql, rec)
                 results["updated"] += 1
+                results["changes"].append({
+                    "station": _station_label(rec),
+                    "type": "อัปเดตข้อมูล",
+                    "fields": changed_fields,
+                })
             else:
                 results["skipped"] += 1
+
+        missing_df = df_new[
+            df_new["subdistrict"].isna()
+            | (df_new["subdistrict"].astype(str).str.strip() == "")
+        ]
+        results["missing_subdistrict"] = [
+            {
+                "station": _station_label(row.to_dict()),
+                "province": _display_value(row.get("province")),
+                "district": _display_value(row.get("district")),
+            }
+            for _, row in missing_df.iterrows()
+        ]
 
     summary = f"Sync Summary: +{results['inserted']} new, ~{results['updated']} updated, {results['skipped']} skipped."
     logger.info(summary)

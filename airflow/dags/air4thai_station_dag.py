@@ -16,6 +16,19 @@ from stations.stations import run as run_station_job
 
 # Key ของ Airflow Variable ที่ใช้เก็บ Discord Webhook URL
 AIRFLOW_VAR_DISCORD_WEBHOOK = "air4thai_station"
+DISCORD_MESSAGE_LIMIT = 1900
+FIELD_LABELS = {
+    "station_id": "รหัสสถานี",
+    "station_id_new": "รหัสสถานีใหม่",
+    "station_name": "ชื่อสถานี",
+    "station_type": "ประเภทสถานี",
+    "latitude": "ละติจูด",
+    "longitude": "ลองจิจูด",
+    "province": "จังหวัด",
+    "district": "อำเภอ/เขต",
+    "subdistrict": "ตำบล/แขวง",
+    "health_region": "เขตสุขภาพ",
+}
 
 default_args = {
     "owner": "airflow",
@@ -54,22 +67,65 @@ def air4thai_station_sync_dag():
 
     @task(task_id="notify_station_changes")
     def notify_changes(sync_summary: dict):
-        """แจ้งเตือนผ่าน Discord หากมีการเปลี่ยนแปลงข้อมูลสถานี"""
+        """แจ้งการเปลี่ยนแปลงสถานีและสถานีที่ไม่มีข้อมูลตำบลผ่าน Discord"""
         if not sync_summary:
             print("No summary received")
             return
 
         new_count = int(sync_summary.get("inserted") or 0)
         updated_count = int(sync_summary.get("updated") or 0)
+        changes = sync_summary.get("changes") or []
+        missing_subdistrict = sync_summary.get("missing_subdistrict") or []
 
-        if new_count == 0 and updated_count == 0:
-            print("No station changes -> skip notify")
+        if new_count == 0 and updated_count == 0 and not missing_subdistrict:
+            print("No station changes and no missing subdistrict -> skip notify")
             return
 
-        message = sync_summary.get("message") or f"Station changes: inserted={new_count}, updated={updated_count}"
-        
-        send_custom_discord_message(AIRFLOW_VAR_DISCORD_WEBHOOK, message)
-        print(f"Discord notified: {new_count} new, {updated_count} updated")
+        lines = [
+            "**Air4Thai Station Sync**",
+            f"เพิ่มใหม่: {new_count} | อัปเดต: {updated_count} | ไม่มีตำบล: {len(missing_subdistrict)}",
+        ]
+
+        if changes:
+            lines.append("\n**รายละเอียดการเปลี่ยนแปลง**")
+            for change in changes:
+                fields = change.get("fields") or {}
+                location = change.get("location") or {}
+                detail = ", ".join(
+                    f"{FIELD_LABELS.get(key, key)}: {value.get('old')} -> {value.get('new')}"
+                    for key, value in fields.items()
+                ) or ", ".join(
+                    f"{FIELD_LABELS.get(key, key)}: {value}"
+                    for key, value in location.items()
+                )
+                lines.append(f"- {change.get('type')}: {change.get('station')} | {detail}")
+
+        if missing_subdistrict:
+            lines.append("\n**สถานีที่ไม่มีข้อมูลตำบล**")
+            for station in missing_subdistrict:
+                lines.append(
+                    f"- {station.get('station')} | จังหวัด: {station.get('province')} "
+                    f"| อำเภอ/เขต: {station.get('district')}"
+                )
+
+        messages = []
+        current = ""
+        for line in lines:
+            candidate = f"{current}\n{line}".strip()
+            if current and len(candidate) > DISCORD_MESSAGE_LIMIT:
+                messages.append(current)
+                current = line
+            else:
+                current = candidate
+        if current:
+            messages.append(current)
+
+        for message in messages:
+            send_custom_discord_message(AIRFLOW_VAR_DISCORD_WEBHOOK, message)
+        print(
+            f"Discord notified: {new_count} new, {updated_count} updated, "
+            f"{len(missing_subdistrict)} missing subdistrict"
+        )
 
     # กำหนดลำดับการทำงาน (Dependency)
     # ใช้การผ่านค่าตัวแปรแทน xcom_pull
