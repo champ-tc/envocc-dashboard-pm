@@ -10,7 +10,8 @@ from urllib.parse import quote_plus
 import numpy as np
 import pandas as pd
 import requests
-from sqlalchemy import create_engine, text, Engine, Connection
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine, Connection
 
 # ---------------------------------------------------------
 # CONFIGURATION & CONSTANTS
