@@ -18,4 +18,5 @@ COPY --chown=airflow:0 dags/ /opt/airflow/dags/
 COPY --chown=airflow:0 config/ /opt/airflow/config/
 RUN test -f /opt/airflow/dags/air4thai_pm25_daily_dag.py \
     && test -f /opt/airflow/dags/scripts/hdc.parquet \
+    && PYTHONPATH=/opt/airflow/dags python -c "import stations.stations" \
     && find /opt/airflow/dags -type f | head
