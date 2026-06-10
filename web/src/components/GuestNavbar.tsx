@@ -52,7 +52,7 @@ export default function GuestNavbar() {
                         <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
                             <div className="w-[60px] h-[36px] sm:w-[84px] sm:h-[48px] relative flex items-center justify-center">
                                 <Image
-                                    src="/img/Logo_ddc.png"
+                                    src="/img/logo_ddc.png"
                                     alt="DDC Logo"
                                     fill
                                     sizes="(max-width: 640px) 60px, 84px"

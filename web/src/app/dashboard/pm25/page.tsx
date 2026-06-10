@@ -492,7 +492,7 @@ export default function DashboardPM25() {
                     <div className="flex items-center gap-4">
                         <div className="flex -space-x-3">
                             <div className="relative shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10 w-12 h-12 sm:w-14 sm:h-14 z-20">
-                                <Image src="/img/Logo_ddc.png" alt="DDC Logo" fill sizes="60px" className="rounded-xl object-contain p-1" priority />
+                                <Image src="/img/logo_ddc.png" alt="DDC Logo" fill sizes="60px" className="rounded-xl object-contain p-1" priority />
                             </div>
                         </div>
                         <div className="flex flex-col">
