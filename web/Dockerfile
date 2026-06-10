@@ -29,6 +29,7 @@ RUN useradd --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nextjs /app/scripts ./scripts
 
 # --- จุดสำคัญ: ดึง node_modules ทั้งหมดที่เกี่ยวข้องมาใช้ ---
 # standalone mode ของ Next.js อาจจะตัด Native modules ทิ้ง 

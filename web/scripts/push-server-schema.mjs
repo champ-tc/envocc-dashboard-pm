@@ -1,10 +1,40 @@
 import postgres from "postgres";
 
-import { databaseTarget, serverDatabaseEnv } from "./server-db-env.mjs";
+let databaseUrl = process.env.DATABASE_URL;
+let databaseTarget = databaseUrl ? "DATABASE_URL from environment" : null;
+
+if (
+  !databaseUrl &&
+  process.env.DB_HOST &&
+  process.env.DB_USER &&
+  process.env.DB_PASSWORD &&
+  process.env.DB_NAME
+) {
+  const dbPort = process.env.DB_PORT || "5432";
+  databaseUrl = [
+    "postgresql://",
+    encodeURIComponent(process.env.DB_USER),
+    ":",
+    encodeURIComponent(process.env.DB_PASSWORD),
+    "@",
+    process.env.DB_HOST,
+    ":",
+    dbPort,
+    "/",
+    encodeURIComponent(process.env.DB_NAME),
+  ].join("");
+  databaseTarget = `${process.env.DB_HOST}:${dbPort}/${process.env.DB_NAME}`;
+}
+
+if (!databaseUrl) {
+  const serverConfig = await import("./server-db-env.mjs");
+  databaseUrl = serverConfig.serverDatabaseEnv.DATABASE_URL;
+  databaseTarget = serverConfig.databaseTarget;
+}
 
 console.log(`[db:push:server] DATABASE_URL -> ${databaseTarget}`);
 
-const sql = postgres(serverDatabaseEnv.DATABASE_URL, { connect_timeout: 5 });
+const sql = postgres(databaseUrl, { connect_timeout: 5 });
 
 try {
   await sql.begin(async (transaction) => {
@@ -66,6 +96,55 @@ try {
         expired_date timestamp,
         admin_notes text
       )
+    `;
+
+    await transaction`
+      create table if not exists stations (
+        station_id text,
+        station_id_new text,
+        station_name text,
+        station_type text,
+        latitude double precision,
+        longitude double precision,
+        province text,
+        district text,
+        subdistrict text,
+        health_region text,
+        created_at timestamp with time zone default now()
+      )
+    `;
+
+    await transaction`
+      create index if not exists idx_stations_id
+      on stations (station_id)
+    `;
+
+    await transaction`
+      create index if not exists idx_stations_id_new
+      on stations (station_id_new)
+    `;
+
+    await transaction`
+      create table if not exists pm25_hourly (
+        station_id_new text not null,
+        air4_time timestamp with time zone not null,
+        pm25 double precision,
+        pm10 double precision,
+        o3 double precision,
+        co double precision,
+        no2 double precision,
+        so2 double precision
+      )
+    `;
+
+    await transaction`
+      create unique index if not exists uq_pm25_hourly_station_time
+      on pm25_hourly (station_id_new, air4_time)
+    `;
+
+    await transaction`
+      create index if not exists idx_pm25_hourly_air4_time
+      on pm25_hourly (air4_time)
     `;
 
     await transaction`

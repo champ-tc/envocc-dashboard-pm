@@ -31,7 +31,42 @@ services:
       POSTGRES_DB: ${ETL_POSTGRES_DB}
     ports: ["${ETL_POSTGRES_PORT:-15432}:5432"]
     volumes: [postgres-etl-volume:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ETL_POSTGRES_USER} -d ${ETL_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
+
+  db-schema-init:
+    image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    platform: linux/amd64
+    command: ["node", "scripts/push-server-schema.mjs"]
+    environment:
+      DB_HOST: postgres-etl
+      DB_PORT: 5432
+      DB_USER: ${ETL_POSTGRES_USER}
+      DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
+      DB_NAME: ${ETL_POSTGRES_DB}
+    depends_on:
+      postgres-etl: { condition: service_healthy }
+    restart: "no"
+
+  db-seed-init:
+    image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    platform: linux/amd64
+    command: ["node", "scripts/seed-users.mjs"]
+    env_file: [.env]
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres-etl
+      DB_PORT: 5432
+      DB_USER: ${ETL_POSTGRES_USER}
+      DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
+      DB_NAME: ${ETL_POSTGRES_DB}
+    depends_on:
+      db-schema-init: { condition: service_completed_successfully }
+    restart: "no"
 
   duckdb-data-init:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
@@ -64,6 +99,7 @@ services:
     volumes:
       - duckdb-data-volume:/app/public/duckdb
     depends_on:
+      db-seed-init: { condition: service_completed_successfully }
       duckdb-data-init: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
