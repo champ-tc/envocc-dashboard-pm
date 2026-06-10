@@ -200,7 +200,7 @@ services:
         mkdir -p "$${DUCKDB_DATA_DIR}"
         find /opt/airflow/dags/scripts -maxdepth 1 -type f \
           \( -name 'hdc*.csv' -o -name 'hdc*.parquet' \) \
-          -exec cp -u {} "$${DUCKDB_DATA_DIR}/" \;
+          -exec cp -f {} "$${DUCKDB_DATA_DIR}/" \;
         chown -R "$${AIRFLOW_UID:-50000}:0" "$${DUCKDB_DATA_DIR}"
         chmod -R ug+rwX,o+rX "$${DUCKDB_DATA_DIR}"
         airflow version
