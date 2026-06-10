@@ -29,23 +29,24 @@ def main():
 
     csv_path = output_dir / "hdc.csv"
     csv_temp_path = output_dir / ".hdc.csv.tmp"
-    hdc.to_csv(csv_temp_path, index=False, encoding="utf-8-sig")
-    os.replace(csv_temp_path, csv_path)
-
     parquet_path = output_dir / "hdc.parquet"
     parquet_temp_path = output_dir / ".hdc.parquet.tmp"
+
     try:
+        hdc.to_csv(csv_temp_path, index=False, encoding="utf-8-sig")
         hdc.to_parquet(
             parquet_temp_path,
             index=False,
             engine="pyarrow"
         )
+
         os.replace(parquet_temp_path, parquet_path)
+        os.replace(csv_temp_path, csv_path)
         print(f"Export completed: {output_dir}/hdc.csv, {output_dir}/hdc.parquet")
-    except ImportError:
+    except Exception:
+        csv_temp_path.unlink(missing_ok=True)
         parquet_temp_path.unlink(missing_ok=True)
-        print("Export completed: hdc.csv")
-        print("ข้ามการ export parquet เพราะไม่มี pyarrow")
+        raise
 
     print("Shape:", hdc.shape)
 
