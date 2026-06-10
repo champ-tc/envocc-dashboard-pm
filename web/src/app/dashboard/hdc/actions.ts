@@ -306,7 +306,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                         db.all(sqlProvinceData, (err4: Error | null, res4: DuckDBRow[]) => {
                             if (err4) return reject(err4);
 
-                            const midYearPath = path.join(process.cwd(), 'public', 'duckdb', 'mid_year.csv');
+                            const midYearPath = path.join(dataDir, 'mid_year.csv');
                             const sqlPop = `SELECT TRIM(province_name) as province, CAST(population AS DOUBLE) as pop FROM read_csv_auto('${midYearPath}', ignore_errors=true)`;
 
                             db.all(sqlPop, (errPop: Error | null, resPop: DuckDBRow[]) => {

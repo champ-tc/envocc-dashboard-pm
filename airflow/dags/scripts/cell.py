@@ -10,10 +10,13 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 def main():
+    output_dir = Path(os.getenv("DUCKDB_DATA_DIR", str(BASE_DIR)))
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     raw_files = [
-        BASE_DIR / "hdc_merged_long_2567.csv",
-        BASE_DIR / "hdc_merged_long_2568.csv",
-        BASE_DIR / "hdc_merged_long_2569.csv",
+        output_dir / "hdc_merged_long_2567.csv",
+        output_dir / "hdc_merged_long_2568.csv",
+        output_dir / "hdc_merged_long_2569.csv",
     ]
 
     missing_files = [str(file) for file in raw_files if not file.exists()]
@@ -24,20 +27,23 @@ def main():
 
     hdc = pd.concat([pd.read_csv(file) for file in raw_files], ignore_index=True)
 
-    # กำหนดที่เก็บไฟล์ output
-    output_dir = Path(os.getenv("DUCKDB_DATA_DIR", str(BASE_DIR)))
-    output_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = output_dir / "hdc.csv"
+    csv_temp_path = output_dir / ".hdc.csv.tmp"
+    hdc.to_csv(csv_temp_path, index=False, encoding="utf-8-sig")
+    os.replace(csv_temp_path, csv_path)
 
-    hdc.to_csv(output_dir / "hdc.csv", index=False, encoding="utf-8-sig")
-
+    parquet_path = output_dir / "hdc.parquet"
+    parquet_temp_path = output_dir / ".hdc.parquet.tmp"
     try:
         hdc.to_parquet(
-            output_dir / "hdc.parquet",
+            parquet_temp_path,
             index=False,
             engine="pyarrow"
         )
+        os.replace(parquet_temp_path, parquet_path)
         print(f"Export completed: {output_dir}/hdc.csv, {output_dir}/hdc.parquet")
     except ImportError:
+        parquet_temp_path.unlink(missing_ok=True)
         print("Export completed: hdc.csv")
         print("ข้ามการ export parquet เพราะไม่มี pyarrow")
 

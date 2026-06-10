@@ -4,7 +4,7 @@
 The Airflow system in this project handles the automated collection, processing, and storage of PM2.5 and patient health data. It uses a **CeleryExecutor** with **Redis** as a broker and **PostgreSQL** as the backend.
 
 ## Data Pipelines (DAGs)
-- **`pm25_patients_pipeline_dag.py`**: The core pipeline.
+- **`hdc_scraping.py`**: The core pipeline.
   - Scrapes data from external sources using Selenium.
   - Merges and cleans data using Pandas.
   - Outputs processed data to `web/public/duckdb/` and `postgres-etl`.

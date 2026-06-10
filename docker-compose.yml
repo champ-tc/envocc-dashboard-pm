@@ -33,11 +33,38 @@ services:
     volumes: [postgres-etl-volume:/var/lib/postgresql/data]
     restart: always
 
+  duckdb-data-init:
+    image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    platform: linux/amd64
+    user: "0:0"
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -eu
+        mkdir -p /data
+        for file in pm25.csv mid_year.csv dashboard_dds.csv; do
+          if [ -f "/app/public/duckdb/$${file}" ]; then
+            cp -n "/app/public/duckdb/$${file}" "/data/$${file}"
+          fi
+        done
+        chown -R 50000:0 /data
+        chmod -R ug+rwX,o+rX /data
+    volumes:
+      - duckdb-data-volume:/data
+    restart: "no"
+
   web:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
     platform: linux/amd64
     expose: ["3000"]
     env_file: [.env]
+    environment:
+      DUCKDB_DATA_DIR: /app/public/duckdb
+    volumes:
+      - duckdb-data-volume:/app/public/duckdb
+    depends_on:
+      duckdb-data-init: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 10s
@@ -78,11 +105,13 @@ services:
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
       DB_NAME: ${ETL_POSTGRES_DB}
       DB_PORT: 5432
+      DUCKDB_DATA_DIR: /opt/airflow/data
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/config:/opt/airflow/config
       - ./airflow/plugins:/opt/airflow/plugins
+      - duckdb-data-volume:/opt/airflow/data
 
   airflow-webserver:
     <<: *airflow-common
@@ -132,6 +161,12 @@ services:
         set -euo pipefail
         : "$${_AIRFLOW_WWW_USER_USERNAME:?Set _AIRFLOW_WWW_USER_USERNAME in .env}"
         : "$${_AIRFLOW_WWW_USER_PASSWORD:?Set _AIRFLOW_WWW_USER_PASSWORD in .env}"
+        mkdir -p "$${DUCKDB_DATA_DIR}"
+        find /opt/airflow/dags/scripts -maxdepth 1 -type f \
+          \( -name 'hdc*.csv' -o -name 'hdc*.parquet' \) \
+          -exec cp -n {} "$${DUCKDB_DATA_DIR}/" \;
+        chown -R "$${AIRFLOW_UID:-50000}:0" "$${DUCKDB_DATA_DIR}"
+        chmod -R ug+rwX,o+rX "$${DUCKDB_DATA_DIR}"
         airflow version
         airflow config get-value core auth_manager
         airflow db migrate
@@ -162,6 +197,7 @@ services:
     user: "0:0"
     depends_on:
       postgres: { condition: service_healthy }
+      duckdb-data-init: { condition: service_completed_successfully }
 
   nginx:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-nginx:latest
@@ -183,3 +219,4 @@ services:
 volumes:
   postgres-db-volume:
   postgres-etl-volume:
+  duckdb-data-volume:

@@ -117,14 +117,10 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
 # ==============================================================================
 # DAG
 # ==============================================================================
-# Set schedule based on environment (Disable in development)
-APP_ENV = os.getenv("APP_ENV", "development")
-dag_schedule = "0 3 * * *" if APP_ENV == "production" else None
-
 with DAG(
     dag_id="pm25_patients_pipeline_dag",
     description="Pipeline for scraping, merging, and concatenating PM2.5 patient data",
-    schedule=dag_schedule,
+    schedule="0 6 * * *",
     start_date=pendulum.datetime(2024, 1, 1, tz="Asia/Bangkok"),
 
     catchup=False,
