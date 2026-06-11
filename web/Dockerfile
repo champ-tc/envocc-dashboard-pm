@@ -27,6 +27,14 @@ RUN useradd --system --uid 1001 nextjs
 
 # คัดลอกไฟล์หลัก
 COPY --from=builder /app/public ./public
+RUN if [ -f /app/public/img/logo_ddc.png ]; then \
+      cp /app/public/img/logo_ddc.png /app/public/img/Logo_ddc.png; \
+    elif [ -f /app/public/img/Logo_ddc.png ]; then \
+      cp /app/public/img/Logo_ddc.png /app/public/img/logo_ddc.png; \
+    else \
+      echo "DDC logo asset not found" >&2; \
+      exit 1; \
+    fi
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nextjs /app/scripts ./scripts
