@@ -70,6 +70,19 @@ const seedUsers = isProduction
           runtimeEnv._AIRFLOW_WWW_USER_PASSWORD,
         role: "superadmin",
       },
+      ...(runtimeEnv.WEB_ADMIN_USERNAME ||
+      runtimeEnv.WEB_ADMIN_EMAIL ||
+      runtimeEnv.WEB_ADMIN_PASSWORD
+        ? [
+            {
+              name: runtimeEnv.WEB_ADMIN_NAME || "Seed Admin",
+              email: runtimeEnv.WEB_ADMIN_EMAIL,
+              username: runtimeEnv.WEB_ADMIN_USERNAME,
+              password: runtimeEnv.WEB_ADMIN_PASSWORD,
+              role: "admin",
+            },
+          ]
+        : []),
       ...(runtimeEnv.WEB_USER_USERNAME ||
       runtimeEnv.WEB_USER_EMAIL ||
       runtimeEnv.WEB_USER_PASSWORD

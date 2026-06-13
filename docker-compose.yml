@@ -138,7 +138,11 @@ services:
       AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
       AIRFLOW__CORE__LOGGING_LEVEL: INFO
+      AIRFLOW_STARTUP_TRIGGER_DAGS: ${AIRFLOW_STARTUP_TRIGGER_DAGS:-true}
+      AIRFLOW_STARTUP_DAG_WAIT_SECONDS: ${AIRFLOW_STARTUP_DAG_WAIT_SECONDS:-180}
+      AIRFLOW_STARTUP_DAG_POLL_SECONDS: ${AIRFLOW_STARTUP_DAG_POLL_SECONDS:-10}
       # --- Airflow 3.0 Core Security Fixes ---
       AIRFLOW__CORE__AUTH_MANAGER: 'airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager'
       AIRFLOW__FAB__AUTH_BACKENDS: 'airflow.providers.fab.auth_manager.api.auth.backend.session'
@@ -187,7 +191,12 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
-    command: scheduler
+    command:
+      - bash
+      - -c
+      - |
+        python /opt/airflow/scripts/startup_dags.py &
+        exec airflow scheduler
     user: "${AIRFLOW_UID:-1000}:0"
     restart: always
     depends_on:
