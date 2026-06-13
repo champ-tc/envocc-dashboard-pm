@@ -70,6 +70,19 @@ const seedUsers = isProduction
           runtimeEnv._AIRFLOW_WWW_USER_PASSWORD,
         role: "superadmin",
       },
+      ...(runtimeEnv.WEB_USER_USERNAME ||
+      runtimeEnv.WEB_USER_EMAIL ||
+      runtimeEnv.WEB_USER_PASSWORD
+        ? [
+            {
+              name: runtimeEnv.WEB_USER_NAME || "Seed User",
+              email: runtimeEnv.WEB_USER_EMAIL,
+              username: runtimeEnv.WEB_USER_USERNAME,
+              password: runtimeEnv.WEB_USER_PASSWORD,
+              role: "user",
+            },
+          ]
+        : []),
     ]
   : [
       {
@@ -91,11 +104,18 @@ const seedUsers = isProduction
 for (const seedUser of seedUsers) {
   if (!seedUser.email || !seedUser.username || !seedUser.password) {
     throw new Error(
-      "Production seed requires WEB_SUPERADMIN_EMAIL, WEB_SUPERADMIN_USERNAME, and WEB_SUPERADMIN_PASSWORD.",
+      `Seed account "${seedUser.role}" requires email, username, and password.`,
     );
   }
-  if (isProduction && seedUser.password.length < 12) {
-    throw new Error("WEB_SUPERADMIN_PASSWORD must be at least 12 characters.");
+  if (
+    isProduction &&
+    seedUser.password.length < 12 &&
+    runtimeEnv.WEB_ALLOW_INSECURE_SEED_PASSWORDS !== "true"
+  ) {
+    throw new Error(
+      `${seedUser.username} password must be at least 12 characters. ` +
+        "Set WEB_ALLOW_INSECURE_SEED_PASSWORDS=true only for a controlled environment.",
+    );
   }
 }
 
