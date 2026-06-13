@@ -47,13 +47,15 @@ export default function AdminRequestsPage() {
     };
 
     return (
-        <div className="w-full">
-            <div className="mb-8">
-                <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">คำขอเข้าถึงข้อมูล</h1>
-                <p className="text-slate-500 font-medium">อนุมัติหรือปฏิเสธคำขอเข้าถึงข้อมูล BigData (HDC)</p>
+        <div className="auth-page">
+            <div className="auth-page-header">
+                <div>
+                    <h1 className="auth-page-title">คำขอเข้าถึงข้อมูล</h1>
+                    <p className="auth-page-description">อนุมัติหรือปฏิเสธคำขอเข้าถึงข้อมูล BigData (HDC)</p>
+                </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            <div className="auth-surface flex flex-col overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[900px]">
                         <thead>

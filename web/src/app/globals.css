@@ -5,6 +5,118 @@
     --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
 }
 
+.authenticated-font {
+    --font-sans: var(--font-authenticated), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-authenticated), ui-sans-serif, system-ui, sans-serif;
+    color: #0f172a;
+}
+
+.authenticated-font .font-black {
+    font-weight: 700;
+}
+
+.authenticated-font .tracking-widest {
+    letter-spacing: 0.06em;
+}
+
+.auth-main {
+    background:
+        radial-gradient(circle at 0% 0%, rgb(219 234 254 / 55%), transparent 30rem),
+        radial-gradient(circle at 100% 15%, rgb(224 242 254 / 45%), transparent 32rem),
+        #f8fafc;
+}
+
+.auth-content {
+    width: min(100%, 1600px);
+    min-height: 100%;
+    margin-inline: auto;
+    padding: 1.25rem;
+}
+
+.auth-page {
+    width: 100%;
+}
+
+.auth-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.auth-page-title {
+    color: #0f172a;
+    font-size: clamp(1.6rem, 3vw, 2.15rem);
+    font-weight: 750;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+}
+
+.auth-page-description {
+    margin-top: 0.35rem;
+    color: #64748b;
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+.auth-surface {
+    border: 1px solid rgb(226 232 240 / 90%);
+    border-radius: 1.5rem;
+    background: rgb(255 255 255 / 92%);
+    box-shadow: 0 18px 45px -32px rgb(15 23 42 / 45%);
+    backdrop-filter: blur(12px);
+}
+
+.authenticated-font table thead tr {
+    background: #f8fafc;
+}
+
+.authenticated-font table th {
+    color: #64748b;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.authenticated-font table td {
+    vertical-align: middle;
+}
+
+.authenticated-font table tbody tr {
+    transition: background-color 160ms ease;
+}
+
+.authenticated-font table tbody tr:hover {
+    background: rgb(239 246 255 / 55%);
+}
+
+.authenticated-font input:not([type='checkbox']):not([type='radio']),
+.authenticated-font select,
+.authenticated-font textarea {
+    min-height: 2.75rem;
+    border-color: #cbd5e1;
+    border-radius: 0.85rem;
+}
+
+.authenticated-font input:focus,
+.authenticated-font select:focus,
+.authenticated-font textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 12%);
+}
+
+.authenticated-font .btn {
+    text-transform: none;
+}
+
+@media (min-width: 768px) {
+    .auth-content {
+        padding: 2rem;
+    }
+}
+
 .cloud {
     display: inline-flex;
     align-items: center;

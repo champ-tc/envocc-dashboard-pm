@@ -64,17 +64,19 @@ export default function HdcDownloadPage() {
     }, []);
 
     return (
-        <div className="max-w-3xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">
+        <div className="auth-page max-w-4xl">
+            <div className="auth-page-header">
+                <div>
+                <h1 className="auth-page-title">
                     ดาวน์โหลดข้อมูล HDC
                 </h1>
-                <p className="text-slate-500 font-medium">
+                <p className="auth-page-description">
                     ดาวน์โหลดไฟล์ hdc.csv ล่าสุดที่สร้างจาก Airflow pipeline
                 </p>
+                </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+            <div className="auth-surface p-6 md:p-8">
                 {isLoading ? (
                     <p className="text-slate-500">กำลังตรวจสอบไฟล์จาก pipeline volume...</p>
                 ) : status?.exists ? (

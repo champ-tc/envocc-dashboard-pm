@@ -5,14 +5,14 @@ export default async function AdminProfilePage() {
     const session = await requireRoles(['admin', 'superadmin']);
 
     return (
-        <div className="max-w-5xl">
-            <div className="mb-8">
-                <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">ข้อมูลส่วนตัว</h1>
-                <p className="text-slate-500 font-medium">จัดการข้อมูลและรหัสผ่านของคุณ</p>
+        <div className="auth-page max-w-5xl">
+            <div className="auth-page-header">
+                <div>
+                    <h1 className="auth-page-title">ข้อมูลส่วนตัว</h1>
+                    <p className="auth-page-description">ตรวจสอบข้อมูลบัญชีและเปลี่ยนรหัสผ่าน</p>
+                </div>
             </div>
-            <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-slate-200">
-                <ProfileForm user={session} />
-            </div>
+            <ProfileForm user={session} />
         </div>
     );
 }

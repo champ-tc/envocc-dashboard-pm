@@ -1,10 +1,10 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarDays } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import EditablePagination from '@/components/EditablePagination';
+import CalendarDatePicker from '@/components/shared/CalendarDatePicker';
 
 type Pollutant = 'pm25' | 'pm10' | 'o3' | 'co' | 'no2' | 'so2';
 type Statistic = 'Max' | 'Min' | 'Avg';
@@ -179,26 +179,20 @@ export default function Pm25DailyManagementPage() {
     };
 
     return (
-        <div className="w-full">
-            <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="auth-page">
+            <div className="auth-page-header">
                 <div>
-                    <h1 className="mb-2 text-3xl font-black tracking-tight text-slate-800">จัดการค่าฝุ่นรายวัน</h1>
-                    <p className="font-medium text-slate-500">เลือกวันที่หนึ่งวันเพื่อดู เพิ่ม แก้ไข และลบค่าสรุปรายวัน</p>
+                    <h1 className="auth-page-title">จัดการค่าฝุ่นรายวัน</h1>
+                    <p className="auth-page-description">เลือกวันที่หนึ่งวันเพื่อดู เพิ่ม แก้ไข และลบค่าสรุปรายวัน</p>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row">
-                    <label className="flex min-w-64 cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10">
-                        <CalendarDays className="h-5 w-5 shrink-0 text-blue-600" />
-                        <span className="flex-1">
-                            <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">วันที่ข้อมูล</span>
-                            <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} className="w-full cursor-pointer bg-transparent text-sm font-black text-slate-700 outline-none" aria-label="เลือกวันที่" />
-                        </span>
-                    </label>
+                    <CalendarDatePicker label="วันที่ข้อมูล" value={selectedDate} onChange={setSelectedDate} className="min-w-64" />
                     <input disabled={!selectedDate} type="text" placeholder="ค้นหาสถานี จังหวัด หรือรหัส..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-72" />
                     <button disabled={!selectedDate} onClick={openCreateForm} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">+ เพิ่มข้อมูล</button>
                 </div>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="auth-surface overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1050px] text-left">
                         <thead>

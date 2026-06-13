@@ -13,19 +13,21 @@ export default function AdminLayout({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+        <div className="flex h-screen overflow-hidden bg-slate-100 text-slate-900 font-sans">
             <Sidebar 
                 role={session.role} 
                 isOpen={isSidebarOpen} 
                 onClose={() => setIsSidebarOpen(false)} 
             />
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <Navbar 
                     session={session} 
                     onToggleSidebar={() => setIsSidebarOpen(true)} 
                 />
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative">
-                    {children}
+                <main className="auth-main relative flex-1 overflow-y-auto">
+                    <div className="auth-content">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 interface DatePickerProps {
     label: string;
@@ -12,138 +13,109 @@ interface DatePickerProps {
 
 export default function DatePicker({ label, options, value, onChange, thaiMonths }: DatePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
-    
-    // Extract available years and months from options
-    const availableData = useMemo(() => {
-        return (options || []).reduce((acc: any, dateStr: string) => {
-            const [y, m] = dateStr.split('-');
-            if (!acc[y]) acc[y] = new Set();
-            acc[y].add(m);
-            return acc;
-        }, {});
-    }, [options]);
+    const normalizedOptions = useMemo(
+        () => Array.from(new Set((options || []).map((date) => date.slice(0, 7)))).sort().reverse(),
+        [options],
+    );
+    const availableYears = useMemo(
+        () => Array.from(new Set(normalizedOptions.map((date) => date.slice(0, 4)))),
+        [normalizedOptions],
+    );
+    const selectedMonth = value ? value.slice(0, 7) : '';
+    const [viewYear, setViewYear] = useState(selectedMonth.slice(0, 4));
 
-    const availableYears = useMemo(() => 
-        Object.keys(availableData).sort((a, b) => b.localeCompare(a)), 
-    [availableData]);
+    useEffect(() => {
+        if (!isOpen) return;
+        setViewYear(selectedMonth.slice(0, 4) || availableYears[0] || new Date().getFullYear().toString());
+    }, [isOpen, selectedMonth, availableYears]);
 
-    // Current view state (internal to the picker)
-    const [viewYear, setViewYear] = useState('');
-
-    // Update viewYear when availableYears are loaded
-    useMemo(() => {
-        if (!viewYear && availableYears.length > 0) {
-            if (value) {
-                setViewYear(value.split('-')[0]);
-            } else {
-                setViewYear(availableYears[0]);
-            }
-        }
-    }, [availableYears, value, viewYear]);
-
-    const formatDate = (dateStr: string) => {
-        if (!dateStr || !dateStr.includes('-')) return 'เลือกเดือน...';
-        const [y, m] = dateStr.split('-');
-        return `${thaiMonths[parseInt(m) - 1]} พ.ศ. ${parseInt(y) + 543}`;
-    };
-
-    const handlePrevYear = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const currentIndex = availableYears.indexOf(viewYear);
-        if (currentIndex < availableYears.length - 1) {
-            setViewYear(availableYears[currentIndex + 1]);
-        }
-    };
-
-    const handleNextYear = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const currentIndex = availableYears.indexOf(viewYear);
-        if (currentIndex > 0) {
-            setViewYear(availableYears[currentIndex - 1]);
-        }
+    const yearIndex = availableYears.indexOf(viewYear);
+    const formatMonth = (date: string) => {
+        if (!date) return 'เลือกเดือน';
+        const [year, month] = date.split('-').map(Number);
+        return `${thaiMonths[month - 1]} ${year + 543}`;
     };
 
     return (
-        <div className="relative flex-1">
-            <label className="block text-sm font-bold text-slate-500 mb-2 ml-1 uppercase tracking-tight">{label}</label>
-            <button 
+        <div className="relative min-w-0 flex-1">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">{label}</label>
+            <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)} 
-                className={`w-full bg-white border-2 rounded-2xl text-base font-bold py-3.5 px-5 outline-none flex justify-between items-center transition-all ${
-                    isOpen ? 'border-indigo-600 ring-4 ring-indigo-50' : 'border-slate-100 hover:border-indigo-200'
+                onClick={() => setIsOpen(true)}
+                className={`flex min-h-12 w-full items-center gap-3 rounded-xl border bg-white px-3.5 text-left transition ${
+                    isOpen ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-blue-300'
                 }`}
             >
-                <span className={value ? 'text-slate-800' : 'text-slate-400'}>
-                    {formatDate(value)}
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <CalendarDays className="size-4" />
                 </span>
-                <svg className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-180 text-indigo-600' : 'text-slate-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
+                <span className={`min-w-0 flex-1 truncate text-sm font-semibold ${value ? 'text-slate-800' : 'text-slate-400'}`}>
+                    {formatMonth(selectedMonth)}
+                </span>
+                <ChevronDown className="size-4 text-slate-400" />
             </button>
-            
+
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-[200] mt-3 w-72 md:w-80 bg-white border border-slate-200 rounded-[2rem] shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-                        {/* Year Selector Header */}
-                        <div className="flex items-center justify-between mb-6 px-1">
-                            <button 
-                                onClick={handlePrevYear}
-                                disabled={availableYears.indexOf(viewYear) === availableYears.length - 1}
-                                className="p-2 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-20"
+                    <button type="button" aria-label="ปิดตัวเลือกเดือน" className="fixed inset-0 z-[100] cursor-default bg-slate-950/20 backdrop-blur-[1px]" onClick={() => setIsOpen(false)} />
+                    <div className="absolute left-0 z-[110] mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+                        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+                            <button
+                                type="button"
+                                disabled={yearIndex === availableYears.length - 1 || yearIndex < 0}
+                                onClick={() => setViewYear(availableYears[yearIndex + 1])}
+                                className="btn btn-square btn-ghost btn-sm disabled:opacity-20"
                             >
-                                <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
+                                <ChevronLeft className="size-4" />
                             </button>
-                            
                             <div className="text-center">
-                                <span className="text-lg font-black text-indigo-600">พ.ศ. {parseInt(viewYear) + 543}</span>
+                                <p className="text-xs font-medium text-slate-400">เลือกเดือน</p>
+                                <p className="font-bold text-slate-900">พ.ศ. {Number(viewYear) + 543}</p>
                             </div>
-
-                            <button 
-                                onClick={handleNextYear}
-                                disabled={availableYears.indexOf(viewYear) <= 0}
-                                className="p-2 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-20"
+                            <button
+                                type="button"
+                                disabled={yearIndex <= 0}
+                                onClick={() => setViewYear(availableYears[yearIndex - 1])}
+                                className="btn btn-square btn-ghost btn-sm disabled:opacity-20"
                             >
-                                <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                                <ChevronRight className="size-4" />
                             </button>
                         </div>
 
-                        {/* Months Grid */}
-                        <div className="grid grid-cols-3 gap-2">
-                            {Array.from({ length: 12 }).map((_, i) => {
-                                const monthNum = (i + 1).toString().padStart(2, '0');
-                                const dateValue = `${viewYear}-${monthNum}-01`;
-                                const isAvailable = availableData[viewYear]?.has(monthNum);
-                                const isSelected = value === dateValue;
-
+                        <div className="grid grid-cols-3 gap-2 p-4">
+                            {thaiMonths.map((monthName, index) => {
+                                const month = String(index + 1).padStart(2, '0');
+                                const nextValue = `${viewYear}-${month}`;
+                                const isAvailable = normalizedOptions.includes(nextValue);
+                                const isSelected = selectedMonth === nextValue;
                                 return (
                                     <button
-                                        key={i}
+                                        key={month}
+                                        type="button"
                                         disabled={!isAvailable}
                                         onClick={() => {
-                                            onChange(dateValue);
+                                            const sourceOption = options.find((option) => option.startsWith(nextValue));
+                                            onChange(sourceOption || nextValue);
                                             setIsOpen(false);
                                         }}
-                                        className={`py-3 rounded-2xl text-sm font-bold transition-all ${
-                                            isSelected 
-                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-[1.05]' 
-                                                : isAvailable 
-                                                    ? 'bg-slate-50 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600' 
-                                                    : 'text-slate-200 cursor-not-allowed'
+                                        className={`rounded-xl px-2 py-3 text-sm font-semibold transition ${
+                                            isSelected
+                                                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                                : isAvailable
+                                                    ? 'bg-slate-50 text-slate-700 hover:bg-blue-50 hover:text-blue-700'
+                                                    : 'cursor-not-allowed bg-transparent text-slate-300'
                                         }`}
                                     >
-                                        {thaiMonths[i]}
+                                        {monthName}
                                     </button>
                                 );
                             })}
                         </div>
-                        
-                        <div className="mt-6 pt-4 border-t border-slate-50 text-center">
-                            <button 
-                                onClick={() => setIsOpen(false)}
-                                className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest"
-                            >
-                                ปิดหน้าต่าง
+
+                        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
+                            <span className="text-xs text-slate-400">{normalizedOptions.length} เดือนที่มีข้อมูล</span>
+                            <button type="button" onClick={() => setIsOpen(false)} className="btn btn-ghost btn-sm gap-1 text-slate-500">
+                                <X className="size-4" /> ปิด
                             </button>
                         </div>
                     </div>

@@ -104,20 +104,22 @@ export default function DdsUploadPage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">
+        <div className="auth-page max-w-5xl">
+            <div className="auth-page-header">
+                <div>
+                <h1 className="auth-page-title">
                     อัปโหลดข้อมูล DDS
                 </h1>
-                <p className="text-slate-500 font-medium">
+                <p className="auth-page-description">
                     อัปโหลดไฟล์ Excel เพื่อส่งเข้า Airflow DDS pipeline
                 </p>
+                </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
                 <form
                     onSubmit={handleSubmit}
-                    className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm"
+                    className="auth-surface p-6"
                 >
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
@@ -158,7 +160,7 @@ export default function DdsUploadPage() {
                     </button>
                 </form>
 
-                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div className="auth-surface p-6">
                     <h2 className="text-lg font-black text-slate-800 mb-5">สถานะไฟล์ล่าสุด</h2>
 
                     {isLoading ? (

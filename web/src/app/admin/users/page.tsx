@@ -89,11 +89,11 @@ export default function UserManagementPage() {
     }, [searchQuery]);
 
     return (
-        <div className="w-full">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+        <div className="auth-page">
+            <div className="auth-page-header">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">จัดการผู้ใช้</h1>
-                    <p className="text-slate-500 font-medium">จัดการสิทธิ์การเข้าถึงและสถานะของผู้ใช้งานระบบ</p>
+                    <h1 className="auth-page-title">จัดการผู้ใช้</h1>
+                    <p className="auth-page-description">จัดการสิทธิ์การเข้าถึงและสถานะของผู้ใช้งานระบบ</p>
                 </div>
                 <div className="w-full md:w-80">
                     <div className="relative group">
@@ -111,7 +111,7 @@ export default function UserManagementPage() {
                 </div>
             </div>
             
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            <div className="auth-surface flex flex-col overflow-hidden">
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>

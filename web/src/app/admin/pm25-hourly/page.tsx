@@ -2,8 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CalendarDays, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import EditablePagination from '@/components/EditablePagination';
+import CalendarDatePicker from '@/components/shared/CalendarDatePicker';
 
 type HourlyRow = {
     stationIdNew: string;
@@ -262,28 +263,16 @@ export default function Pm25HourlyManagementPage() {
     };
 
     return (
-        <div className="w-full">
-            <div className="flex flex-col gap-4 mb-8 xl:flex-row xl:items-end xl:justify-between">
+        <div className="auth-page">
+            <div className="auth-page-header">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">จัดการค่าฝุ่นรายชั่วโมง</h1>
-                    <p className="text-slate-500 font-medium">เลือกช่วงวันที่เพื่อดู เพิ่ม แก้ไข และลบข้อมูลรายชั่วโมง</p>
+                    <h1 className="auth-page-title">จัดการค่าฝุ่นรายชั่วโมง</h1>
+                    <p className="auth-page-description">เลือกช่วงวันที่เพื่อดู เพิ่ม แก้ไข และลบข้อมูลรายชั่วโมง</p>
                 </div>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-end">
-                    <div className="flex gap-3">
-                        <label className="flex min-w-40 cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10">
-                            <CalendarDays className="h-5 w-5 shrink-0 text-blue-600" />
-                            <span className="flex-1">
-                                <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">จากวันที่</span>
-                                <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="w-full cursor-pointer bg-transparent text-sm font-black text-slate-700 outline-none" aria-label="วันที่เริ่มต้น" />
-                            </span>
-                        </label>
-                        <label className="flex min-w-40 cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10">
-                            <CalendarDays className="h-5 w-5 shrink-0 text-blue-600" />
-                            <span className="flex-1">
-                                <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">ถึงวันที่</span>
-                                <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="w-full cursor-pointer bg-transparent text-sm font-black text-slate-700 outline-none" aria-label="วันที่สิ้นสุด" />
-                            </span>
-                        </label>
+                    <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2">
+                        <CalendarDatePicker label="จากวันที่" value={startDate} onChange={setStartDate} max={endDate || undefined} className="min-w-52" />
+                        <CalendarDatePicker label="ถึงวันที่" value={endDate} onChange={setEndDate} min={startDate || undefined} className="min-w-52" />
                     </div>
                     <input type="text" placeholder="ค้นหาสถานี จังหวัด หรือรหัส..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full sm:w-64 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500" />
                     <div className="flex gap-2 w-full sm:w-auto">
@@ -295,7 +284,7 @@ export default function Pm25HourlyManagementPage() {
                 </div>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="auth-surface overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1100px] text-left">
                         <thead>
@@ -362,10 +351,7 @@ export default function Pm25HourlyManagementPage() {
                                         {stations.map((station) => <option key={station.stationIdNew} value={station.stationIdNew || ''}>{station.stationName || station.stationIdNew} {station.province ? `(${station.province})` : ''}</option>)}
                                     </select>
                                 </label>
-                                <label className="block">
-                                    <span className="mb-1.5 block text-xs font-bold text-slate-500">วันที่ *</span>
-                                    <input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
-                                </label>
+                                <CalendarDatePicker label="วันที่" value={form.date} onChange={(date) => setForm({ ...form, date })} required />
                                 <label className="block">
                                     <span className="mb-1.5 block text-xs font-bold text-slate-500">เวลา *</span>
                                     <input required type="time" value={form.time} onChange={(event) => setForm({ ...form, time: event.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" />

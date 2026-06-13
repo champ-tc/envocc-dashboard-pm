@@ -165,11 +165,11 @@ export default function StationManagementPage() {
     };
 
     return (
-        <div className="w-full">
-            <div className="flex flex-col gap-4 mb-8 md:flex-row md:items-end md:justify-between">
+        <div className="auth-page">
+            <div className="auth-page-header">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">จัดการสถานี</h1>
-                    <p className="text-slate-500 font-medium">เพิ่ม แก้ไข และลบข้อมูลสถานีตรวจวัดในฐานข้อมูล</p>
+                    <h1 className="auth-page-title">จัดการสถานี</h1>
+                    <p className="auth-page-description">เพิ่ม แก้ไข และลบข้อมูลสถานีตรวจวัดในฐานข้อมูล</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                     <input
@@ -185,7 +185,7 @@ export default function StationManagementPage() {
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="auth-surface overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left min-w-[1100px]">
                         <thead>

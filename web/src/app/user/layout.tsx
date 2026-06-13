@@ -1,6 +1,6 @@
 import { requireRoles } from '@/lib/auth';
-import AdminLayout from './AdminLayout';
 import { Noto_Sans_Thai } from 'next/font/google';
+import AdminLayout from '../admin/AdminLayout';
 
 const authenticatedFont = Noto_Sans_Thai({
     subsets: ['thai', 'latin'],
@@ -9,15 +9,11 @@ const authenticatedFont = Noto_Sans_Thai({
     variable: '--font-authenticated',
 });
 
-export default async function Layout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
-    const session = await requireRoles(['admin', 'superadmin']);
+export default async function UserLayout({ children }: { children: React.ReactNode }) {
+    const session = await requireRoles(['user']);
 
     return (
-        <div className={`${authenticatedFont.variable} authenticated-font`}>
+        <div className={`${authenticatedFont.variable} authenticated-font min-h-screen`}>
             <AdminLayout session={session}>
                 {children}
             </AdminLayout>

@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { LogOut, Menu, ShieldCheck } from 'lucide-react';
 
 export default function Navbar({ 
     session, 
@@ -18,42 +19,49 @@ export default function Navbar({
     };
 
     const isUser = session?.role === 'user';
-    const hasSidebar = session?.role === 'admin' || session?.role === 'superadmin';
+    const roleLabel = session?.role === 'superadmin'
+        ? 'ผู้ดูแลระบบสูงสุด'
+        : session?.role === 'admin'
+            ? 'ผู้ดูแลระบบ'
+            : 'ผู้ใช้งาน';
 
     return (
-        <header className="bg-white border-b border-slate-200 px-4 md:px-8 py-4 flex justify-between items-center z-30 sticky top-0 h-20">
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 shadow-sm shadow-slate-200/30 backdrop-blur-xl md:px-7">
             <div className="flex items-center gap-4">
-                {hasSidebar && (
-                    <button 
-                        onClick={onToggleSidebar}
-                        className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
-                        aria-label="Toggle Sidebar"
-                    >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                )}
+                <button
+                    type="button"
+                    onClick={onToggleSidebar}
+                    className="btn btn-square btn-ghost text-slate-600 lg:hidden"
+                    aria-label="เปิดเมนู"
+                >
+                    <Menu className="size-5" />
+                </button>
                 
-                <Link href={isUser ? "/user/main" : "/admin"} className="flex items-center gap-2 group">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs group-hover:scale-105 transition-transform">
-                        PM
+                <Link href={isUser ? "/user/main" : "/admin"} className="group flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                        <ShieldCheck className="size-5" />
                     </div>
-                    <h2 className="text-lg md:text-xl font-bold text-slate-800 tracking-tight hidden sm:block">ภาพรวมระบบ</h2>
+                    <div className="hidden sm:block">
+                        <p className="text-sm font-bold text-slate-900">ระบบฐานข้อมูล PM2.5</p>
+                        <p className="text-xs text-slate-500">ศูนย์จัดการข้อมูลและผู้ใช้งาน</p>
+                    </div>
                 </Link>
             </div>
 
-            <div className="flex items-center gap-3 md:gap-4">
-                <div className="hidden xs:flex flex-col items-end">
-                    <span className="text-slate-900 font-bold text-sm leading-tight">{session?.name}</span>
-                    <span className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">{session?.role}</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+                <div className="hidden text-right sm:block">
+                    <p className="max-w-48 truncate text-sm font-bold text-slate-900">{session?.name}</p>
+                    <p className="text-xs font-medium text-slate-500">{roleLabel}</p>
                 </div>
-                <div className="w-px h-8 bg-slate-200 mx-1 md:mx-2"></div>
+                <div className="flex size-10 items-center justify-center rounded-full bg-linear-to-br from-blue-600 to-sky-500 text-sm font-bold text-white shadow-md shadow-blue-200">
+                    {session?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
                 <button 
                     onClick={handleLogout} 
-                    className="text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-100 font-bold px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm transition-all active:scale-95"
+                    className="btn btn-ghost btn-sm gap-2 rounded-xl text-slate-500 hover:bg-rose-50 hover:text-rose-600"
                 >
-                    ออกจากระบบ
+                    <LogOut className="size-4" />
+                    <span className="hidden md:inline">ออกจากระบบ</span>
                 </button>
             </div>
         </header>
