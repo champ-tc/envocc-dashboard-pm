@@ -3,12 +3,13 @@
 pm25/air4thai_pm25_hourly.py
 
 ✅ เป้าหมาย (ตามที่คุณสั่ง):
-1) โหลด mapping จากฐานข้อมูลก่อน: stations (station_id -> station_id_new)
-2) โหลดข้อมูลจาก Air4Thai (JSON -> fallback XML) เพื่อได้ station_id + เวลา + ค่ามลพิษ
-3) ถ้า station_id ตรงกับ stations -> เติม station_id_new แล้วค่อย upsert ลง pm25_hourly
+1) โหลด station_id_new ทุกตำแหน่งจากตาราง stations
+2) โหลดข้อมูลจาก Air4Thai (JSON -> fallback XML) เพื่อได้ station_id + พิกัด + เวลา + ค่ามลพิษ
+3) สร้าง station_id_new จาก station_id + latitude + longitude แล้วตรวจว่ามีใน stations
 4) ตาราง pm25_hourly "ไม่เก็บที่อยู่/latlon/name/type" เก็บเฉพาะ:
    - station_id_new, air4_time (timestamptz), pm25, pm10, o3, co, no2, so2
-5) ถ้า station_id หา station_id_new ไม่เจอ -> ข้าม + log เตือน
+5) ถ้าไม่มีพิกัดหรือ station_id_new ไม่พบใน stations -> ข้าม + log เตือน
+6) เก็บเฉพาะข้อมูลวันที่ปัจจุบันตามเวลา Asia/Bangkok
 
 ✅ FIX เวลา "ให้ถูกแน่นอน":
 - รองรับวันที่หลายรูปแบบ: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY และกรณีปี พ.ศ. (>=2400) จะลบ 543
@@ -17,9 +18,9 @@ pm25/air4thai_pm25_hourly.py
 - ก่อน insert ลง timestamptz จะ convert เป็น UTC (best practice) เพื่อกันแสดงผลเหลื่อมตาม environment
 - เพิ่ม debug sample 5 แถวแรกให้เห็นชัด ๆ ว่าจาก API -> parsed เป็นอะไร
 
-✅ FIX mapping stations ไม่พังแม้ไม่มี created_at:
-- ถ้ามี created_at -> เลือกแถวล่าสุดต่อ station_id
-- ถ้าไม่มี created_at -> เลือกแถวคะแนนคุณภาพสูงสุด (subdistrict/lat/lon)
+✅ FIX mapping รองรับสถานีย้ายตำแหน่ง:
+- สร้าง station_id_new รูปแบบ station_id_latitude_longitude โดยพิกัดมีทศนิยม 6 ตำแหน่ง
+- เทียบ station_id_new กับทุกตำแหน่งที่มีใน stations โดยตรง
 """
 
 import os
@@ -29,6 +30,8 @@ import requests
 import numpy as np
 import pandas as pd
 import xml.etree.ElementTree as ET
+from datetime import date, datetime
+from typing import Optional, Tuple
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from requests.adapters import HTTPAdapter
@@ -101,6 +104,21 @@ def clean_num(s: pd.Series) -> pd.Series:
     """numeric: to float, -1/-999 -> NaN"""
     n = pd.to_numeric(clean_str(s), errors="coerce")
     return n.where(~n.isin(INVALID_NUM))
+
+
+def build_station_id_new(station_id: object, latitude: object, longitude: object) -> str:
+    """Build the same location-based station ID used by stations.py."""
+    sid = str(station_id or "").strip()
+    if not sid:
+        return ""
+    try:
+        lat = float(latitude)
+        lon = float(longitude)
+    except (TypeError, ValueError):
+        return ""
+    if not np.isfinite(lat) or not np.isfinite(lon):
+        return ""
+    return f"{sid}_{lat:.6f}_{lon:.6f}"
 
 
 def pick(df: pd.DataFrame, keys: list[str]) -> pd.Series:
@@ -218,6 +236,8 @@ def _fetch_xml(sess: requests.Session, timeout_s: int) -> pd.DataFrame:
             rows = []
             for st in root.findall(".//station"):
                 station_id = (st.findtext("stationID") or "").strip()
+                latitude = (st.findtext("lat") or st.findtext("latitude") or "").strip()
+                longitude = (st.findtext("long") or st.findtext("longitude") or "").strip()
 
                 # พยายามหา date/time จากหลาย node (เผื่อ schema เปลี่ยน)
                 date_txt, time_txt = "", ""
@@ -234,7 +254,13 @@ def _fetch_xml(sess: requests.Session, timeout_s: int) -> pd.DataFrame:
                     if date_txt and time_txt:
                         break
 
-                row = {"stationID": station_id, "AQILast.date": date_txt, "AQILast.time": time_txt}
+                row = {
+                    "stationID": station_id,
+                    "lat": latitude,
+                    "long": longitude,
+                    "AQILast.date": date_txt,
+                    "AQILast.time": time_txt,
+                }
 
                 # ค่า pollutants ใน XML จะมาเป็น attribute value
                 for tag in ["PM25", "PM10", "O3", "CO", "NO2", "SO2"]:
@@ -361,75 +387,37 @@ def parse_air4_datetime_th(date_s: pd.Series, time_s: pd.Series) -> pd.Series:
     return dt_th.dt.tz_convert("UTC")
 
 
-# =========================
-# DB mapping: station_id -> station_id_new
-# =========================
-def _has_column(engine, table: str, column: str) -> bool:
-    sql = text("""
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema='public'
-        AND table_name=:t
-        AND column_name=:c
-      LIMIT 1
-    """)
-    with engine.begin() as cx:
-        return cx.execute(sql, {"t": table, "c": column}).first() is not None
+def filter_current_th_date(
+    poll: pd.DataFrame,
+    current_date: Optional[date] = None,
+) -> Tuple[pd.DataFrame, date]:
+    """Keep only records whose Air4Thai date is today in Asia/Bangkok."""
+    today = current_date or datetime.now(TH_TZ).date()
+    air4_dates = poll["air4_time"].dt.tz_convert(TH_TZ).dt.date
+    return poll.loc[air4_dates == today].copy(), today
 
 
+# =========================
+# DB mapping: valid station_id_new values
+# =========================
 def load_station_map(engine) -> pd.DataFrame:
+    """Load every location-based station_id_new available in stations."""
+    sql = """
+      SELECT DISTINCT station_id_new
+      FROM stations
+      WHERE station_id_new IS NOT NULL
+        AND btrim(station_id_new) <> ''
     """
-    โหลด mapping จาก stations แบบ "ไม่พัง":
-    - ถ้ามี created_at -> ใช้แถวล่าสุดต่อ station_id
-    - ถ้าไม่มี created_at -> เลือกแถวคุณภาพดีที่สุด (subdistrict/lat/lon) ต่อ station_id
-    """
-    has_created_at = _has_column(engine, "stations", "created_at")
-
-    if has_created_at:
-        sql = """
-          SELECT DISTINCT ON (station_id)
-            station_id, station_id_new
-          FROM stations
-          WHERE station_id IS NOT NULL
-            AND station_id_new IS NOT NULL
-            AND btrim(station_id_new) <> ''
-          ORDER BY station_id, created_at DESC NULLS LAST
-        """
-    else:
-        sql = """
-          SELECT DISTINCT ON (station_id)
-            station_id, station_id_new
-          FROM (
-            SELECT
-              station_id,
-              station_id_new,
-              subdistrict,
-              latitude,
-              longitude,
-              (
-                CASE WHEN subdistrict IS NULL OR btrim(subdistrict) = '' THEN 0 ELSE 4 END
-                + CASE WHEN latitude  IS NULL THEN 0 ELSE 1 END
-                + CASE WHEN longitude IS NULL THEN 0 ELSE 1 END
-              ) AS score
-            FROM stations
-            WHERE station_id IS NOT NULL
-              AND station_id_new IS NOT NULL
-              AND btrim(station_id_new) <> ''
-          ) s
-          ORDER BY station_id, score DESC
-        """
 
     with engine.begin() as cx:
         rows = cx.execute(text(sql)).mappings().all()
-        mp = pd.DataFrame.from_records([dict(row) for row in rows], columns=["station_id", "station_id_new"])
+        mp = pd.DataFrame.from_records([dict(row) for row in rows], columns=["station_id_new"])
 
     if mp.empty:
         return mp
 
-    mp["station_id"] = clean_str(mp["station_id"])
     mp["station_id_new"] = clean_str(mp["station_id_new"])
-    mp = mp[(mp["station_id"] != "") & (mp["station_id_new"] != "")]
-    return mp
+    return mp[mp["station_id_new"] != ""].drop_duplicates("station_id_new")
 
 
 # =========================
@@ -439,10 +427,10 @@ def run(timeout: int = 30):
     """
     ขั้นตอน:
     1) load env + engine
-    2) load mapping stations
+    2) load valid station_id_new values from stations
     3) fetch Air4Thai
     4) parse datetime (TH) + pollutants
-    5) map station_id_new
+    5) build and validate station_id_new from station_id + latitude + longitude
     6) upsert pm25_hourly (only station_id_new + values)
     """
     print("[DEBUG] __file__ =", __file__)
@@ -466,6 +454,13 @@ def run(timeout: int = 30):
     if raw.empty:
         raise RuntimeError("Air4Thai returned no stationID rows")
 
+    latitude = clean_num(pick(raw, ["lat", "latitude"]))
+    longitude = clean_num(pick(raw, ["long", "longitude", "lon"]))
+    raw["station_id_new"] = [
+        build_station_id_new(sid, lat, lon)
+        for sid, lat, lon in zip(raw["station_id"], latitude, longitude)
+    ]
+
     # 3) parse datetime -> UTC tz-aware
     dt_utc = parse_air4_datetime_th(raw.get("AQILast.date"), raw.get("AQILast.time"))
 
@@ -481,13 +476,25 @@ def run(timeout: int = 30):
     poll = pd.DataFrame(
         {
             "station_id": raw["station_id"],
+            "station_id_new": raw["station_id_new"],
             "air4_time": dt_utc,
             **{k: clean_num(pick(raw, v)) for k, v in POLLUTANTS.items()},
         }
     ).dropna(subset=["station_id", "air4_time"])
 
     if poll.empty:
-        raise RuntimeError("No valid datetime rows after parsing AQILast.date/time")
+        print("[INFO] no rows to upsert (all Air4Thai dates are missing or invalid)")
+        return
+
+    rows_before_date_filter = len(poll)
+    poll, today_th = filter_current_th_date(poll)
+    print(
+        f"[INFO] current-date filter: date={today_th} "
+        f"kept={len(poll)} skipped={rows_before_date_filter - len(poll)}"
+    )
+    if poll.empty:
+        print(f"[INFO] no rows to upsert (no Air4Thai data for {today_th})")
+        return
 
     # 4) record ล่าสุดต่อ station_id
     poll = (
@@ -496,17 +503,31 @@ def run(timeout: int = 30):
             .reset_index(drop=True)
     )
 
-    # 5) map station_id_new
-    df = poll.merge(mp, on="station_id", how="left", validate="m:1")
+    missing_coordinates = poll[poll["station_id_new"] == ""]
+    if not missing_coordinates.empty:
+        print(
+            "[WARN] station rows missing valid latitude/longitude (first 50):",
+            missing_coordinates["station_id"].unique().tolist()[:50],
+        )
 
-    missing = df[df["station_id_new"].astype("string").fillna("") == ""]
+    candidates = poll[poll["station_id_new"] != ""].copy()
+    df = candidates.merge(
+        mp.assign(station_exists=True),
+        on="station_id_new",
+        how="left",
+        validate="m:1",
+    )
+
+    missing = df[df["station_exists"].isna()]
     if not missing.empty:
-        print("[WARN] station_id not found in stations (first 50):",
-              missing["station_id"].unique().tolist()[:50])
+        print(
+            "[WARN] station_id_new not found in stations (first 50):",
+            missing["station_id_new"].unique().tolist()[:50],
+        )
 
-    df = df[df["station_id_new"].astype("string").fillna("") != ""].copy()
+    df = df[df["station_exists"].notna()].copy()
     if df.empty:
-        print("[INFO] no rows to upsert (all station_id unmapped)")
+        print("[INFO] no rows to upsert (all station_id_new values unmapped)")
         return
 
     # 6) keep only required columns

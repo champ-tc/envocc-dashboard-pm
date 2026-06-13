@@ -89,6 +89,22 @@ services:
       - duckdb-data-volume:/data
     restart: "no"
 
+  dds-input-init:
+    image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    platform: linux/amd64
+    user: "0:0"
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -eu
+        mkdir -p /data
+        chown 1001:0 /data
+        chmod 775 /data
+    volumes:
+      - dds-input-volume:/data
+    restart: "no"
+
   web:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
     platform: linux/amd64
@@ -96,11 +112,14 @@ services:
     env_file: [.env]
     environment:
       DUCKDB_DATA_DIR: /app/public/duckdb
+      DDS_INPUT_DIR: /app/uploads/dds
     volumes:
       - duckdb-data-volume:/app/public/duckdb
+      - dds-input-volume:/app/uploads/dds
     depends_on:
       db-seed-init: { condition: service_completed_successfully }
       duckdb-data-init: { condition: service_completed_successfully }
+      dds-input-init: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 10s
@@ -142,12 +161,14 @@ services:
       DB_NAME: ${ETL_POSTGRES_DB}
       DB_PORT: 5432
       DUCKDB_DATA_DIR: /opt/airflow/data
+      DDS_INPUT_DIR: /opt/airflow/input/dds
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/config:/opt/airflow/config
       - ./airflow/plugins:/opt/airflow/plugins
       - duckdb-data-volume:/opt/airflow/data
+      - dds-input-volume:/opt/airflow/input/dds
 
   airflow-webserver:
     <<: *airflow-common
@@ -256,3 +277,4 @@ volumes:
   postgres-db-volume:
   postgres-etl-volume:
   duckdb-data-volume:
+  dds-input-volume:

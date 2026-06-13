@@ -2,6 +2,7 @@
 
 import type duckdbTypes from 'duckdb';
 const duckdb = typeof window === 'undefined' ? eval('require("duckdb")') : null;
+import fs from 'fs';
 import path from 'path';
 import { DDS_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
@@ -90,16 +91,23 @@ interface DuckDBRow {
 }
 
 let dbPromise: Promise<duckdbTypes.Database> | null = null;
+let loadedDdsMtimeMs: number | null = null;
 
 const getDB = (): Promise<duckdbTypes.Database> => {
-    if (dbPromise) return dbPromise;
+    const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
+    const ddsPath = path.join(dataDir, 'dashboard_dds.csv');
+    const pm25Path = path.join(dataDir, 'pm25.csv');
+    const midYearPath = path.join(dataDir, 'mid_year.csv');
+    const currentDdsMtimeMs = fs.statSync(ddsPath).mtimeMs;
+
+    if (dbPromise && loadedDdsMtimeMs === currentDdsMtimeMs) return dbPromise;
+
+    dbPromise = null;
+    loadedDdsMtimeMs = currentDdsMtimeMs;
 
     dbPromise = new Promise((resolve, reject) => {
         try {
             const db: duckdbTypes.Database = new duckdb.Database(':memory:');
-            const ddsPath = path.join(process.cwd(), 'public', 'duckdb', 'dashboard_dds.csv');
-            const pm25Path = path.join(process.cwd(), 'public', 'duckdb', 'pm25.csv');
-            const midYearPath = path.join(process.cwd(), 'public', 'duckdb', 'mid_year.csv');
 
             // Create mapping table from constants
             const mappingValues = Object.entries(PROVINCE_MAPPING)

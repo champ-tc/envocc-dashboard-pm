@@ -96,6 +96,12 @@ def normalize_province(raw: Optional[str]) -> Optional[str]:
     p = re.sub(r"\s+", "", p).replace("ฯ", "")
     return PROVINCE_ALIASES.get(p, p)
 
+def resolve_province(station_id: Any, raw_province: Optional[str]) -> Optional[str]:
+    province = normalize_province(raw_province)
+    if not province and str(station_id or "").strip().lower().startswith("bkp"):
+        return "กรุงเทพมหานคร"
+    return province
+
 def normalize_district(d: Optional[str], pv: Optional[str]) -> Optional[str]:
     if not d: return d
     d = re.sub(r"^(อ\.|อำเภอ)\s*", "", str(d).strip())
@@ -159,7 +165,7 @@ def fetch_air4thai(province_map: Dict[str, str]) -> pd.DataFrame:
         lat, lon = get_val(["lat", "latitude"]), get_val(["long", "longitude"])
         
         parsed = parse_area_text(area)
-        pv = normalize_province(get_val(["province"]) or parsed["province"])
+        pv = resolve_province(sid, get_val(["province"]) or parsed["province"])
         dist = normalize_district(get_val(["district"]) or parsed["district"], pv)
         
         rows.append({

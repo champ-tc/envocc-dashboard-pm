@@ -179,6 +179,12 @@ const ddcColorScale = (val: number) => {
 const THAI_MONTHS_FULL = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
+const formatThaiMonthYear = (dateStr: string) => {
+    const [year, month] = dateStr.split('-').map(Number);
+    if (!year || !month || month < 1 || month > 12) return dateStr;
+    return `${THAI_MONTHS_FULL[month - 1]} ${year + 543}`;
+};
+
 const DISEASE_CARDS = [
     { id: 'respiratory', label: 'กลุ่มโรคทางเดินหายใจ', dbValue: 'โรคระบบทางเดินหายใจ', color: 'rose' },
     { id: 'circulatory', label: 'กลุ่มโรคหัวใจและหลอดเลือด', dbValue: 'โรคระบบไหลเวียนเลือด', color: 'orange' },
@@ -224,11 +230,9 @@ export default function DDSDashboardPage() {
 
             if (sortedDates.length) {
                 const latestDateStr = sortedDates[0];
-                const latestDate = new Date(latestDateStr);
-                const year = latestDate.getFullYear();
-                const month = latestDate.getMonth() + 1;
+                const [year, month] = latestDateStr.split('-').map(Number);
                 const startYear = month >= 10 ? year : year - 1;
-                const startDate = `${startYear}-10-01`;
+                const startDate = `${startYear}-10`;
 
                 setFilters(prev => ({ ...prev, startDate: startDate, endDate: latestDateStr }));
             }
@@ -311,7 +315,7 @@ export default function DDSDashboardPage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 relative z-[60]">
                     <div className="flex items-center gap-4">
                         <div className="shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10">
-                            <Image src="/img/logo_ddc.png" alt="DDC Logo" width={50} height={50} className="rounded-xl object-contain" style={{ width: 'auto', height: 'auto' }} priority />
+                            <Image src="/img/ddc-logo.png" alt="DDC Logo" width={50} height={50} className="rounded-xl object-contain" style={{ width: 'auto', height: 'auto' }} priority />
                         </div>
                         <div className="shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10">
                             <Image src="/img/logo_doe.jpg" alt="DOE Logo" width={50} height={50} style={{ width: 'auto', height: 'auto' }} className="rounded-xl object-contain" priority />
@@ -374,7 +378,7 @@ export default function DDSDashboardPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 shrink-0">
                         {DISEASE_CARDS.map((card, i) => {
                             const stat = data?.top5DiseaseStats?.find((s) => s.id === card.id) || { value: 0 };
-                            
+
                             // Determine options based on diagnosisType
                             let cardOptions: string[] = [];
                             if (filters.diagnosisType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
@@ -400,11 +404,11 @@ export default function DDSDashboardPage() {
                                         <div className="w-1.5 h-6 rounded-full mb-1 shadow-lg" style={{ backgroundColor: card.color === 'rose' ? '#f43f5e' : (card.color === 'orange' ? '#f97316' : (card.color === 'emerald' ? '#10b981' : (card.color === 'blue' ? '#3b82f6' : '#a855f7'))) }}></div>
                                     </div>
                                     <div className="mt-auto relative z-20 w-full">
-                                        <MultiSelect 
-                                            options={cardOptions} 
-                                            selected={groupedIcd10[card.id] || []} 
-                                            onChange={(val) => handleGroupedIcd10Change(card.id, val)} 
-                                            placeholder={filters.diagnosisType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ' ? 'เลือกทั้งหมด' : 'แสดงทั้งหมด'} 
+                                        <MultiSelect
+                                            options={cardOptions}
+                                            selected={groupedIcd10[card.id] || []}
+                                            onChange={(val) => handleGroupedIcd10Change(card.id, val)}
+                                            placeholder={filters.diagnosisType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ' ? 'เลือกทั้งหมด' : 'แสดงทั้งหมด'}
                                         />
                                     </div>
                                 </div>
@@ -417,8 +421,13 @@ export default function DDSDashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1.1fr] gap-4 flex-1 min-h-0 relative z-[20]">
                     {/* Monthly Trend Chart */}
                     <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-[400px] lg:min-h-0">
-                        <div className="flex items-center justify-between mb-8 shrink-0">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-8 shrink-0">
                             <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div>แนวโน้มจำนวนผู้ป่วยรายเดือน</h4>
+                            {options.dates[0] && (
+                                <div className="badge badge-warning badge-outline px-4 py-3 text-xs font-bold">
+                                    ข้อมูลล่าสุดในระบบ: {formatThaiMonthYear(options.dates[0])}
+                                </div>
+                            )}
                         </div>
                         <div className="flex-1 relative flex flex-col justify-end px-14 min-h-0">
                             <div className="absolute left-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-[-25px] left-0 text-[10px] font-black text-white/40 uppercase">จำนวนผู้ป่วย (ราย)</div></div>

@@ -59,13 +59,13 @@ function validationError(error: unknown) {
     return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการจัดการข้อมูลค่าฝุ่นรายชั่วโมง' }, { status: 500 });
 }
 
-function bangkokDayRange(date: string) {
-    dateSchema.parse(date);
-    const start = new Date(`${date}T00:00:00+07:00`);
-    return {
-        start,
-        end: new Date(start.getTime() + 24 * 60 * 60 * 1000),
-    };
+function bangkokRange(startDate: string, endDate: string) {
+    dateSchema.parse(startDate);
+    dateSchema.parse(endDate);
+    const start = new Date(`${startDate}T00:00:00+07:00`);
+    const endDay = new Date(`${endDate}T00:00:00+07:00`);
+    const end = new Date(endDay.getTime() + 24 * 60 * 60 * 1000);
+    return { start, end };
 }
 
 async function stationExists(stationIdNew: string) {
@@ -80,8 +80,15 @@ export async function GET(request: Request) {
     if (!await isSuperadmin()) return unauthorized();
 
     try {
-        const date = dateSchema.parse(new URL(request.url).searchParams.get('date'));
-        const { start, end } = bangkokDayRange(date);
+        const url = new URL(request.url);
+        const startDate = url.searchParams.get('startDate');
+        const endDate = url.searchParams.get('endDate');
+
+        if (!startDate || !endDate) {
+            return NextResponse.json({ error: 'กรุณาระบุวันที่เริ่มต้นและวันที่สิ้นสุด' }, { status: 400 });
+        }
+
+        const { start, end } = bangkokRange(startDate, endDate);
         const rows = await db.select({
             stationIdNew: pm25Hourly.stationIdNew,
             stationName: stations.stationName,

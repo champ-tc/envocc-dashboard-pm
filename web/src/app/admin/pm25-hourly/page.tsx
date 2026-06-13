@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, Download } from 'lucide-react';
 import EditablePagination from '@/components/EditablePagination';
 
 type HourlyRow = {
@@ -26,6 +26,7 @@ type StationOption = {
 
 type HourlyForm = {
     stationIdNew: string;
+    date: string;
     time: string;
     pm25: string;
     pm10: string;
@@ -52,6 +53,17 @@ function formatTimeInBangkok(value: string) {
     }).format(new Date(value));
 }
 
+function formatDateTimeInBangkok(value: string) {
+    return new Intl.DateTimeFormat('th-TH', {
+        timeZone: 'Asia/Bangkok',
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(value));
+}
+
 function localTimeValue(value: string) {
     const parts = new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Bangkok',
@@ -61,6 +73,13 @@ function localTimeValue(value: string) {
     }).formatToParts(new Date(value));
     const part = (type: string) => parts.find((item) => item.type === type)?.value || '';
     return `${part('hour')}:${part('minute')}`;
+}
+
+function localDateValue(value: string) {
+    const date = new Date(value);
+    const tzOffset = 7 * 60; // Bangkok is UTC+7
+    const localTime = new Date(date.getTime() + tzOffset * 60000);
+    return localTime.toISOString().split('T')[0];
 }
 
 function toBangkokIso(date: string, time: string) {
@@ -73,7 +92,9 @@ async function getErrorMessage(response: Response) {
 }
 
 export default function Pm25HourlyManagementPage() {
-    const [selectedDate, setSelectedDate] = useState('');
+    const today = new Date().toISOString().split('T')[0];
+    const [startDate, setStartDate] = useState(today);
+    const [endDate, setEndDate] = useState(today);
     const [rows, setRows] = useState<HourlyRow[]>([]);
     const [stations, setStations] = useState<StationOption[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -85,6 +106,7 @@ export default function Pm25HourlyManagementPage() {
     const [editingRow, setEditingRow] = useState<HourlyRow | null>(null);
     const [form, setForm] = useState<HourlyForm>({
         stationIdNew: '',
+        date: today,
         time: '00:00',
         pm25: '',
         pm10: '',
@@ -95,14 +117,14 @@ export default function Pm25HourlyManagementPage() {
     });
 
     const fetchRows = async () => {
-        if (!selectedDate) {
+        if (!startDate || !endDate) {
             setRows([]);
             setIsLoading(false);
             return;
         }
         setIsLoading(true);
         try {
-            const response = await fetch(`/api/admin/pm25-hourly?date=${encodeURIComponent(selectedDate)}`);
+            const response = await fetch(`/api/admin/pm25-hourly?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
             if (!response.ok) throw new Error(await getErrorMessage(response));
             const data = await response.json();
             setRows(data.rows);
@@ -116,7 +138,7 @@ export default function Pm25HourlyManagementPage() {
 
     useEffect(() => {
         fetchRows();
-    }, [selectedDate]);
+    }, [startDate, endDate]);
 
     useEffect(() => {
         fetch('/api/admin/stations')
@@ -144,7 +166,7 @@ export default function Pm25HourlyManagementPage() {
 
     const openCreateForm = () => {
         setEditingRow(null);
-        setForm({ stationIdNew: '', time: '00:00', pm25: '', pm10: '', o3: '', co: '', no2: '', so2: '' });
+        setForm({ stationIdNew: '', date: startDate, time: '00:00', pm25: '', pm10: '', o3: '', co: '', no2: '', so2: '' });
         setIsFormOpen(true);
     };
 
@@ -152,6 +174,7 @@ export default function Pm25HourlyManagementPage() {
         setEditingRow(row);
         setForm({
             stationIdNew: row.stationIdNew,
+            date: localDateValue(row.air4Time),
             time: localTimeValue(row.air4Time),
             pm25: row.pm25?.toString() || '',
             pm10: row.pm10?.toString() || '',
@@ -169,7 +192,7 @@ export default function Pm25HourlyManagementPage() {
         try {
             const payload = {
                 ...form,
-                air4Time: toBangkokIso(selectedDate, form.time),
+                air4Time: toBangkokIso(form.date, form.time),
                 originalStationIdNew: editingRow?.stationIdNew,
                 originalAir4Time: editingRow?.air4Time,
             };
@@ -190,7 +213,7 @@ export default function Pm25HourlyManagementPage() {
     };
 
     const handleDelete = async (row: HourlyRow) => {
-        if (!confirm(`ยืนยันการลบข้อมูล ${row.stationName || row.stationIdNew} เวลา ${formatTimeInBangkok(row.air4Time)} น. ใช่หรือไม่?`)) return;
+        if (!confirm(`ยืนยันการลบข้อมูล ${row.stationName || row.stationIdNew} เวลา ${formatDateTimeInBangkok(row.air4Time)} น. ใช่หรือไม่?`)) return;
         try {
             const params = new URLSearchParams({ stationIdNew: row.stationIdNew, air4Time: row.air4Time });
             const response = await fetch(`/api/admin/pm25-hourly?${params}`, { method: 'DELETE' });
@@ -202,23 +225,73 @@ export default function Pm25HourlyManagementPage() {
         }
     };
 
+    const exportToCsv = () => {
+        if (filteredRows.length === 0) {
+            toast.error('ไม่มีข้อมูลที่จะส่งออก');
+            return;
+        }
+
+        const headers = ['เวลา', 'รหัสสถานี', 'ชื่อสถานี', 'จังหวัด', 'PM2.5', 'PM10', 'O3', 'CO', 'NO2', 'SO2'];
+        const csvRows = filteredRows.map(row => [
+            formatDateTimeInBangkok(row.air4Time),
+            row.stationIdNew,
+            row.stationName || '',
+            row.province || '',
+            row.pm25 ?? '',
+            row.pm10 ?? '',
+            row.o3 ?? '',
+            row.co ?? '',
+            row.no2 ?? '',
+            row.so2 ?? ''
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `pm25_hourly_${startDate}_to_${endDate}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="w-full">
             <div className="flex flex-col gap-4 mb-8 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">จัดการค่าฝุ่นรายชั่วโมง</h1>
-                    <p className="text-slate-500 font-medium">เลือกวันที่หนึ่งวันเพื่อดู เพิ่ม แก้ไข และลบข้อมูลรายชั่วโมง</p>
+                    <p className="text-slate-500 font-medium">เลือกช่วงวันที่เพื่อดู เพิ่ม แก้ไข และลบข้อมูลรายชั่วโมง</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <label className="flex min-w-64 cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10">
-                        <CalendarDays className="h-5 w-5 shrink-0 text-blue-600" />
-                        <span className="flex-1">
-                            <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">วันที่ข้อมูล</span>
-                            <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} className="w-full cursor-pointer bg-transparent text-sm font-black text-slate-700 outline-none" aria-label="เลือกวันที่" />
-                        </span>
-                    </label>
-                    <input disabled={!selectedDate} type="text" placeholder="ค้นหาสถานี จังหวัด หรือรหัส..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full sm:w-72 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100" />
-                    <button disabled={!selectedDate} onClick={openCreateForm} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">+ เพิ่มข้อมูล</button>
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-end">
+                    <div className="flex gap-3">
+                        <label className="flex min-w-40 cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10">
+                            <CalendarDays className="h-5 w-5 shrink-0 text-blue-600" />
+                            <span className="flex-1">
+                                <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">จากวันที่</span>
+                                <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="w-full cursor-pointer bg-transparent text-sm font-black text-slate-700 outline-none" aria-label="วันที่เริ่มต้น" />
+                            </span>
+                        </label>
+                        <label className="flex min-w-40 cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10">
+                            <CalendarDays className="h-5 w-5 shrink-0 text-blue-600" />
+                            <span className="flex-1">
+                                <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">ถึงวันที่</span>
+                                <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="w-full cursor-pointer bg-transparent text-sm font-black text-slate-700 outline-none" aria-label="วันที่สิ้นสุด" />
+                            </span>
+                        </label>
+                    </div>
+                    <input type="text" placeholder="ค้นหาสถานี จังหวัด หรือรหัส..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full sm:w-64 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500" />
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <button onClick={exportToCsv} disabled={filteredRows.length === 0} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:bg-slate-300">
+                            <Download className="h-4 w-4" /> Export CSV
+                        </button>
+                        <button onClick={openCreateForm} className="flex-1 sm:flex-none rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700">+ เพิ่มข้อมูล</button>
+                    </div>
                 </div>
             </div>
 
@@ -227,22 +300,20 @@ export default function Pm25HourlyManagementPage() {
                     <table className="w-full min-w-[1100px] text-left">
                         <thead>
                             <tr className="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                                <th className="px-5 py-4">เวลา</th>
+                                <th className="px-5 py-4">วัน-เวลา</th>
                                 <th className="px-5 py-4">สถานี</th>
                                 {pollutantFields.map((field) => <th key={field.key} className="px-4 py-4">{field.label}</th>)}
                                 <th className="px-5 py-4 text-center">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {!selectedDate ? (
-                                <tr><td colSpan={9} className="py-20 text-center text-slate-400">กรุณาเลือกวันที่จากปฏิทินก่อนแสดงข้อมูลรายชั่วโมง</td></tr>
-                            ) : isLoading ? (
+                            {isLoading ? (
                                 <tr><td colSpan={9} className="py-20 text-center font-bold text-slate-400">กำลังโหลดข้อมูล...</td></tr>
                             ) : displayedRows.length === 0 ? (
-                                <tr><td colSpan={9} className="py-20 text-center text-slate-400">ไม่พบข้อมูลในวันที่เลือก</td></tr>
+                                <tr><td colSpan={9} className="py-20 text-center text-slate-400">ไม่พบข้อมูลในส่วงวันที่เลือก</td></tr>
                             ) : displayedRows.map((row) => (
                                 <tr key={`${row.stationIdNew}-${row.air4Time}`} className="hover:bg-slate-50/50">
-                                    <td className="px-5 py-4 text-sm font-bold text-blue-600">{formatTimeInBangkok(row.air4Time)} น.</td>
+                                    <td className="px-5 py-4 text-sm font-bold text-blue-600">{formatDateTimeInBangkok(row.air4Time)} น.</td>
                                     <td className="px-5 py-4">
                                         <div className="font-bold text-slate-800">{row.stationName || row.stationIdNew}</div>
                                         <div className="text-xs text-slate-400">{row.stationIdNew} {row.province ? `· ${row.province}` : ''}</div>
@@ -291,8 +362,12 @@ export default function Pm25HourlyManagementPage() {
                                         {stations.map((station) => <option key={station.stationIdNew} value={station.stationIdNew || ''}>{station.stationName || station.stationIdNew} {station.province ? `(${station.province})` : ''}</option>)}
                                     </select>
                                 </label>
-                                <label className="block md:col-span-2">
-                                    <span className="mb-1.5 block text-xs font-bold text-slate-500">เวลาในวันที่ {selectedDate} *</span>
+                                <label className="block">
+                                    <span className="mb-1.5 block text-xs font-bold text-slate-500">วันที่ *</span>
+                                    <input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
+                                </label>
+                                <label className="block">
+                                    <span className="mb-1.5 block text-xs font-bold text-slate-500">เวลา *</span>
                                     <input required type="time" value={form.time} onChange={(event) => setForm({ ...form, time: event.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
                                 </label>
                                 {pollutantFields.map((field) => (

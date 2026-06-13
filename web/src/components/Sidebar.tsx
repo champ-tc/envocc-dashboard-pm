@@ -35,6 +35,8 @@ export default function Sidebar({
         menuItems.push({ label: 'จัดการสถานี', href: '/admin/stations' });
         menuItems.push({ label: 'จัดการค่าฝุ่นรายชั่วโมง', href: '/admin/pm25-hourly' });
         menuItems.push({ label: 'จัดการค่าฝุ่นรายวัน', href: '/admin/pm25-daily' });
+        menuItems.push({ label: 'อัปโหลดข้อมูล DDS', href: '/admin/dds-upload' });
+        menuItems.push({ label: 'ดาวน์โหลดข้อมูล HDC', href: '/admin/hdc-download' });
     }
 
     return (

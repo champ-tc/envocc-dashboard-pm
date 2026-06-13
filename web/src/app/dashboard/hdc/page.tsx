@@ -617,7 +617,7 @@ export default function DashboardHDC() {
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 relative z-[60]">
                     <div className="flex items-center gap-4">
                         <div className="shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10">
-                            <Image src="/img/logo_ddc.png" alt="DDC Logo" width={50} height={50} className="rounded-xl object-contain" style={{ width: 'auto', height: 'auto' }} priority />
+                            <Image src="/img/ddc-logo.png" alt="DDC Logo" width={50} height={50} className="rounded-xl object-contain" style={{ width: 'auto', height: 'auto' }} priority />
                         </div>
                         <div className="shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10">
                             <Image src="/img/logo_hdc.jpg" alt="HDC Logo" width={50} height={50} className="rounded-xl object-contain" style={{ width: 'auto', height: 'auto' }} priority />

@@ -2,21 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import DatePicker from './shared/DatePicker';
-import { getFilterOptions } from '@/app/dashboard/hdc/actions';
-import { THAI_MONTHS_SHORT } from '@/lib/constants';
 
 export default function BigDataDownload() {
     const [status, setStatus] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    // Filter options
-    const [dateOptions, setDateOptions] = useState<string[]>([]);
-    
-    // Filter states
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
 
     const fetchInitialData = async () => {
         try {
@@ -25,12 +15,6 @@ export default function BigDataDownload() {
             const data = await res.json();
             if (res.ok && data.requests.length > 0) {
                 setStatus(data.requests[0]);
-            }
-
-            // Fetch date options for filters
-            const options = await getFilterOptions();
-            if (options && options.dates) {
-                setDateOptions(options.dates);
             }
         } catch (error) {
             console.error('Failed to fetch initial data');
@@ -62,21 +46,7 @@ export default function BigDataDownload() {
     };
 
     const handleDownload = () => {
-        if (!startDate || !endDate) {
-            toast.error('กรุณาระบุช่วงวันที่ให้ครบถ้วน');
-            return;
-        }
-
-        const year = startDate.split('-')[0];
-        
-        // Prepare download URL with filters
-        const params = new URLSearchParams({
-            year,
-            startDate,
-            endDate
-        });
-        
-        window.location.href = `/api/user/download?${params.toString()}`;
+        window.location.href = '/api/user/download';
     };
 
     if (isLoading) {
@@ -90,7 +60,6 @@ export default function BigDataDownload() {
     const isApproved = status?.status === 'approved';
     const isExpired = status?.expiredDate && new Date(status.expiredDate) < new Date();
     const canDownload = isApproved && !isExpired;
-    const isReadyToDownload = canDownload && startDate && endDate;
 
     return (
         <div className="group p-8 bg-white border border-slate-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-500">
@@ -128,31 +97,18 @@ export default function BigDataDownload() {
 
                 {canDownload ? (
                     <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-700">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
-                            <DatePicker 
-                                label="ช่วงเวลาเริ่มต้น" 
-                                options={dateOptions} 
-                                value={startDate} 
-                                onChange={setStartDate} 
-                                thaiMonths={THAI_MONTHS_SHORT} 
-                            />
-                            <DatePicker 
-                                label="ช่วงเวลาสิ้นสุด" 
-                                options={dateOptions} 
-                                value={endDate} 
-                                onChange={setEndDate} 
-                                thaiMonths={THAI_MONTHS_SHORT} 
-                            />
+                        <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
+                            <p className="text-sm font-bold text-slate-700">
+                                ดาวน์โหลดไฟล์ HDC ทั้งหมดในรูปแบบ CSV
+                            </p>
+                            <p className="text-xs text-slate-500 mt-2">
+                                ไฟล์ที่ได้รับคือ hdc.csv เวอร์ชันล่าสุดจาก Airflow pipeline
+                            </p>
                         </div>
                         
                         <button 
                             onClick={handleDownload}
-                            disabled={!isReadyToDownload}
-                            className={`w-full py-4 rounded-2xl font-black text-base transition-all duration-300 flex items-center justify-center gap-3 shadow-2xl ${
-                                isReadyToDownload 
-                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 translate-y-0 active:scale-[0.98]' 
-                                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                            }`}
+                            className="w-full py-4 rounded-2xl font-black text-base transition-all duration-300 flex items-center justify-center gap-3 shadow-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 active:scale-[0.98]"
                         >
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
