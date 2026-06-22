@@ -46,6 +46,10 @@ const pollutantFields: { key: keyof Pick<HourlyForm, 'pm25' | 'pm10' | 'o3' | 'c
     { key: 'so2', label: 'SO2' },
 ];
 
+const tablePollutantFields: { key: keyof Pick<HourlyRow, 'pm25'>; label: string }[] = [
+    { key: 'pm25', label: 'PM2.5' },
+];
+
 function formatTimeInBangkok(value: string) {
     return new Intl.DateTimeFormat('th-TH', {
         timeZone: 'Asia/Bangkok',
@@ -286,20 +290,20 @@ export default function Pm25HourlyManagementPage() {
 
             <div className="auth-surface overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1100px] text-left">
+                    <table className="w-full min-w-[760px] text-left">
                         <thead>
                             <tr className="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase tracking-widest text-slate-400">
                                 <th className="px-5 py-4">วัน-เวลา</th>
                                 <th className="px-5 py-4">สถานี</th>
-                                {pollutantFields.map((field) => <th key={field.key} className="px-4 py-4">{field.label}</th>)}
+                                {tablePollutantFields.map((field) => <th key={field.key} className="px-4 py-4">{field.label}</th>)}
                                 <th className="px-5 py-4 text-center">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {isLoading ? (
-                                <tr><td colSpan={9} className="py-20 text-center font-bold text-slate-400">กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colSpan={4} className="py-20 text-center font-bold text-slate-400">กำลังโหลดข้อมูล...</td></tr>
                             ) : displayedRows.length === 0 ? (
-                                <tr><td colSpan={9} className="py-20 text-center text-slate-400">ไม่พบข้อมูลในส่วงวันที่เลือก</td></tr>
+                                <tr><td colSpan={4} className="py-20 text-center text-slate-400">ไม่พบข้อมูลในส่วงวันที่เลือก</td></tr>
                             ) : displayedRows.map((row) => (
                                 <tr key={`${row.stationIdNew}-${row.air4Time}`} className="hover:bg-slate-50/50">
                                     <td className="px-5 py-4 text-sm font-bold text-blue-600">{formatDateTimeInBangkok(row.air4Time)} น.</td>
@@ -307,7 +311,7 @@ export default function Pm25HourlyManagementPage() {
                                         <div className="font-bold text-slate-800">{row.stationName || row.stationIdNew}</div>
                                         <div className="text-xs text-slate-400">{row.stationIdNew} {row.province ? `· ${row.province}` : ''}</div>
                                     </td>
-                                    {pollutantFields.map((field) => <td key={field.key} className="px-4 py-4 text-sm text-slate-600">{row[field.key] ?? '-'}</td>)}
+                                    {tablePollutantFields.map((field) => <td key={field.key} className="px-4 py-4 text-sm text-slate-600">{row[field.key] ?? '-'}</td>)}
                                     <td className="px-5 py-4">
                                         <div className="flex justify-center gap-2">
                                             <button onClick={() => openEditForm(row)} className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-100">แก้ไข</button>

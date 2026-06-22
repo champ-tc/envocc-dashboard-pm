@@ -13,7 +13,8 @@ const DEFINITIONS = [
             "โรคหัวใจขาดเลือดเฉียบพลัน (Acute ischemic heart diseases)",
             "กลุ่มโรคตาอักเสบ (Conjunctivitis / Keratoconjunctivitis)",
             "กลุ่มโรคผิวหนังอักเสบ (Eczema / Urticaria)"
-        ]
+        ],
+        link: "https://ddc.moph.go.th/doed/pagecontent.php?page=1474&dept=doed"
     },
     {
         id: 2,
@@ -35,12 +36,14 @@ const DEFINITIONS = [
     {
         id: 5,
         title: "ข้อมูลจาก Digital Disease Surveillance (DDS)",
-        desc: "ข้อมูลการเฝ้าระวังโรคดิจิทัล กองระบาดวิทยา กรมควบคุมโรค"
+        desc: "ข้อมูลการเฝ้าระวังโรคดิจิทัล กองระบาดวิทยา กรมควบคุมโรค",
+        link: "https://dds-eservice.moph.go.th/login"
     },
     {
         id: 6,
         title: "ข้อมูลฝุ่นละออง PM2.5 (Air4Thai)",
-        desc: "ข้อมูลการตรวจวัดรายชั่วโมงจากสถานีตรวจวัด 105 สถานี 77 จังหวัด กรมควบคุมมลพิษ"
+        desc: "ข้อมูลการตรวจวัดรายชั่วโมงจากสถานีตรวจวัด 105 สถานี 77 จังหวัด กรมควบคุมมลพิษ",
+        link: "http://air4thai.pcd.go.th/webV3/#/History"
     }
 ];
 
@@ -69,7 +72,7 @@ function DefinitionBlock({ def }: { def: typeof DEFINITIONS[0] }) {
                     )}
                     {def.link && (
                         <div className="card-actions mt-4">
-                            <a target="_blank" href={def.link} rel="noopener noreferrer" 
+                            <a target="_blank" href={def.link} rel="noopener noreferrer"
                                 className="btn btn-sm btn-outline rounded-full font-medium shadow-xs border-blue-500 text-blue-600 hover:bg-linear-to-br hover:from-blue-600 hover:to-sky-500 hover:text-white hover:border-none">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                 ดูข้อมูลเพิ่มเติม
@@ -87,7 +90,7 @@ export default async function HomePage() {
     return (
         <div className="min-h-screen flex flex-col items-center text-slate-900 relative overflow-hidden font-sans selection:bg-blue-100"
             style={{ backgroundImage: "url('/img/background.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
-            
+
             <div className="absolute inset-0 bg-white/20 z-0" />
             <GuestNavbar />
 
@@ -100,10 +103,10 @@ export default async function HomePage() {
                 {/* Hero Section */}
                 <header className="space-y-4">
                     <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg leading-tight tracking-tight uppercase">
-                        PM2.5 Patient Database <br className="hidden sm:block" /> 
+                        PM2.5 Patient Database <br className="hidden sm:block" />
                         <span className="text-xl sm:text-2xl md:text-3xl block mt-2 font-bold opacity-90 capitalize">ระบบฐานข้อมูลผู้ป่วยจากฝุ่นละอองขนาดเล็ก</span>
                     </h1>
-                    
+
                     <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <Link href="/login" className="btn btn-lg rounded-full px-12 shadow-xl shadow-blue-500/20 hover:scale-105 transition-all w-full sm:w-auto bg-linear-to-br from-blue-600 to-sky-500 border-none text-white hover:shadow-blue-500/40">
                             เข้าสู่ระบบ (Login)

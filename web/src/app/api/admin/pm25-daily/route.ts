@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -82,7 +82,15 @@ export async function GET(request: Request) {
     if (!await isSuperadmin()) return unauthorized();
 
     try {
-        const date = dateSchema.parse(new URL(request.url).searchParams.get('date'));
+        const searchParams = new URL(request.url).searchParams;
+        const date = searchParams.get('date');
+        const startDate = searchParams.get('startDate') || date;
+        const endDate = searchParams.get('endDate') || date;
+        if (!startDate || !endDate) {
+            return NextResponse.json({ error: 'กรุณาระบุวันที่เริ่มต้นและวันที่สิ้นสุด' }, { status: 400 });
+        }
+        const parsedStartDate = dateSchema.parse(startDate);
+        const parsedEndDate = dateSchema.parse(endDate);
         const rows = await db.select({
             air4Date: pm25Daily.air4Date,
             stationIdNew: pm25Daily.stationIdNew,
@@ -109,8 +117,8 @@ export async function GET(request: Request) {
         })
             .from(pm25Daily)
             .leftJoin(stations, eq(pm25Daily.stationIdNew, stations.stationIdNew))
-            .where(eq(pm25Daily.air4Date, date))
-            .orderBy(asc(pm25Daily.stationIdNew));
+            .where(and(gte(pm25Daily.air4Date, parsedStartDate), lte(pm25Daily.air4Date, parsedEndDate)))
+            .orderBy(asc(pm25Daily.air4Date), asc(pm25Daily.stationIdNew));
         return NextResponse.json({ rows });
     } catch (error) {
         return validationError(error);

@@ -154,10 +154,8 @@ interface FilterProps {
     handleRegionChange: (val: string[]) => void;
     handleProvinceChange: (val: string[]) => void;
     handleDistrictChange: (val: string[]) => void;
-    handleSubdistrictChange: (val: string[]) => void;
     baseProvinces: string[];
     baseDistricts: string[];
-    baseSubdistricts: string[];
     thaiMonthsShort: string[];
 }
 
@@ -168,14 +166,12 @@ function FilterSection({
     handleRegionChange,
     handleProvinceChange,
     handleDistrictChange,
-    handleSubdistrictChange,
     baseProvinces,
     baseDistricts,
-    baseSubdistricts,
     thaiMonthsShort 
 }: FilterProps) {
     return (
-        <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-8 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-40">
+        <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-40">
             <CustomDatePicker 
                 label="จากเดือน" 
                 options={options?.dates || []} 
@@ -207,12 +203,6 @@ function FilterSection({
                 options={baseDistricts} 
                 selected={filters.districts} 
                 onChange={handleDistrictChange} 
-            />
-            <MultiSelect 
-                label="ตำบล/แขวง" 
-                options={baseSubdistricts} 
-                selected={filters.subdistricts} 
-                onChange={handleSubdistrictChange} 
             />
             <MultiSelect 
                 label="กลุ่มโรค" 
@@ -331,7 +321,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
 
                 <div className="absolute right-12 top-0 bottom-0 w-px bg-white/10 z-20">
                     <div className="absolute top-[-25px] right-0 text-[10px] font-black text-rose-500/40 uppercase tracking-wider whitespace-nowrap text-right">
-                        เฉลี่ยฝุ่น PM2.5 (µg/m³)
+                        เฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)
                     </div>
                 </div>
 
@@ -404,7 +394,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-[9px] text-rose-400 uppercase tracking-widest mb-0.5 font-bold">เฉลี่ยฝุ่น PM2.5</div>
-                                                    <span className="text-2xl text-rose-500 font-black tabular-nums leading-none">{m.avg_pm25 || 0} <small className="text-[10px] opacity-40 font-bold">µg/m³</small></span>
+                                                    <span className="text-2xl text-rose-500 font-black tabular-nums leading-none">{m.avg_pm25 || 0} <small className="text-[10px] opacity-40 font-bold">มคก./ลบ.ม.</small></span>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -547,14 +537,6 @@ export default function DashboardHDC() {
         return dists.sort((a, b) => a.localeCompare(b, 'th'));
     }, [filters.provinces, options.districts, options.hierarchy]);
 
-    const baseSubdistricts = useMemo(() => {
-        if (!options.hierarchy) return [];
-        const subs = filters.districts.length === 0 
-            ? options.subdistricts 
-            : Array.from(new Set(options.hierarchy.filter(h => filters.districts.includes(h.district)).map(h => h.subdistrict)));
-        return subs.sort((a, b) => a.localeCompare(b, 'th'));
-    }, [filters.districts, options.subdistricts, options.hierarchy]);
-
     const handleRegionChange = useCallback((val: string[]) => {
         setFilters(prev => ({ ...prev, regions: val, provinces: [], districts: [], subdistricts: [] }));
     }, []);
@@ -565,10 +547,6 @@ export default function DashboardHDC() {
 
     const handleDistrictChange = useCallback((val: string[]) => {
         setFilters(prev => ({ ...prev, districts: val, subdistricts: [] }));
-    }, []);
-
-    const handleSubdistrictChange = useCallback((val: string[]) => {
-        setFilters(prev => ({ ...prev, subdistricts: val }));
     }, []);
 
     useEffect(() => {
@@ -644,10 +622,8 @@ export default function DashboardHDC() {
                         handleRegionChange={handleRegionChange}
                         handleProvinceChange={handleProvinceChange}
                         handleDistrictChange={handleDistrictChange}
-                        handleSubdistrictChange={handleSubdistrictChange}
                         baseProvinces={baseProvinces}
                         baseDistricts={baseDistricts}
-                        baseSubdistricts={baseSubdistricts}
                         thaiMonthsShort={THAI_MONTHS_SHORT} 
                     />
                 </div>

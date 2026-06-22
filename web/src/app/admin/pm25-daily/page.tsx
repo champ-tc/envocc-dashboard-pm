@@ -62,7 +62,8 @@ async function getErrorMessage(response: Response) {
 }
 
 export default function Pm25DailyManagementPage() {
-    const [selectedDate, setSelectedDate] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [rows, setRows] = useState<DailyRow[]>([]);
     const [stations, setStations] = useState<StationOption[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -75,14 +76,15 @@ export default function Pm25DailyManagementPage() {
     const [form, setForm] = useState<DailyForm>(emptyForm);
 
     const fetchRows = async () => {
-        if (!selectedDate) {
+        if (!startDate || !endDate) {
             setRows([]);
             setIsLoading(false);
             return;
         }
         setIsLoading(true);
         try {
-            const response = await fetch(`/api/admin/pm25-daily?date=${encodeURIComponent(selectedDate)}`);
+            const params = new URLSearchParams({ startDate, endDate });
+            const response = await fetch(`/api/admin/pm25-daily?${params}`);
             if (!response.ok) throw new Error(await getErrorMessage(response));
             const data = await response.json();
             setRows(data.rows);
@@ -96,7 +98,7 @@ export default function Pm25DailyManagementPage() {
 
     useEffect(() => {
         fetchRows();
-    }, [selectedDate]);
+    }, [startDate, endDate]);
 
     useEffect(() => {
         fetch('/api/admin/stations')
@@ -149,7 +151,7 @@ export default function Pm25DailyManagementPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...form,
-                    air4Date: selectedDate,
+                    air4Date: editingRow?.air4Date || startDate,
                     originalAir4Date: editingRow?.air4Date,
                     originalStationIdNew: editingRow?.stationIdNew,
                 }),
@@ -183,41 +185,46 @@ export default function Pm25DailyManagementPage() {
             <div className="auth-page-header">
                 <div>
                     <h1 className="auth-page-title">จัดการค่าฝุ่นรายวัน</h1>
-                    <p className="auth-page-description">เลือกวันที่หนึ่งวันเพื่อดู เพิ่ม แก้ไข และลบค่าสรุปรายวัน</p>
+                    <p className="auth-page-description">เลือกช่วงวันที่เพื่อดู เพิ่ม แก้ไข และลบค่าสรุปรายวัน</p>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row">
-                    <CalendarDatePicker label="วันที่ข้อมูล" value={selectedDate} onChange={setSelectedDate} className="min-w-64" />
-                    <input disabled={!selectedDate} type="text" placeholder="ค้นหาสถานี จังหวัด หรือรหัส..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-72" />
-                    <button disabled={!selectedDate} onClick={openCreateForm} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">+ เพิ่มข้อมูล</button>
+                    <CalendarDatePicker label="จากวันที่" value={startDate} onChange={setStartDate} max={endDate || undefined} className="min-w-52" />
+                    <CalendarDatePicker label="ถึงวันที่" value={endDate} onChange={setEndDate} min={startDate || undefined} className="min-w-52" />
+                    <input disabled={!startDate || !endDate} type="text" placeholder="ค้นหาสถานี จังหวัด หรือรหัส..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-72" />
+                    <button disabled={!startDate || !endDate} onClick={openCreateForm} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">+ เพิ่มข้อมูล</button>
                 </div>
             </div>
 
             <div className="auth-surface overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1050px] text-left">
+                    <table className="w-full min-w-[760px] text-left">
                         <thead>
                             <tr className="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                                <th className="px-5 py-4">วันที่</th>
                                 <th className="px-5 py-4">สถานี</th>
-                                <th className="px-4 py-4">PM2.5<br />Max / Min / Avg</th>
-                                {pollutants.slice(1).map((pollutant) => <th key={pollutant.key} className="px-4 py-4">{pollutant.label}<br />Avg</th>)}
+                                <th className="px-4 py-4">PM2.5 Max</th>
+                                <th className="px-4 py-4">PM2.5 Min</th>
+                                <th className="px-4 py-4">PM2.5 Avg</th>
                                 <th className="px-5 py-4 text-center">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {!selectedDate ? (
-                                <tr><td colSpan={8} className="py-20 text-center text-slate-400">กรุณาเลือกวันที่จากปฏิทินก่อนแสดงข้อมูลรายวัน</td></tr>
+                            {!startDate || !endDate ? (
+                                <tr><td colSpan={6} className="py-20 text-center text-slate-400">กรุณาเลือกช่วงวันที่จากปฏิทินก่อนแสดงข้อมูลรายวัน</td></tr>
                             ) : isLoading ? (
-                                <tr><td colSpan={8} className="py-20 text-center font-bold text-slate-400">กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colSpan={6} className="py-20 text-center font-bold text-slate-400">กำลังโหลดข้อมูล...</td></tr>
                             ) : displayedRows.length === 0 ? (
-                                <tr><td colSpan={8} className="py-20 text-center text-slate-400">ไม่พบข้อมูลในวันที่เลือก</td></tr>
+                                <tr><td colSpan={6} className="py-20 text-center text-slate-400">ไม่พบข้อมูลในช่วงวันที่เลือก</td></tr>
                             ) : displayedRows.map((row) => (
                                 <tr key={`${row.stationIdNew}-${row.air4Date}`} className="hover:bg-slate-50/50">
+                                    <td className="px-5 py-4 text-sm font-bold text-blue-600">{row.air4Date}</td>
                                     <td className="px-5 py-4">
                                         <div className="font-bold text-slate-800">{row.stationName || row.stationIdNew}</div>
                                         <div className="text-xs text-slate-400">{row.stationIdNew} {row.province ? `· ${row.province}` : ''}</div>
                                     </td>
-                                    <td className="px-4 py-4 text-sm font-bold text-blue-600">{formatPollutantValue(row.pm25Max)} / {formatPollutantValue(row.pm25Min)} / {formatPollutantValue(row.pm25Avg)}</td>
-                                    {pollutants.slice(1).map((pollutant) => <td key={pollutant.key} className="px-4 py-4 text-sm text-slate-600">{formatPollutantValue(row[valueKey(pollutant.key, 'Avg')])}</td>)}
+                                    <td className="px-4 py-4 text-sm font-bold text-blue-600">{formatPollutantValue(row.pm25Max)}</td>
+                                    <td className="px-4 py-4 text-sm text-slate-600">{formatPollutantValue(row.pm25Min)}</td>
+                                    <td className="px-4 py-4 text-sm text-slate-600">{formatPollutantValue(row.pm25Avg)}</td>
                                     <td className="px-5 py-4">
                                         <div className="flex justify-center gap-2">
                                             <button onClick={() => openEditForm(row)} className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-100">แก้ไข</button>

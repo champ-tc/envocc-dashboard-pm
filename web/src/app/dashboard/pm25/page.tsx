@@ -325,10 +325,70 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                     })}
                 </div>
             </div>
-            {!loading && <div className="absolute top-8 right-8 text-[9px] font-black text-white/20 uppercase tracking-widest text-right">Scale: {Math.round(maxValue)}<br />(µg/m³)</div>}
+            {!loading && <div className="absolute top-8 right-8 text-[9px] font-black text-white/20 uppercase tracking-widest text-right">Scale: {Math.round(maxValue)}<br />(มคก./ลบ.ม.)</div>}
         </div>
     );
 });
+
+function TopExceedRanking({ data, loading }: { data?: { province: string; exceed_days: number }[]; loading: boolean }) {
+    const rows = data || [];
+    const maxDays = Math.max(...rows.map(row => Number(row.exceed_days) || 0), 1);
+
+    return (
+        <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
+            <div className="flex items-start justify-between gap-4 mb-5 shrink-0">
+                <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase leading-tight">
+                    <div className="w-2.5 h-8 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
+                    10 อันดับจังหวัดที่มีจำนวนวันเกินมาตรฐานมากที่สุด
+                </h4>
+                <span className="text-[10px] font-black text-orange-200 bg-orange-500/15 px-3 py-1.5 rounded-xl border border-orange-500/20 whitespace-nowrap">
+                    &gt; 37.5
+                </span>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar scrollbar-hide pr-1">
+                {loading ? (
+                    <div className="flex flex-col gap-3">
+                        {[...Array(10)].map((_, idx) => (
+                            <div key={idx} className="h-11 rounded-2xl bg-white/5 animate-pulse"></div>
+                        ))}
+                    </div>
+                ) : rows.length === 0 ? (
+                    <div className="h-full min-h-40 flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-bold text-white/40">
+                        ไม่พบจังหวัดที่เกินค่ามาตรฐานในช่วงวันที่เลือก
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-2.5">
+                        {rows.map((row, idx) => {
+                            const days = Number(row.exceed_days) || 0;
+                            const percent = Math.max((days / maxDays) * 100, 6);
+                            const isTopThree = idx < 3;
+
+                            return (
+                                <div key={`${row.province}-${idx}`} className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 min-h-12">
+                                    <div className={`absolute inset-y-0 left-0 rounded-2xl ${isTopThree ? 'bg-orange-500/25' : 'bg-blue-500/15'}`} style={{ width: `${percent}%` }}></div>
+                                    <div className="relative z-10 flex items-center gap-3 min-w-0">
+                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black tabular-nums shrink-0 ${isTopThree ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-white/10 text-white/70'}`}>
+                                            {idx + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-extrabold text-white truncate">{row.province}</div>
+                                            <div className="text-[10px] font-bold text-white/35 uppercase">ค่าเฉลี่ยรายวันเกินมาตรฐาน</div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <div className="text-xl font-black text-white tabular-nums leading-none">{days.toLocaleString()}</div>
+                                            <div className="text-[10px] font-bold text-white/35">วัน</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 // --- Main Hook ---
 function useDashboard() {
@@ -520,8 +580,8 @@ export default function DashboardPM25() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 relative z-[90]">
                     {[
-                        { label: 'ค่าเฉลี่ย 24 ชั่วโมงฝุ่น PM2.5', value: data?.avgPM25, unit: 'µg/m³', color: '#3b82f6', isPrimary: true },
-                        { label: 'ค่าเฉลี่ย 24 ชั่วโมงฝุ่น PM2.5 สูงสุด', value: data?.maxPM25, unit: 'µg/m³', color: '#f43f5e', isPrimary: false },
+                        { label: 'ค่าเฉลี่ย 24 ชั่วโมงฝุ่น PM2.5', value: data?.avgPM25, unit: 'มคก./ลบ.ม.', color: '#3b82f6', isPrimary: true },
+                        { label: 'ค่าเฉลี่ย 24 ชั่วโมงฝุ่น PM2.5 สูงสุด', value: data?.maxPM25, unit: 'มคก./ลบ.ม.', color: '#f43f5e', isPrimary: false },
                         { label: 'จำนวนจังหวัดที่ค่าฝุ่น PM2.5 เกินค่ามาตรฐาน (37.5 มคก./ลบ.ม.)', value: exceedData37.count, unit: 'จังหวัด', color: '#f97316', isPrimary: false, tooltip: exceedData37.tooltip },
                         { label: 'จำนวนจังหวัดที่ค่าฝุ่น PM2.5 มากกว่า 75 มคก./ลบ.ม.', value: exceedData75.count, unit: 'จังหวัด', color: '#e11d48', isPrimary: false, tooltip: exceedData75.tooltip }
                     ].map((stat, i) => (
@@ -565,6 +625,7 @@ export default function DashboardPM25() {
                             </h4>
                         </div>
                         <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar scrollbar-hide">
+                            <div className="h-[430px] shrink-0"><TopExceedRanking data={data?.top10Exceed || []} loading={loading} /></div>
                             <div className="h-[350px] shrink-0"><MultiLineChart title="เฉลี่ยรายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></div>
                             <div className="h-[350px] shrink-0"><MultiLineChart title="สถิติรายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></div>
                             <div className="h-[350px] shrink-0"><MultiLineChart title="สถิติรายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></div>

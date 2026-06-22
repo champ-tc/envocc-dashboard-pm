@@ -379,7 +379,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     <div class="h-[1px] bg-slate-700 my-1"></div>
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full" style="background-color: ${pm25ColorScale(station.pm25)}"></div>
-                        <span class="text-xs font-extrabold text-blue-300">PM2.5: ${station.pm25.toFixed(1)}</span>
+                        <span class="text-xs font-extrabold text-blue-300">PM2.5: ${station.pm25.toFixed(1)} มคก./ลบ.ม.</span>
                     </div>
                 </div>
             `;

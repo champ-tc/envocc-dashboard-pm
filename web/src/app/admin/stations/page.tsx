@@ -49,6 +49,15 @@ async function getErrorMessage(response: Response) {
     return body?.error || 'เกิดข้อผิดพลาดในการดำเนินการ';
 }
 
+function escapeExcelXml(value: string | number | null | undefined) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
 export default function StationManagementPage() {
     const [stations, setStations] = useState<Station[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -98,6 +107,58 @@ export default function StationManagementPage() {
 
     const totalPages = Math.max(1, Math.ceil(filteredStations.length / itemsPerPage));
     const displayedStations = filteredStations.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const downloadExcel = () => {
+        const headers = [
+            'Station ID',
+            'Station ID ใหม่',
+            'ชื่อสถานี',
+            'ประเภทสถานี',
+            'จังหวัด',
+            'อำเภอ / เขต',
+            'ตำบล / แขวง',
+            'เขตสุขภาพ',
+            'Latitude',
+            'Longitude',
+        ];
+        const rows = filteredStations.map((station) => [
+            station.stationId,
+            station.stationIdNew,
+            station.stationName,
+            station.stationType,
+            station.province,
+            station.district,
+            station.subdistrict,
+            station.healthRegion,
+            station.latitude,
+            station.longitude,
+        ]);
+        const worksheetRows = [headers, ...rows].map((row) => (
+            `<Row>${row.map((cell) => {
+                const isNumber = typeof cell === 'number' && Number.isFinite(cell);
+                return `<Cell><Data ss:Type="${isNumber ? 'Number' : 'String'}">${escapeExcelXml(cell)}</Data></Cell>`;
+            }).join('')}</Row>`
+        )).join('');
+        const workbook = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Worksheet ss:Name="Stations">
+  <Table>${worksheetRows}</Table>
+ </Worksheet>
+</Workbook>`;
+        const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const date = new Date().toISOString().slice(0, 10);
+        link.href = url;
+        link.download = `stations_${date}.xls`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
 
     const openCreateForm = () => {
         setEditingStation(null);
@@ -179,6 +240,13 @@ export default function StationManagementPage() {
                         onChange={(event) => setSearchQuery(event.target.value)}
                         className="w-full sm:w-80 bg-white border border-slate-200 px-4 py-3 rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
                     />
+                    <button
+                        onClick={downloadExcel}
+                        disabled={filteredStations.length === 0}
+                        className="px-5 py-3 rounded-2xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
+                    >
+                        โหลดข้อมูล Excel
+                    </button>
                     <button onClick={openCreateForm} className="px-5 py-3 rounded-2xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors">
                         + เพิ่มสถานี
                     </button>

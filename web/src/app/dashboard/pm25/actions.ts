@@ -87,7 +87,22 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
             runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date, TRIM("Regional Health") as label, AVG(pm25) as value ${sqlBase} GROUP BY date, label ORDER BY label, date ASC`),
             runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date, TRIM(province) as label, AVG(pm25) as value ${sqlBase} GROUP BY date, label ORDER BY label, date ASC`),
             runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date, TRIM(district) as label, AVG(pm25) as value ${sqlBase} GROUP BY date, label ORDER BY label, date ASC`),
-            runQuery(db, `SELECT TRIM(province) as province, COUNT(*) as exceed_days FROM read_csv_auto('${csvPath}', ignore_errors=true) WHERE pm25 > 37.5 ${dateFilter} ${locFilters} GROUP BY province ORDER BY exceed_days DESC LIMIT 10`),
+            runQuery(db, `
+                WITH province_daily AS (
+                    SELECT
+                        TRIM(province) as province,
+                        CAST(date AS DATE) as report_date,
+                        AVG(pm25) as avg_pm25
+                    ${sqlBase}
+                    GROUP BY 1, 2
+                )
+                SELECT province, COUNT(*) as exceed_days
+                FROM province_daily
+                WHERE avg_pm25 > 37.5
+                GROUP BY province
+                ORDER BY exceed_days DESC, province ASC
+                LIMIT 10
+            `),
             runQuery(db, `SELECT TRIM(province) as province, MAX(pm25) as value ${sqlBase} GROUP BY province`),
             runQuery(db, `SELECT TRIM(province) as province, strftime(date, '%Y-%m-%d') as date, pm25 FROM read_csv_auto('${csvPath}', ignore_errors=true) WHERE 1=1 ${dateFilter} ${locFilters} ORDER BY province, date ASC`)
         ]);
@@ -166,6 +181,11 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
         const provinceMaxes: Record<string, number> = {};
         resProvAvg.forEach(p => { provinceMaxes[p.province] = p.value; });
 
+        const top10Exceed = resTop10.map(row => ({
+            province: row.province as string,
+            exceed_days: Number(row.exceed_days) || 0
+        }));
+
         return {
             avgPM25: Number(resStats[0]?.avg_pm25 || 0).toFixed(1),
             maxPM25: Number(resStats[0]?.max_pm25 || 0).toFixed(1),
@@ -175,7 +195,7 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
             regionTrend: groupByLabel(resRegion),
             provinceTrend: provinceTrendData,
             districtTrend: groupByLabel(resDistTrend),
-            top10Exceed: resTop10,
+            top10Exceed,
             provinceMaxes,
             provinceStreak37: streak37,
             provinceStreak75: streak75

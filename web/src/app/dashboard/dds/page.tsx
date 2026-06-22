@@ -57,11 +57,19 @@ function SingleSelect({ label, options, selected, onChange }: { label?: string, 
 }
 
 // Custom MultiSelect
-function MultiSelect({ label, options, selected, onChange, placeholder = "ทั้งหมด", renderOption }: { label?: string, options: string[], selected: string[], onChange: (val: string[]) => void, placeholder?: string, renderOption?: (opt: string) => string }) {
+function MultiSelect({ label, options, selected, onChange, placeholder = "ทั้งหมด", renderOption, searchPlaceholder = "ค้นหา" }: { label?: string, options: string[], selected: string[], onChange: (val: string[]) => void, placeholder?: string, renderOption?: (opt: string) => string, searchPlaceholder?: string }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [searchText, setSearchText] = useState('');
     const safeOptions = options || [];
     const safeSelected = selected || [];
     const getDisplayText = (opt: string) => renderOption ? renderOption(opt) : opt;
+    const normalizedSearch = searchText.trim().toLowerCase();
+    const filteredOptions = normalizedSearch
+        ? safeOptions.filter((opt: string) => {
+            const displayText = getDisplayText(opt).toLowerCase();
+            return opt.toLowerCase().includes(normalizedSearch) || displayText.includes(normalizedSearch);
+        })
+        : safeOptions;
 
     return (
         <div className="relative col-span-1 w-full">
@@ -76,15 +84,23 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
+                    <div className="fixed inset-0 z-[100]" onClick={() => { setIsOpen(false); setSearchText(''); }}></div>
                     <div className="absolute z-[200] mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                        <input
+                            type="search"
+                            value={searchText}
+                            onChange={(event) => setSearchText(event.target.value)}
+                            onClick={(event) => event.stopPropagation()}
+                            placeholder={searchPlaceholder}
+                            className="input input-sm w-full rounded-2xl border-white/10 bg-white/10 text-xs font-bold text-white placeholder:text-white/35 focus:border-blue-400 focus:outline-none"
+                        />
                         <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
                             <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
                                 {safeSelected.length === safeOptions.length && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                             </div>
                             <span className="text-xs font-bold text-white">เลือกทั้งหมด</span>
                         </div>
-                        {safeOptions.map((opt: string) => (
+                        {filteredOptions.map((opt: string) => (
                             <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
                                 <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.includes(opt) ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
                                     {safeSelected.includes(opt) && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
@@ -92,6 +108,11 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                                 <span className={`text-xs transition-colors ${safeSelected.includes(opt) ? 'font-extrabold text-blue-400' : 'font-bold text-white/70'}`}>{getDisplayText(opt)}</span>
                             </div>
                         ))}
+                        {filteredOptions.length === 0 && (
+                            <div className="px-3 py-4 text-center text-xs font-bold text-white/40">
+                                ไม่พบรหัสที่ค้นหา
+                            </div>
+                        )}
                     </div>
                 </>
             )}
@@ -209,15 +230,20 @@ export default function DDSDashboardPage() {
         icd10_by_disease: {}, diagnosisTypes: [], hierarchy: []
     });
     const [loading, setLoading] = useState(true);
+
+    const initialGroupedIcd10 = DISEASE_CARDS.reduce((acc, card) => {
+        const baseCodes = DISEASE_ICD_OPTIONS[card.id] || [];
+        acc[card.id] = baseCodes.filter(c => c !== 'Y97');
+        return acc;
+    }, {} as Record<string, string[]>);
+
     const [filters, setFilters] = useState<DDSFilters>({
-        startDate: '', endDate: '', regions: [], provinces: [], districts: [], subdistricts: [], diseases: [], icd10_codes: [],
+        startDate: '', endDate: '', regions: [], provinces: [], districts: [], subdistricts: [], diseases: [], icd10_codes: Object.values(initialGroupedIcd10).flat(),
         diagnosisType: 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1',
-        groupedIcd10: { 'respiratory': [], 'circulatory': [], 'skin': [], 'eye': [], 'health_status': [] }
+        groupedIcd10: initialGroupedIcd10
     });
 
-    const [groupedIcd10, setGroupedIcd10] = useState<Record<string, string[]>>({
-        'respiratory': [], 'circulatory': [], 'skin': [], 'eye': [], 'health_status': []
-    });
+    const [groupedIcd10, setGroupedIcd10] = useState<Record<string, string[]>>(initialGroupedIcd10);
 
     // STEP 0: Auth & Initial Options
     useEffect(() => {
@@ -341,7 +367,18 @@ export default function DDSDashboardPage() {
                         <MultiSelect label="จังหวัด" options={baseProvinces} selected={filters.provinces} onChange={(val) => setFilters(f => ({ ...f, provinces: val, districts: [], subdistricts: [] }))} />
                         <MultiSelect label="อำเภอ/เขต" options={baseDistricts} selected={filters.districts} onChange={(val) => setFilters(f => ({ ...f, districts: val, subdistricts: [] }))} />
                         <MultiSelect label="ตำบล/แขวง" options={baseSubdistricts} selected={filters.subdistricts} onChange={(val) => setFilters(f => ({ ...f, subdistricts: val }))} />
-                        <SingleSelect label="ประเภทวินิจฉัย" options={options.diagnosisTypes} selected={filters.diagnosisType} onChange={(val) => setFilters(f => ({ ...f, diagnosisType: val, icd10_codes: Object.values(groupedIcd10).flat() }))} />
+                        <SingleSelect label="ประเภทวินิจฉัย" options={options.diagnosisTypes} selected={filters.diagnosisType} onChange={(val) => {
+                            let nextGrouped = groupedIcd10;
+                            if (val !== 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
+                                nextGrouped = DISEASE_CARDS.reduce((acc, card) => {
+                                    const baseCodes = DISEASE_ICD_OPTIONS[card.id] || [];
+                                    acc[card.id] = val === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1' ? baseCodes.filter(c => c !== 'Y97') : baseCodes;
+                                    return acc;
+                                }, {} as Record<string, string[]>);
+                                setGroupedIcd10(nextGrouped);
+                            }
+                            setFilters(f => ({ ...f, diagnosisType: val, icd10_codes: Object.values(nextGrouped).flat(), groupedIcd10: nextGrouped }));
+                        }} />
                     </div>
                 </div>
 
@@ -409,6 +446,7 @@ export default function DDSDashboardPage() {
                                             selected={groupedIcd10[card.id] || []}
                                             onChange={(val) => handleGroupedIcd10Change(card.id, val)}
                                             placeholder={filters.diagnosisType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ' ? 'เลือกทั้งหมด' : 'แสดงทั้งหมด'}
+                                            searchPlaceholder="ค้นหารหัสโรค"
                                         />
                                     </div>
                                 </div>
@@ -431,7 +469,7 @@ export default function DDSDashboardPage() {
                         </div>
                         <div className="flex-1 relative flex flex-col justify-end px-14 min-h-0">
                             <div className="absolute left-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-[-25px] left-0 text-[10px] font-black text-white/40 uppercase">จำนวนผู้ป่วย (ราย)</div></div>
-                            <div className="absolute right-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-[-25px] right-0 text-[10px] font-black text-rose-500/60 uppercase text-right">เฉลี่ย PM2.5 (µg/m³)</div></div>
+                            <div className="absolute right-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-[-25px] right-0 text-[10px] font-black text-rose-500/60 uppercase text-right">เฉลี่ย PM2.5 (มคก./ลบ.ม.)</div></div>
                             {!loading && data?.monthlyTrend && data.monthlyTrend.length > 0 && (() => {
                                 const maxVal = Math.max(...data.monthlyTrend.map(x => x.total || 0), 1);
                                 const pm25Max = Math.max(...data.monthlyTrend.map(x => x.avg_pm25 || 0), 50);
@@ -513,7 +551,7 @@ export default function DDSDashboardPage() {
                                             <div class="space-y-3">
                                                 <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl"><span>จำนวนผู้ป่วย</span><span class="text-lg font-black">${Math.round(valObj.value).toLocaleString()} ${popupUnit}</span></div>
                                                 <div class="flex items-center justify-between bg-blue-500/10 p-4 rounded-2xl"><span>อัตราป่วย</span><span class="text-lg font-black text-blue-400">${valObj.rate.toFixed(2)} ต่อแสน</span></div>
-                                                ${area.includes('-') && valObj.pm25 ? `<div class="flex items-center justify-between bg-rose-500/10 p-4 rounded-2xl"><span>PM2.5</span><span class="text-lg font-black text-rose-400">${valObj.pm25.toFixed(1)} µg</span></div>` : ''}
+                                                ${area.includes('-') && valObj.pm25 ? `<div class="flex items-center justify-between bg-rose-500/10 p-4 rounded-2xl"><span>PM2.5</span><span class="text-lg font-black text-rose-400">${valObj.pm25.toFixed(1)} มคก./ลบ.ม.</span></div>` : ''}
                                             </div>
                                         </div>
                                     `;
