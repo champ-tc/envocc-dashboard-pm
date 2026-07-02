@@ -131,7 +131,7 @@ export const DDS_DISEASES = [
     { id: 'circulatory', dbValue: 'โรคระบบไหลเวียนเลือด', codes: ['I21', 'I22', 'I24'], label: 'โรคระบบไหลเวียนเลือด', shortLabel: 'ระบบไหลเวียนเลือด', color: 'orange', hex: '#f97316' },
     { id: 'skin', dbValue: 'โรคผิวหนังและเนื้อเยื่อใต้ผิวหนัง', codes: ['L30.9', 'L50'], label: 'โรคผิวหนังและเนื้อเยื่อใต้ผิวหนัง', shortLabel: 'โรคผิวหนัง', color: 'emerald', hex: '#10b981' },
     { id: 'eye', dbValue: 'โรคตารวมส่วนประกอบของตา', codes: ['H10'], label: 'โรคตารวมส่วนประกอบของตา', shortLabel: 'โรคตา', color: 'blue', hex: '#3b82f6' },
-    { id: 'health_status', dbValue: 'ปัจจัยที่มีผลต่อสถานะสุขภาพ และการรับบริการสุขภาพ', codes: ['Z58', 'Z581', 'Y97'], label: 'กลุ่มโรคอื่นๆ', shortLabel: 'กลุ่มโรคอื่นๆ', color: 'purple', hex: '#a855f7' },
+    { id: 'health_status', dbValue: 'ปัจจัยที่มีผลต่อสถานะสุขภาพ และการรับบริการสุขภาพ', codes: ['Z581', 'Y97'], label: 'กลุ่มโรคอื่นๆ', shortLabel: 'กลุ่มโรคอื่นๆ', color: 'purple', hex: '#a855f7' },
 ];
 
 export const HDC_DISEASES = [

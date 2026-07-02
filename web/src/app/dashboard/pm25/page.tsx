@@ -2,8 +2,8 @@
 import { useEffect, useState, memo, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { getDashboardData, getFilterOptions } from './actions';
+import DashboardNavMenu from '@/components/DashboardNavMenu';
 
 // --- Types ---
 interface FilterOptions {
@@ -151,14 +151,14 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                 <>
                     <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
                     <div className="absolute z-[200] mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
-                        <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
+                        <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
                             <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
                                 {safeSelected.length === safeOptions.length && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                             </div>
                             <span className="text-xs font-bold text-white">เลือกทั้งหมด</span>
                         </div>
                         {safeOptions.map((opt: string) => (
-                            <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
+                            <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
                                 <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.includes(opt) ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
                                     {safeSelected.includes(opt) && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                                 </div>
@@ -335,22 +335,22 @@ function TopExceedRanking({ data, loading }: { data?: { province: string; exceed
     const maxDays = Math.max(...rows.map(row => Number(row.exceed_days) || 0), 1);
 
     return (
-        <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
-            <div className="flex items-start justify-between gap-4 mb-5 shrink-0">
-                <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase leading-tight">
-                    <div className="w-2.5 h-8 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
+        <div className="bg-slate-900/60 backdrop-blur-3xl p-4 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
+            <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
+                <h4 className="font-extrabold text-sm text-white flex items-center gap-3 tracking-tight uppercase leading-tight">
+                    <div className="w-2 h-6 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
                     10 อันดับจังหวัดที่มีจำนวนวันเกินมาตรฐานมากที่สุด
                 </h4>
-                <span className="text-[10px] font-black text-orange-200 bg-orange-500/15 px-3 py-1.5 rounded-xl border border-orange-500/20 whitespace-nowrap">
-                    &gt; 37.5
+                <span className="text-[10px] font-black text-orange-200 bg-orange-500/15 px-2.5 py-1 rounded-xl border border-orange-500/20 whitespace-nowrap">
+                    &gt; 37.5 มคก./ลบ.ม.
                 </span>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar scrollbar-hide pr-1">
+            <div className="flex-1 min-h-0 overflow-hidden">
                 {loading ? (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-0.5">
                         {[...Array(10)].map((_, idx) => (
-                            <div key={idx} className="h-11 rounded-2xl bg-white/5 animate-pulse"></div>
+                            <div key={idx} className="h-7 rounded-xl bg-white/5 animate-pulse"></div>
                         ))}
                     </div>
                 ) : rows.length === 0 ? (
@@ -358,25 +358,24 @@ function TopExceedRanking({ data, loading }: { data?: { province: string; exceed
                         ไม่พบจังหวัดที่เกินค่ามาตรฐานในช่วงวันที่เลือก
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-2.5">
+                    <div className="flex flex-col gap-0.5">
                         {rows.map((row, idx) => {
                             const days = Number(row.exceed_days) || 0;
                             const percent = Math.max((days / maxDays) * 100, 6);
                             const isTopThree = idx < 3;
 
                             return (
-                                <div key={`${row.province}-${idx}`} className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 min-h-12">
-                                    <div className={`absolute inset-y-0 left-0 rounded-2xl ${isTopThree ? 'bg-orange-500/25' : 'bg-blue-500/15'}`} style={{ width: `${percent}%` }}></div>
-                                    <div className="relative z-10 flex items-center gap-3 min-w-0">
-                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black tabular-nums shrink-0 ${isTopThree ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-white/10 text-white/70'}`}>
+                                <div key={`${row.province}-${idx}`} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/5 px-2.5 py-0.5 min-h-7">
+                                    <div className={`absolute inset-y-0 left-0 rounded-xl ${isTopThree ? 'bg-orange-500/25' : 'bg-blue-500/15'}`} style={{ width: `${percent}%` }}></div>
+                                    <div className="relative z-10 flex items-center gap-2.5 min-w-0">
+                                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black tabular-nums shrink-0 ${isTopThree ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-white/10 text-white/70'}`}>
                                             {idx + 1}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-sm font-extrabold text-white truncate">{row.province}</div>
-                                            <div className="text-[10px] font-bold text-white/35 uppercase">ค่าเฉลี่ยรายวันเกินมาตรฐาน</div>
+                                            <div className="text-xs font-extrabold text-white truncate">{row.province}</div>
                                         </div>
-                                        <div className="text-right shrink-0">
-                                            <div className="text-xl font-black text-white tabular-nums leading-none">{days.toLocaleString()}</div>
+                                        <div className="text-right shrink-0 flex items-baseline gap-1">
+                                            <div className="text-sm font-black text-white tabular-nums leading-none">{days.toLocaleString()}</div>
                                             <div className="text-[10px] font-bold text-white/35">วัน</div>
                                         </div>
                                     </div>
@@ -455,7 +454,7 @@ function useDashboard() {
     const exceedData37 = useMemo(() => {
         if (!data?.provinceTrend) return { count: 0, tooltip: undefined };
         
-        const exceedingProvinces: { prov: string, dateText: string }[] = [];
+        const exceedingProvinces: { prov: string }[] = [];
 
         Object.entries(data.provinceTrend).forEach(([prov, trend]) => {
             if (!trend || trend.length === 0) return;
@@ -463,45 +462,6 @@ function useDashboard() {
             const lastPoint = sorted[sorted.length - 1]; // เช็คจากวันที่ปัจจุบัน (วันล่าสุดของข้อมูลที่กรอง)
             
             if (lastPoint && lastPoint.value > 37.5) {
-                exceedingProvinces.push({ prov, dateText: formatDateShort(lastPoint.date) });
-            }
-        });
-
-        if (exceedingProvinces.length === 0) return { count: 0, tooltip: undefined };
-
-        const byRegion: Record<string, { prov: string, dateText: string }[]> = {};
-        exceedingProvinces.forEach(item => {
-            const region = provinceToRegion.get(item.prov) || provinceToRegion.get(`จังหวัด${item.prov}`) || 'ไม่ระบุเขต';
-            if (!byRegion[region]) byRegion[region] = [];
-            byRegion[region].push(item);
-        });
-
-        const tooltip = Object.entries(byRegion)
-            .sort((a, b) => {
-                const numA = parseInt(a[0].replace(/\D/g, '')) || 0;
-                const numB = parseInt(b[0].replace(/\D/g, '')) || 0;
-                if (numA === numB) return a[0].localeCompare(b[0], 'th');
-                return numA - numB;
-            })
-            .map(([region, items]) => {
-                let regionName = region;
-                if (regionName.includes('เขต') && !regionName.includes('เขตสุขภาพที่') && !regionName.includes('กรุงเทพ')) {
-                    regionName = regionName.replace('เขต', 'เขตสุขภาพที่').replace(/\s+/g, ' ').trim();
-                }
-                const provListStr = items.map(i => `${i.prov} (${i.dateText})`).join(', ');
-                return { region: regionName, count: items.length, provinces: provListStr };
-            });
-
-        return { count: exceedingProvinces.length, tooltip };
-    }, [data?.provinceTrend, provinceToRegion]);
-
-    const exceedData75 = useMemo(() => {
-        if (!data?.provinceStreak75) return { count: 0, tooltip: undefined };
-        
-        const exceedingProvinces: { prov: string }[] = [];
-
-        Object.entries(data.provinceStreak75).forEach(([prov, streakCount]) => {
-            if (streakCount >= 2) {
                 exceedingProvinces.push({ prov });
             }
         });
@@ -532,7 +492,46 @@ function useDashboard() {
             });
 
         return { count: exceedingProvinces.length, tooltip };
-    }, [data?.provinceStreak75, provinceToRegion]);
+    }, [data?.provinceTrend, provinceToRegion]);
+
+    const exceedData75 = useMemo(() => {
+        if (!data?.provinceMaxes) return { count: 0, tooltip: undefined };
+        
+        const exceedingProvinces: { prov: string }[] = [];
+
+        Object.entries(data.provinceMaxes).forEach(([prov, maxPM25]) => {
+            if (maxPM25 > 75) {
+                exceedingProvinces.push({ prov });
+            }
+        });
+
+        if (exceedingProvinces.length === 0) return { count: 0, tooltip: undefined };
+
+        const byRegion: Record<string, { prov: string }[]> = {};
+        exceedingProvinces.forEach(item => {
+            const region = provinceToRegion.get(item.prov) || provinceToRegion.get(`จังหวัด${item.prov}`) || 'ไม่ระบุเขต';
+            if (!byRegion[region]) byRegion[region] = [];
+            byRegion[region].push(item);
+        });
+
+        const tooltip = Object.entries(byRegion)
+            .sort((a, b) => {
+                const numA = parseInt(a[0].replace(/\D/g, '')) || 0;
+                const numB = parseInt(b[0].replace(/\D/g, '')) || 0;
+                if (numA === numB) return a[0].localeCompare(b[0], 'th');
+                return numA - numB;
+            })
+            .map(([region, items]) => {
+                let regionName = region;
+                if (regionName.includes('เขต') && !regionName.includes('เขตสุขภาพที่') && !regionName.includes('กรุงเทพ')) {
+                    regionName = regionName.replace('เขต', 'เขตสุขภาพที่').replace(/\s+/g, ' ').trim();
+                }
+                const provListStr = items.map(i => i.prov).join(', ');
+                return { region: regionName, count: items.length, provinces: provListStr };
+            });
+
+        return { count: exceedingProvinces.length, tooltip };
+    }, [data?.provinceMaxes, provinceToRegion]);
 
     return { data, options, loading, filters, setFilters, baseProvinces, baseDistricts, provinceMaxes, exceedData37, exceedData75 };
 }
@@ -563,9 +562,7 @@ export default function DashboardPM25() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Link href="/" className="bg-white/10 hover:bg-white/20 transition-all p-3.5 rounded-2xl border border-white/10 group shadow-lg">
-                            <svg className="w-5 h-5 text-white group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                        </Link>
+                        <DashboardNavMenu />
                     </div>
                 </header>
 
@@ -596,7 +593,7 @@ export default function DashboardPM25() {
                             <div className={`text-[10px] font-bold uppercase mt-1 ${stat.isPrimary ? 'text-white/50' : 'text-white/30'}`}>{stat.unit}</div>
                             
                             {stat.tooltip && Array.isArray(stat.tooltip) && stat.tooltip.length > 0 && (
-                                <div className={`absolute top-full mt-3 w-[300px] sm:w-[450px] lg:w-[550px] max-h-[50vh] overflow-y-auto custom-scrollbar p-5 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-auto ${i >= 2 ? 'right-0' : 'left-0'}`}>
+                                <div className={`absolute top-full mt-3 w-[300px] sm:w-[450px] lg:w-[550px] max-h-[50vh] overflow-y-auto custom-scrollbar p-5 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none ${i >= 2 ? 'right-0' : 'left-0'}`}>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                                         {stat.tooltip.map((item: any, idx: number) => (
                                             <div key={idx} className="flex flex-col gap-1.5 border-b border-white/5 pb-3">

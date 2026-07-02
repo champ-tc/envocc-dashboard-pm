@@ -30,6 +30,11 @@ export default function GuestNavbar() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    useEffect(() => {
+        setIsDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+    }, [pathname]);
+
     const isLogin = pathname === '/login';
     const isRegister = pathname === '/register';
     const isHome = pathname === '/';
@@ -94,10 +99,10 @@ export default function GuestNavbar() {
                             {isDropdownOpen && (
                                 <div className="absolute top-full left-0 pt-2 w-48 z-60 transition-all animate-in fade-in slide-in-from-top-2 duration-200">
                                     <div className={`rounded-2xl shadow-xl border border-slate-100 overflow-hidden py-2 ${isTransparent ? 'bg-white/95 backdrop-blur-md' : 'bg-white'}`}>
-                                        <Link href="/dashboard/hdc" className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all font-medium">
+                                        <Link href="/dashboard/hdc" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all font-medium">
                                             Health Data Center (HDC)
                                         </Link>
-                                        <Link href="/dashboard/dds" className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all font-medium">
+                                        <Link href="/dashboard/dds" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all font-medium">
                                             Digital Disease Surveillance (DDS)
                                         </Link>
                                     </div>

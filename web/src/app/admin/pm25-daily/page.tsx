@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Download } from 'lucide-react';
 
 import EditablePagination from '@/components/EditablePagination';
 import CalendarDatePicker from '@/components/shared/CalendarDatePicker';
@@ -180,6 +181,40 @@ export default function Pm25DailyManagementPage() {
         }
     };
 
+    const exportToCsv = () => {
+        if (filteredRows.length === 0) {
+            toast.error('ไม่มีข้อมูลที่จะส่งออก');
+            return;
+        }
+
+        const pollutantHeaders = pollutants.flatMap((pollutant) => statistics.map((statistic) => `${pollutant.label} ${statistic}`));
+        const pollutantKeys = pollutants.flatMap((pollutant) => statistics.map((statistic) => valueKey(pollutant.key, statistic)));
+        const headers = ['วันที่', 'รหัสสถานี', 'ชื่อสถานี', 'จังหวัด', ...pollutantHeaders];
+        const csvRows = filteredRows.map(row => [
+            row.air4Date,
+            row.stationIdNew,
+            row.stationName || '',
+            row.province || '',
+            ...pollutantKeys.map((key) => row[key] ?? '')
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `pm25_daily_${startDate}_to_${endDate}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="auth-page">
             <div className="auth-page-header">
@@ -187,11 +222,18 @@ export default function Pm25DailyManagementPage() {
                     <h1 className="auth-page-title">จัดการค่าฝุ่นรายวัน</h1>
                     <p className="auth-page-description">เลือกช่วงวันที่เพื่อดู เพิ่ม แก้ไข และลบค่าสรุปรายวัน</p>
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                    <CalendarDatePicker label="จากวันที่" value={startDate} onChange={setStartDate} max={endDate || undefined} className="min-w-52" />
-                    <CalendarDatePicker label="ถึงวันที่" value={endDate} onChange={setEndDate} min={startDate || undefined} className="min-w-52" />
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-end">
+                    <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2">
+                        <CalendarDatePicker label="จากวันที่" value={startDate} onChange={setStartDate} max={endDate || undefined} className="min-w-52" />
+                        <CalendarDatePicker label="ถึงวันที่" value={endDate} onChange={setEndDate} min={startDate || undefined} className="min-w-52" />
+                    </div>
                     <input disabled={!startDate || !endDate} type="text" placeholder="ค้นหาสถานี จังหวัด หรือรหัส..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-72" />
-                    <button disabled={!startDate || !endDate} onClick={openCreateForm} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">+ เพิ่มข้อมูล</button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <button onClick={exportToCsv} disabled={filteredRows.length === 0} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:bg-slate-300">
+                            <Download className="h-4 w-4" /> Export CSV
+                        </button>
+                        <button disabled={!startDate || !endDate} onClick={openCreateForm} className="flex-1 sm:flex-none rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">+ เพิ่มข้อมูล</button>
+                    </div>
                 </div>
             </div>
 

@@ -77,6 +77,7 @@ export interface DDSDashboardData {
     top5DiseaseStats: DiseaseStat[];
     monthlyTrend: MonthlyTrendData[];
     provinceAverages: Record<string, { value: number; rate: number; pm25: number }>;
+    districtAverages: Record<string, SubdistrictStats>;
     subdistrictAverages: Record<string, SubdistrictStats>;
     stations: StationData[];
 }
@@ -301,8 +302,8 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         let ddsDiagnosisFilter = 'AND 1=0'; // Default to nothing if no match found
         const diagType = filters.diagnosisType?.trim();
 
-        const diagType1Codes = ["Z58", "Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50"];
-        const diagType2Codes = ["Z58", "Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50", "Y97"];
+        const diagType1Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50"];
+        const diagType2Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50", "Y97"];
 
         if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1') {
             const codesStr = diagType1Codes.map(c => `'${c}'`).join(',');
@@ -311,9 +312,9 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
             const codesStr = diagType2Codes.map(c => `'${c}'`).join(',');
             ddsDiagnosisFilter = `AND TRIM(icd10_code) IN (${codesStr})`;
         } else if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
-            const allowedCodes = ["Z58", "Z581"];
+            const allowedCodes = ["Z581"];
             if (filters.icd10_codes && filters.icd10_codes.length > 0) {
-                allowedCodes.push(...filters.icd10_codes);
+                allowedCodes.push(...filters.icd10_codes.filter(c => c.trim() !== "Z58"));
             }
             const codesStr = allowedCodes.map(c => `'${c}'`).join(',');
             ddsDiagnosisFilter = `AND TRIM(icd10_code) IN (${codesStr})`;
@@ -326,7 +327,8 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         DDS_DISEASES.forEach(d => {
             const groupCodes = d.codes || [];
             if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
-                const selectedCodes = filters.groupedIcd10?.[d.id] || [];
+                const selectedCodes = (filters.groupedIcd10?.[d.id] || [])
+                    .filter(c => d.id !== 'health_status' || c.trim() !== "Z58");
                 if (selectedCodes.length > 0) {
                     icdFilters[d.id] = `AND TRIM(icd) IN (${selectedCodes.map(c => `'${c.trim().replace(/'/g, "''")}'`).join(',')})`;
                 } else {
@@ -494,31 +496,132 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                         };
                     });
 
-                    resolve({
-                        totalPatients: Number(stats.total_patients) || 0,
-                        totalVisits: Number(stats.total_visits) || 0,
-                        otherPatients: Number(stats.other_patients) || 0,
-                        avgPM25: stats.avg_pm25 ? Number(stats.avg_pm25).toFixed(1) : '0.0',
-                        provinceCount: Number(stats.province_count) || 0,
-                        reportDate: stats.latest_date ? new Date(stats.latest_date as string).toISOString().split('T')[0] : null,
-                        top5DiseaseStats: DDS_DISEASES.map(d => ({
-                            id: d.id,
-                            label: d.shortLabel || d.label,
-                            value: Number(stats[d.id]) || 0,
-                            color: d.color
-                        })),
-                        monthlyTrend: (resTrend || []).map((m) => {
-                            const mapped: MonthlyTrendData = {
-                                month: m.month as string,
-                                total: Number(m.total) || 0,
-                                avg_pm25: m.avg_pm25 ? Number(Number(m.avg_pm25).toFixed(1)) : 0
+                    const sqlDistrictList = `
+                        WITH dds_base AS (
+                            SELECT TRIM(province_name) as prov, TRIM(district_name) as dist, TRIM("Disease Type") as diag, TRIM(icd10_code) as icd
+                            FROM dds_raw 
+                            WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters} ${ddsDiagnosisFilter} ${ddsDiseaseFilter}
+                        ),
+                        dds_filtered AS (
+                            SELECT * FROM dds_base
+                            WHERE (
+                                ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR ')}
+                            )
+                        ),
+                        pm25_district AS (
+                            SELECT TRIM(province) as prov, TRIM(district) as dist, AVG(pm25) as pm25_avg
+                            FROM pm25_raw 
+                            WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters}
+                            GROUP BY 1, 2
+                        )
+                        SELECT 
+                            d.prov as prov,
+                            d.dist as dist,
+                            COUNT(*)::DOUBLE as patients,
+                            MAX(p.pm25_avg)::DOUBLE as pm
+                        FROM dds_filtered d
+                        LEFT JOIN pm25_district p ON d.prov = p.prov AND d.dist = p.dist
+                        WHERE d.dist IS NOT NULL AND d.dist != ''
+                        GROUP BY 1, 2
+                    `;
+
+                    db.all(sqlDistrictList, (errDistrict: Error | null, resDistrict: DuckDBRow[]) => {
+                        if (errDistrict) {
+                            console.error('Error in sqlDistrictList:', errDistrict);
+                            return reject(errDistrict);
+                        }
+
+                        const districtAverages: Record<string, SubdistrictStats> = {};
+                        (resDistrict || []).forEach((r) => {
+                            const provinceName = r.prov as string;
+                            const districtName = r.dist as string;
+                            if (!provinceName || !districtName) return;
+                            const patients = Number(r.patients) || 0;
+                            districtAverages[`${provinceName}-${districtName}`] = {
+                                value: patients,
+                                rate: patients,
+                                pm25: Number(r.pm) || 0
                             };
-                            DDS_DISEASES.forEach(d => { mapped[d.id] = Number(m[d.id]) || 0; });
-                            return mapped;
-                        }).reverse(),
-                        provinceAverages,
-                        subdistrictAverages: {},
-                        stations: []
+                        });
+
+                        const sqlSubdistrictList = `
+                            WITH dds_base AS (
+                                SELECT TRIM(province_name) as prov, TRIM(district_name) as dist, TRIM(subdistrict_name) as subdist, TRIM("Disease Type") as diag, TRIM(icd10_code) as icd
+                                FROM dds_raw 
+                                WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters} ${ddsDiagnosisFilter} ${ddsDiseaseFilter}
+                            ),
+                            dds_filtered AS (
+                                SELECT * FROM dds_base
+                                WHERE (
+                                    ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR ')}
+                                )
+                            ),
+                            pm25_subdistrict AS (
+                                SELECT TRIM(province) as prov, TRIM(district) as dist, TRIM(subdistrict) as subdist, AVG(pm25) as pm25_avg
+                                FROM pm25_raw 
+                                WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters}
+                                GROUP BY 1, 2, 3
+                            )
+                            SELECT 
+                                d.prov as prov,
+                                d.dist as dist,
+                                d.subdist as subdist,
+                                COUNT(*)::DOUBLE as patients,
+                                MAX(p.pm25_avg)::DOUBLE as pm
+                            FROM dds_filtered d
+                            LEFT JOIN pm25_subdistrict p ON d.prov = p.prov AND d.dist = p.dist AND d.subdist = p.subdist
+                            WHERE d.dist IS NOT NULL AND d.dist != '' AND d.subdist IS NOT NULL AND d.subdist != ''
+                            GROUP BY 1, 2, 3
+                        `;
+
+                        db.all(sqlSubdistrictList, (errSubdistrict: Error | null, resSubdistrict: DuckDBRow[]) => {
+                            if (errSubdistrict) {
+                                console.error('Error in sqlSubdistrictList:', errSubdistrict);
+                                return reject(errSubdistrict);
+                            }
+
+                            const subdistrictAverages: Record<string, SubdistrictStats> = {};
+                            (resSubdistrict || []).forEach((r) => {
+                                const provinceName = r.prov as string;
+                                const districtName = r.dist as string;
+                                const subdistrictName = r.subdist as string;
+                                if (!provinceName || !districtName || !subdistrictName) return;
+                                const patients = Number(r.patients) || 0;
+                                subdistrictAverages[`${provinceName}-${districtName}-${subdistrictName}`] = {
+                                    value: patients,
+                                    rate: patients,
+                                    pm25: Number(r.pm) || 0
+                                };
+                            });
+
+                            resolve({
+                                totalPatients: Number(stats.total_patients) || 0,
+                                totalVisits: Number(stats.total_visits) || 0,
+                                otherPatients: Number(stats.other_patients) || 0,
+                                avgPM25: stats.avg_pm25 ? Number(stats.avg_pm25).toFixed(1) : '0.0',
+                                provinceCount: Number(stats.province_count) || 0,
+                                reportDate: stats.latest_date ? new Date(stats.latest_date as string).toISOString().split('T')[0] : null,
+                                top5DiseaseStats: DDS_DISEASES.map(d => ({
+                                    id: d.id,
+                                    label: d.shortLabel || d.label,
+                                    value: Number(stats[d.id]) || 0,
+                                    color: d.color
+                                })),
+                                monthlyTrend: (resTrend || []).map((m) => {
+                                    const mapped: MonthlyTrendData = {
+                                        month: m.month as string,
+                                        total: Number(m.total) || 0,
+                                        avg_pm25: m.avg_pm25 ? Number(Number(m.avg_pm25).toFixed(1)) : 0
+                                    };
+                                    DDS_DISEASES.forEach(d => { mapped[d.id] = Number(m[d.id]) || 0; });
+                                    return mapped;
+                                }).reverse(),
+                                provinceAverages,
+                                districtAverages,
+                                subdistrictAverages,
+                                stations: []
+                            });
+                        });
                     });
                 });
             });

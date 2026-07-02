@@ -34,8 +34,10 @@ from datetime import date, datetime
 from typing import Optional, Tuple
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from requests.exceptions import SSLError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from urllib3.exceptions import InsecureRequestWarning
 from zoneinfo import ZoneInfo
 
 try:
@@ -74,6 +76,7 @@ POLLUTANTS = {
 INVALID_NUM = {-1.0, -999.0}
 
 TH_TZ = ZoneInfo("Asia/Bangkok")
+AIR4THAI_HOST = "air4thai.pcd.go.th"
 
 
 # =========================
@@ -151,7 +154,7 @@ def _engine():
 
 def _debug_env_network():
     """print DNS + proxy env for debugging"""
-    host = "air4thai.pcd.go.th"
+    host = AIR4THAI_HOST
     try:
         ip = socket.gethostbyname(host)
         print(f"[NET] DNS {host} -> {ip}")
@@ -183,14 +186,62 @@ def _session_with_retries() -> requests.Session:
     return sess
 
 
-def _request_get(sess: requests.Session, url: str, timeout_s: int) -> requests.Response:
+def _bool_env(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _air4thai_ssl_fallback_enabled() -> bool:
+    """
+    Air4Thai has periodically served an incomplete TLS chain. Keep normal
+    certificate verification first, then allow a scoped fallback for this host.
+    Set AIR4THAI_ALLOW_INSECURE_SSL=false to disable the fallback.
+    """
+    return _bool_env("AIR4THAI_ALLOW_INSECURE_SSL", default=True)
+
+
+def _request_get(
+    sess: requests.Session,
+    url: str,
+    timeout_s: int,
+    *,
+    verify_ssl: bool = True,
+) -> requests.Response:
     """GET with connect/read timeout + log preview"""
     timeout = (10, timeout_s)  # (connect, read)
-    r = sess.get(url, headers=REQ_HEADERS, timeout=timeout, allow_redirects=True)
+    r = sess.get(
+        url,
+        headers=REQ_HEADERS,
+        timeout=timeout,
+        allow_redirects=True,
+        verify=verify_ssl,
+    )
     ct = (r.headers.get("Content-Type") or "")
     preview = (r.text or "")[:200].replace("\n", " ").replace("\r", " ")
-    print(f"[HTTP] url={url} status={r.status_code} final={r.url} ct={ct} preview={preview}")
+    verify_label = "on" if verify_ssl else "off"
+    print(
+        f"[HTTP] url={url} status={r.status_code} final={r.url} "
+        f"verify_ssl={verify_label} ct={ct} preview={preview}"
+    )
     return r
+
+
+def _request_air4thai_get(sess: requests.Session, url: str, timeout_s: int) -> requests.Response:
+    """GET Air4Thai endpoint with verified TLS first and scoped cert fallback."""
+    try:
+        return _request_get(sess, url, timeout_s=timeout_s, verify_ssl=True)
+    except SSLError as e:
+        if AIR4THAI_HOST not in url or not _air4thai_ssl_fallback_enabled():
+            raise
+
+        print(
+            "[WARN] Air4Thai SSL verification failed; retrying this host with "
+            f"verify_ssl=off. Set AIR4THAI_ALLOW_INSECURE_SSL=false to disable. error={repr(e)}"
+        )
+        requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+        return _request_get(sess, url, timeout_s=timeout_s, verify_ssl=False)
 
 
 # =========================
@@ -200,7 +251,7 @@ def _fetch_json(sess: requests.Session, timeout_s: int) -> pd.DataFrame:
     last_err = None
     for url in AIR4_JSON_URLS:
         try:
-            r = _request_get(sess, url, timeout_s=timeout_s)
+            r = _request_air4thai_get(sess, url, timeout_s=timeout_s)
             if r.status_code != 200:
                 raise RuntimeError(f"JSON HTTP {r.status_code}")
 
@@ -226,7 +277,7 @@ def _fetch_xml(sess: requests.Session, timeout_s: int) -> pd.DataFrame:
     last_err = None
     for url in AIR4_XML_URLS:
         try:
-            r = _request_get(sess, url, timeout_s=timeout_s)
+            r = _request_air4thai_get(sess, url, timeout_s=timeout_s)
             if r.status_code != 200:
                 raise RuntimeError(f"XML HTTP {r.status_code}")
             if _looks_like_html(r.text):

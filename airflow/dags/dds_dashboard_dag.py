@@ -155,7 +155,7 @@ with DAG(
     dag_id="dds_dashboard_file_sensor",
     description="Process a newly replaced original_dds.xlsx for the DDS dashboard",
     default_args=default_args,
-    schedule="*/5 * * * *",
+    schedule="@continuous",
     start_date=pendulum.datetime(2026, 1, 1, tz="Asia/Bangkok"),
     catchup=False,
     max_active_runs=1,
@@ -165,11 +165,10 @@ with DAG(
         task_id="wait_for_new_original_dds",
         filepath=str(SOURCE_FILE),
         signature_variable=FILE_SIGNATURE_VARIABLE,
-        min_file_age_seconds=60,
+        min_file_age_seconds=10,
         poke_interval=30,
-        timeout=240,
+        timeout=7 * 24 * 60 * 60,
         mode="reschedule",
-        soft_fail=True,
     )
 
     capture_signature = PythonOperator(

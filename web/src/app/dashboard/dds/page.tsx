@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions, getCurrentUser, DDSOptions, DDSFilters, DDSDashboardData, MonthlyTrendData } from './actions';
 import { DDS_DISEASES } from '@/lib/constants';
+import DashboardNavMenu from '@/components/DashboardNavMenu';
 
 // --- Shared Components ---
 
@@ -60,6 +60,7 @@ function SingleSelect({ label, options, selected, onChange }: { label?: string, 
 function MultiSelect({ label, options, selected, onChange, placeholder = "ทั้งหมด", renderOption, searchPlaceholder = "ค้นหา" }: { label?: string, options: string[], selected: string[], onChange: (val: string[]) => void, placeholder?: string, renderOption?: (opt: string) => string, searchPlaceholder?: string }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchText, setSearchText] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
     const safeOptions = options || [];
     const safeSelected = selected || [];
     const getDisplayText = (opt: string) => renderOption ? renderOption(opt) : opt;
@@ -71,8 +72,22 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
         })
         : safeOptions;
 
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handlePointerDown = (event: PointerEvent) => {
+            if (!containerRef.current?.contains(event.target as Node)) {
+                setIsOpen(false);
+                setSearchText('');
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown, true);
+        return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+    }, [isOpen]);
+
     return (
-        <div className="relative col-span-1 w-full">
+        <div ref={containerRef} className="relative col-span-1 w-full">
             {label && <label className="block text-xs uppercase font-bold text-white/70 mb-2 ml-2 tracking-wider">{label}</label>}
             <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-xs font-bold text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-36">
@@ -94,14 +109,14 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                             placeholder={searchPlaceholder}
                             className="input input-sm w-full rounded-2xl border-white/10 bg-white/10 text-xs font-bold text-white placeholder:text-white/35 focus:border-blue-400 focus:outline-none"
                         />
-                        <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
+                        <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); setSearchText(''); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
                             <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
                                 {safeSelected.length === safeOptions.length && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                             </div>
                             <span className="text-xs font-bold text-white">เลือกทั้งหมด</span>
                         </div>
                         {filteredOptions.map((opt: string) => (
-                            <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
+                            <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); setSearchText(''); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
                                 <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.includes(opt) ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
                                     {safeSelected.includes(opt) && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                                 </div>
@@ -219,7 +234,19 @@ const DISEASE_ICD_OPTIONS: Record<string, string[]> = {
     'circulatory': ['I21', 'I22', 'I24'],
     'skin': ['L30.9', 'L50'],
     'eye': ['H10'],
-    'health_status': ['Z58', 'Z581', 'Y97']
+    'health_status': ['Z581', 'Y97']
+};
+
+const ENVOCC_WITH_Z581_TYPE = 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1';
+
+const getDiagnosisCodes = (groupId: string, diagnosisType: string) => {
+    const baseCodes = DISEASE_ICD_OPTIONS[groupId] || [];
+    if (diagnosisType === ENVOCC_WITH_Z581_TYPE) {
+        return groupId === 'health_status'
+            ? baseCodes.filter(c => c === 'Z581')
+            : baseCodes.filter(c => c !== 'Y97');
+    }
+    return baseCodes;
 };
 
 export default function DDSDashboardPage() {
@@ -232,8 +259,7 @@ export default function DDSDashboardPage() {
     const [loading, setLoading] = useState(true);
 
     const initialGroupedIcd10 = DISEASE_CARDS.reduce((acc, card) => {
-        const baseCodes = DISEASE_ICD_OPTIONS[card.id] || [];
-        acc[card.id] = baseCodes.filter(c => c !== 'Y97');
+        acc[card.id] = getDiagnosisCodes(card.id, ENVOCC_WITH_Z581_TYPE);
         return acc;
     }, {} as Record<string, string[]>);
 
@@ -318,7 +344,19 @@ export default function DDSDashboardPage() {
         });
     }, []);
 
-    const isDetailedView = filters.districts.length > 0;
+    const hasSubdistrictData = Object.keys(data?.subdistrictAverages || {}).length > 0;
+    const isAreaBreakdownView = filters.provinces.length > 0 || filters.districts.length > 0;
+    const isDetailedView = isAreaBreakdownView;
+    const mapLevel = isAreaBreakdownView ? (hasSubdistrictData ? 'ตำบล' : 'อำเภอ') : 'จังหวัด';
+    const mapData = isAreaBreakdownView
+        ? (hasSubdistrictData ? (data?.subdistrictAverages || {}) : (data?.districtAverages || {}))
+        : (data?.provinceAverages || {});
+    const mapAreaCount = isAreaBreakdownView
+        ? Object.keys(mapData).length
+        : Object.keys(data?.provinceAverages || {}).length;
+    const mapFilters = isAreaBreakdownView && !hasSubdistrictData
+        ? { ...filters, districts: filters.districts.length > 0 ? filters.districts : baseDistricts }
+        : filters;
     const ddcLegend = {
         title: 'ระดับความเสี่ยง',
         unit: isDetailedView ? 'ความหนาแน่นผู้ป่วย' : 'จำนวนผู้ป่วย',
@@ -353,9 +391,7 @@ export default function DDSDashboardPage() {
                             </p>
                         </div>
                     </div>
-                    <Link href="/" className="bg-white/10 hover:bg-white/20 transition-all p-3.5 rounded-2xl border border-white/10 group shadow-lg self-end md:self-auto">
-                        <svg className="w-5 h-5 text-white group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                    </Link>
+                    <DashboardNavMenu className="self-end md:self-auto" />
                 </div>
 
                 {/* Filters */}
@@ -371,8 +407,7 @@ export default function DDSDashboardPage() {
                             let nextGrouped = groupedIcd10;
                             if (val !== 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
                                 nextGrouped = DISEASE_CARDS.reduce((acc, card) => {
-                                    const baseCodes = DISEASE_ICD_OPTIONS[card.id] || [];
-                                    acc[card.id] = val === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1' ? baseCodes.filter(c => c !== 'Y97') : baseCodes;
+                                    acc[card.id] = getDiagnosisCodes(card.id, val);
                                     return acc;
                                 }, {} as Record<string, string[]>);
                                 setGroupedIcd10(nextGrouped);
@@ -420,17 +455,12 @@ export default function DDSDashboardPage() {
                             let cardOptions: string[] = [];
                             if (filters.diagnosisType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
                                 // Show all available codes from DB for this disease type
-                                cardOptions = options.icd10_by_disease?.[card.dbValue] || [];
+                                cardOptions = card.id === 'health_status'
+                                    ? (options.icd10_by_disease?.[card.dbValue] || []).filter(c => c !== 'Z58')
+                                    : options.icd10_by_disease?.[card.dbValue] || [];
                             } else {
                                 // Show only allowed codes for this disease group
-                                const baseCodes = DISEASE_ICD_OPTIONS[card.id] || [];
-                                if (filters.diagnosisType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1') {
-                                    // Filter out Y97 if it exists in health_status
-                                    cardOptions = baseCodes.filter(c => c !== 'Y97');
-                                } else {
-                                    // For Z58.1+Y97, show all baseCodes (which includes Y97 in health_status)
-                                    cardOptions = baseCodes;
-                                }
+                                cardOptions = getDiagnosisCodes(card.id, filters.diagnosisType);
                             }
 
                             return (
@@ -532,14 +562,14 @@ export default function DDSDashboardPage() {
                     {/* Thailand Map Section */}
                     <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
-                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>สถิติผู้ป่วยราย{isDetailedView ? 'ตำบล' : 'จังหวัด'}</h4>
-                            <div className="bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full text-xs font-extrabold border border-blue-500/20 uppercase tracking-widest">{isDetailedView ? data?.stations?.length : Object.keys(data?.provinceAverages || {}).length} พื้นที่</div>
+                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>สถิติผู้ป่วยราย{mapLevel}</h4>
+                            <div className="bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full text-xs font-extrabold border border-blue-500/20 uppercase tracking-widest">{mapAreaCount} พื้นที่</div>
                         </div>
                         <div className="flex-1 w-full min-h-[500px] relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 bg-slate-800/50">
                             <ThailandMap
-                                data={isDetailedView ? (data?.subdistrictAverages || {}) : (data?.provinceAverages || {})}
+                                data={mapData}
                                 stations={data?.stations || []}
-                                filters={filters}
+                                filters={mapFilters}
                                 getColor={ddcColorScale}
                                 legendConfig={ddcLegend}
                                 popupUnit="ราย"

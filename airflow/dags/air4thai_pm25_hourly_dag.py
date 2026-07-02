@@ -17,16 +17,25 @@ if str(DAGS_DIR) not in sys.path:
     sys.path.insert(0, str(DAGS_DIR))
 
 from check_db.check_db import check_db
-from notify.discord_notify import discord_failure_callback
 
 DISCORD_VAR_KEY = "air4thai_pm25_hourly"
+
+
+def _discord_failure_callback(context):
+    """Lazy import keeps DAG parsing resilient if notify dependencies hiccup."""
+    try:
+        from notify.discord_notify import discord_failure_callback
+
+        return discord_failure_callback(DISCORD_VAR_KEY)(context)
+    except Exception as e:
+        print(f"[WARN] Discord failure callback skipped: {type(e).__name__}: {e}")
 
 default_args = {
     "owner": "envocc",
     "depends_on_past": False,
     "retries": 2,
     "retry_delay": timedelta(minutes=2),
-    "on_failure_callback": discord_failure_callback(DISCORD_VAR_KEY),
+    "on_failure_callback": _discord_failure_callback,
 }
 
 local_tz = pendulum.timezone("Asia/Bangkok")
@@ -95,7 +104,7 @@ def run_air4thai_job(**context):
         raise
 
 
-with DAG(
+dag = DAG(
     dag_id="air4thai_pm25_hourly",
     description="Fetch Air4Thai and upsert into pm25_hourly",
     default_args=default_args,
@@ -104,22 +113,25 @@ with DAG(
     catchup=False,
     max_active_runs=1,
     tags=["pm25", "air4thai"],
-) as dag:
+)
 
-    t_check_db = PythonOperator(
-        task_id="check_db",
-        python_callable=check_db,
-    )
+t_check_db = PythonOperator(
+    task_id="check_db",
+    python_callable=check_db,
+    dag=dag,
+)
 
-    t_fetch_and_upsert = PythonOperator(
-        task_id="fetch_and_upsert",
-        python_callable=run_air4thai_job,
-        # ❌ ไม่ต้องใช้ provide_context ใน Airflow รุ่นนี้แล้ว
-    )
+t_fetch_and_upsert = PythonOperator(
+    task_id="fetch_and_upsert",
+    python_callable=run_air4thai_job,
+    dag=dag,
+    # ❌ ไม่ต้องใช้ provide_context ใน Airflow รุ่นนี้แล้ว
+)
 
-    t_ensure_pm25_hourly_table = PythonOperator(
-        task_id="ensure_pm25_hourly_table",
-        python_callable=ensure_pm25_hourly_table,
-    )
+t_ensure_pm25_hourly_table = PythonOperator(
+    task_id="ensure_pm25_hourly_table",
+    python_callable=ensure_pm25_hourly_table,
+    dag=dag,
+)
 
-    t_check_db >> t_ensure_pm25_hourly_table >> t_fetch_and_upsert
+t_check_db >> t_ensure_pm25_hourly_table >> t_fetch_and_upsert

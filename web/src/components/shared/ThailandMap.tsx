@@ -275,6 +275,35 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         return '#f43f5e';
     };
 
+    const getAdaptiveTooltipOptions = (e: any) => {
+        const map = e.target?._map;
+        const size = map?.getSize?.();
+        const point = e.containerPoint || (map && e.latlng ? map.latLngToContainerPoint(e.latlng) : null);
+        const baseOptions = {
+            sticky: true,
+            className: 'custom-map-tooltip-container',
+        };
+
+        if (!size || !point) {
+            return { ...baseOptions, direction: 'auto' as const, offset: [0, 0] as [number, number] };
+        }
+
+        if (point.y < 190) {
+            return { ...baseOptions, direction: 'bottom' as const, offset: [0, 24] as [number, number] };
+        }
+        if (point.y > size.y - 190) {
+            return { ...baseOptions, direction: 'top' as const, offset: [0, -24] as [number, number] };
+        }
+        if (point.x < 220) {
+            return { ...baseOptions, direction: 'right' as const, offset: [24, 0] as [number, number] };
+        }
+        if (point.x > size.x - 220) {
+            return { ...baseOptions, direction: 'left' as const, offset: [-24, 0] as [number, number] };
+        }
+
+        return { ...baseOptions, direction: 'top' as const, offset: [0, -24] as [number, number] };
+    };
+
     const tambonStyle = (feature: any) => {
         const pNameRaw = feature.properties.ADM1_TH || '';
         const dNameRaw = feature.properties.ADM2_TH || '';
@@ -293,7 +322,10 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         const isDistrictSelected = selectedDistricts.includes(cleanD);
 
         const key = `${provinceTh}-${districtTh.trim()}-${subdistrictTh}`;
+        const subdistrictKey = `${provinceTh}-${districtTh.trim()}-${subdistrictTh}`;
+        const districtKey = `${provinceTh}-${districtTh.trim()}`;
         const station = stationMap.get(key);
+        const rawAreaValue = normalizedData[cleanThaiName(subdistrictKey)] || normalizedData[cleanThaiName(districtKey)] || normalizedData[cleanD] || normalizedData[cleanP];
 
         let fillColor = 'transparent';
         let fillOpacity = 0;
@@ -301,11 +333,10 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         if (station) {
             fillColor = pm25ColorScale(station.pm25);
             fillOpacity = 0.8;
-        } else if (isDistrictSelected) {
-            const rawValue = normalizedData[cleanP] || { value: 0, rate: 0 };
-            const value = typeof rawValue === 'object' ? (rawValue.value || 0) : (rawValue || 0);
+        } else if (rawAreaValue || isDistrictSelected) {
+            const value = typeof rawAreaValue === 'object' ? (rawAreaValue.value || 0) : (rawAreaValue || 0);
             fillColor = getColor(value);
-            fillOpacity = 0.4;
+            fillOpacity = value > 0 ? 0.7 : 0.25;
         }
 
         return {
@@ -314,7 +345,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             opacity: 0.8,
             color: '#475569',
             fillOpacity,
-            interactive: !!station || isDistrictSelected
+            interactive: !!station || !!rawAreaValue || isDistrictSelected
         };
     };
 
@@ -344,12 +375,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     </div>
                 `;
 
-                l.bindTooltip(popupContent, { 
-                    sticky: true, 
-                    className: 'custom-map-tooltip-container',
-                    direction: 'top',
-                    offset: [0, -20]
-                }).openTooltip(e.latlng);
+                l.bindTooltip(popupContent, getAdaptiveTooltipOptions(e)).openTooltip(e.latlng);
             },
             mouseout: (e: any) => {
                 const l = e.target;
@@ -369,6 +395,8 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         const subdistrictTh = fixThaiMojibake(tNameRaw).trim();
 
         const key = `${provinceTh}-${districtTh.trim()}-${subdistrictTh}`;
+        const subdistrictKey = `${provinceTh}-${districtTh.trim()}-${subdistrictTh}`;
+        const districtKey = `${provinceTh}-${districtTh.trim()}`;
         const station = stationMap.get(key);
 
         if (station) {
@@ -394,14 +422,18 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                 }
                 
                 const cleanP = cleanThaiName(provinceTh);
-                const latestRawValue = dataRef.current[cleanP];
+                const cleanD = cleanThaiName(districtTh);
+                const latestRawValue = dataRef.current[cleanThaiName(subdistrictKey)] || dataRef.current[cleanThaiName(districtKey)] || dataRef.current[cleanD] || dataRef.current[cleanP];
                 const displayValue = (latestRawValue && typeof latestRawValue === 'object') 
                     ? (latestRawValue.value ?? 0) 
                     : (latestRawValue ?? 0);
+                const areaName = latestRawValue === dataRef.current[cleanThaiName(subdistrictKey)]
+                    ? `${subdistrictTh}, ${districtTh.trim()}, ${provinceTh}`
+                    : latestRawValue === dataRef.current[cleanP] ? provinceTh : `${districtTh.trim()}, ${provinceTh}`;
 
-                const popupContent = renderPopup ? renderPopup(provinceTh, latestRawValue, popupUnit) : `
+                const popupContent = renderPopup ? renderPopup(areaName, latestRawValue, popupUnit) : `
                     <div class="font-sans p-2 min-w-[120px]">
-                        <div class="text-base font-extrabold text-slate-800 mb-2 leading-tight">${provinceTh}</div>
+                        <div class="text-base font-extrabold text-slate-800 mb-2 leading-tight">${areaName}</div>
                         <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
                             <span class="text-2xl font-extrabold text-slate-900">${Number(displayValue).toLocaleString()}</span>
                             <span class="text-[10px] font-bold text-slate-400 ml-1">${popupUnit}</span>
@@ -412,12 +444,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                 const l = e.target;
                 // Only bind province tooltip if we don't already have a station tooltip
                 if (!station) {
-                    l.bindTooltip(popupContent, { 
-                        sticky: true, 
-                        className: 'custom-map-tooltip-container',
-                        direction: 'top',
-                        offset: [0, -20]
-                    }).openTooltip(e.latlng);
+                    l.bindTooltip(popupContent, getAdaptiveTooltipOptions(e)).openTooltip(e.latlng);
                 }
             },
             mouseout: (e: any) => {
@@ -486,6 +513,16 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     border: none;
                     box-shadow: none;
                     padding: 0;
+                    max-width: min(340px, calc(100vw - 32px));
+                    max-height: min(360px, calc(100vh - 120px));
+                    overflow: auto;
+                    white-space: normal;
+                    pointer-events: none;
+                }
+                .custom-map-tooltip-container > div {
+                    max-width: min(340px, calc(100vw - 32px));
+                    max-height: min(360px, calc(100vh - 120px));
+                    overflow: auto;
                 }
                 .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before, .leaflet-tooltip-left:before, .leaflet-tooltip-right:before {
                     display: none !important;

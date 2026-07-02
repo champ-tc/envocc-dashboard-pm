@@ -1,5 +1,11 @@
 name: pm25
 
+x-web-build: &web-build
+  context: ./web
+  dockerfile: Dockerfile
+  args:
+    NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+
 services:
   redis:
     image: redis:7.2-bookworm
@@ -40,6 +46,7 @@ services:
 
   db-schema-init:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    build: *web-build
     platform: linux/amd64
     command: ["node", "scripts/push-server-schema.mjs"]
     environment:
@@ -54,6 +61,7 @@ services:
 
   db-seed-init:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    build: *web-build
     platform: linux/amd64
     command: ["node", "scripts/seed-users.mjs"]
     env_file: [.env]
@@ -70,6 +78,7 @@ services:
 
   duckdb-data-init:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    build: *web-build
     platform: linux/amd64
     user: "0:0"
     entrypoint: /bin/sh
@@ -91,6 +100,7 @@ services:
 
   dds-input-init:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    build: *web-build
     platform: linux/amd64
     user: "0:0"
     entrypoint: /bin/sh
@@ -107,6 +117,7 @@ services:
 
   web:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
+    build: *web-build
     platform: linux/amd64
     expose: ["3000"]
     env_file: [.env]
@@ -227,23 +238,32 @@ services:
         set -euo pipefail
         : "$${_AIRFLOW_WWW_USER_USERNAME:?Set _AIRFLOW_WWW_USER_USERNAME in .env}"
         : "$${_AIRFLOW_WWW_USER_PASSWORD:?Set _AIRFLOW_WWW_USER_PASSWORD in .env}"
+        echo "[airflow-init] Preparing mounted data/config paths"
         mkdir -p "$${DUCKDB_DATA_DIR}"
         find /opt/airflow/dags/scripts -maxdepth 1 -type f \
           \( -name 'hdc*.csv' -o -name 'hdc*.parquet' \) \
           -exec cp -f {} "$${DUCKDB_DATA_DIR}/" \;
         chown -R "$${AIRFLOW_UID:-50000}:0" "$${DUCKDB_DATA_DIR}"
         chmod -R ug+rwX,o+rX "$${DUCKDB_DATA_DIR}"
+        chmod -R a+rX /opt/airflow/config
+        echo "[airflow-init] Airflow version/config"
         airflow version
         airflow config get-value core auth_manager
+        echo "[airflow-init] Migrating Airflow metadata DB"
         airflow db migrate
+        echo "[airflow-init] Migrating FAB DB if available"
         if airflow fab-db --help >/dev/null 2>&1; then
           airflow fab-db migrate
+        else
+          echo "[airflow-init] airflow fab-db command not available; skipping"
         fi
-        if airflow users list -o plain | awk '{print $$1}' | grep -Fxq "$${_AIRFLOW_WWW_USER_USERNAME}"; then
+        echo "[airflow-init] Ensuring Airflow admin user"
+        users_plain="$$(airflow users list -o plain 2>/dev/null || true)"
+        if printf '%s\n' "$${users_plain}" | awk '{print $$1}' | grep -Fxq "$${_AIRFLOW_WWW_USER_USERNAME}"; then
           airflow users reset-password \
               --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
               --password "$${_AIRFLOW_WWW_USER_PASSWORD}"
-        elif airflow users list -o plain | grep -Fq "$${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}"; then
+        elif printf '%s\n' "$${users_plain}" | grep -Fq "$${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}"; then
           echo "Airflow user email $${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com} already exists; keeping the existing user and skipping create."
           airflow users list
         else
@@ -255,8 +275,9 @@ services:
               --role "$${_AIRFLOW_WWW_USER_ROLE:-Admin}" \
               --email "$${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}"
         fi
+        echo "[airflow-init] Importing Airflow Variables if present"
         if [ -f /opt/airflow/config/variables.json ]; then
-          airflow variables import /opt/airflow/config/variables.json
+          airflow variables import /opt/airflow/config/variables.json || echo "[airflow-init] Variable import failed; continuing startup"
         else
           echo "Airflow Variables seed file not found: /opt/airflow/config/variables.json"
         fi
