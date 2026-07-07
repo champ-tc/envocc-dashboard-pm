@@ -208,33 +208,25 @@ def create_driver():
 
     if HEADLESS:
         logger.info("Running in HEADLESS mode")
-        options.add_argument("--headless") # ใช้ --headless ปกติสำหรับ Docker/Linux (ลดปัญหา crash จาก Ozone/Display server)
+        options.add_argument("--headless") # ใช้ --headless มาตรฐานสำหรับ Linux
         options.add_argument("--window-size=1920,1080")
     else:
         logger.info("Running in HEADED mode")
         options.add_argument("--start-maximized")
 
-    options.add_argument("--remote-allow-origins=*") # จำเป็นมากสำหรับ ChromeDriver 111+
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--no-sandbox") # จำเป็นสำหรับ Docker
-    options.add_argument("--disable-dev-shm-usage") # แก้ปัญหาหน่วยความจำ /dev/shm เต็มใน Docker
+    # Critical modern Docker flags (เฉพาะ flag ที่จำเป็นและปลอดภัยสำหรับ Chromium 120+ ใน Docker)
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--disable-software-rasterizer") # ป้องกัน crash จาก SwiftShader/GLX ใน Linux
-    options.add_argument("--disable-setuid-sandbox")
-    options.add_argument("--no-zygote") # ป้องกัน crash จาก zygote process ใน Docker
-    options.add_argument("--disable-breakpad") # ป้องกัน crash ตอนเขียน crash dump
-    options.add_argument("--disable-crash-reporter")
+    options.add_argument("--remote-allow-origins=*")
+
+    # Anti-bot and clean session flags
+    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--lang=th-TH")
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-notifications")
-    options.add_argument("--disable-infobars")
     options.add_argument("--disable-popup-blocking")
-    options.add_argument("--disable-background-networking")
-    options.add_argument("--disable-background-timer-throttling")
-    options.add_argument("--disable-renderer-backgrounding")
-    options.add_argument("--disable-features=Translate,BackForwardCache")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option("useAutomationExtension", False)
 
     prefs = {
         "profile.default_content_setting_values.notifications": 2,
@@ -247,7 +239,14 @@ def create_driver():
 
     chromedriver_bin = shutil.which("chromedriver") or "/usr/bin/chromedriver"
     logger.info(f"Using chromedriver binary at: {chromedriver_bin}")
-    service = Service(chromedriver_bin) if os.path.exists(chromedriver_bin) else Service()
+    
+    # เปิดใช้ verbose logging ออก sys.stdout เพื่อให้เห็น Error จากภายในของ Chromium โดยตรงหากสตาร์ทไม่ขึ้น
+    service_args = ["--verbose"]
+    service = (
+        Service(chromedriver_bin, service_args=service_args, log_output=sys.stdout)
+        if os.path.exists(chromedriver_bin)
+        else Service(service_args=service_args, log_output=sys.stdout)
+    )
 
     driver = webdriver.Chrome(
         service=service,
