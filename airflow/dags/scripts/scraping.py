@@ -184,6 +184,7 @@ def get_target_years():
 
 def create_driver():
     import shutil
+    import tempfile
     logger.info("Initializing Chrome/Chromium driver...")
     options = webdriver.ChromeOptions()
 
@@ -200,18 +201,29 @@ def create_driver():
     else:
         logger.warning("No Chrome/Chromium binary found via shutil.which; relying on default Selenium discovery")
 
+    # สร้าง temp user-data-dir แบบสุ่มเพื่อป้องกันปัญหา Permission/Lock file ใน Docker
+    user_data_dir = tempfile.mkdtemp(prefix="chrome_user_data_")
+    logger.info(f"Using temp user-data-dir: {user_data_dir}")
+    options.add_argument(f"--user-data-dir={user_data_dir}")
+
     if HEADLESS:
         logger.info("Running in HEADLESS mode")
-        options.add_argument("--headless=new")
+        options.add_argument("--headless") # ใช้ --headless ปกติสำหรับ Docker/Linux (ลดปัญหา crash จาก Ozone/Display server)
         options.add_argument("--window-size=1920,1080")
     else:
         logger.info("Running in HEADED mode")
         options.add_argument("--start-maximized")
 
+    options.add_argument("--remote-allow-origins=*") # จำเป็นมากสำหรับ ChromeDriver 111+
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox") # จำเป็นสำหรับ Docker
+    options.add_argument("--disable-dev-shm-usage") # แก้ปัญหาหน่วยความจำ /dev/shm เต็มใน Docker
     options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer") # ป้องกัน crash จาก SwiftShader/GLX ใน Linux
+    options.add_argument("--disable-setuid-sandbox")
+    options.add_argument("--no-zygote") # ป้องกัน crash จาก zygote process ใน Docker
+    options.add_argument("--disable-breakpad") # ป้องกัน crash ตอนเขียน crash dump
+    options.add_argument("--disable-crash-reporter")
     options.add_argument("--lang=th-TH")
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-notifications")
