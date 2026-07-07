@@ -37,7 +37,8 @@ default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
     "execution_timeout": timedelta(hours=6), # Scraping takes a long time
-    "on_failure_callback": on_failure,
+    # ปิด callback ชั่วคราว เพื่อป้องกัน Airflow 3 แครชตอน task fail (Issue #44354)
+    # "on_failure_callback": on_failure,
 }
 
 def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
