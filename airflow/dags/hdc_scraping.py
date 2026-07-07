@@ -71,7 +71,7 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
         [
             sys.executable,
             "-c",
-            "import pandas, selenium, lxml, html5lib, openpyxl; print('dependency preflight OK')",
+            "import pandas; print('dependency preflight OK')",
         ],
         cwd=script_path,
         env=env,
@@ -120,7 +120,7 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
 # ==============================================================================
 with DAG(
     dag_id="hdc_scraping",
-    description="Pipeline for scraping, merging, and concatenating PM2.5 patient data",
+    description="Pipeline for fetching HDC PM2.5 patient API data, cleaning it, and concatenating yearly outputs",
     schedule="0 6 * * *",
     start_date=pendulum.datetime(2024, 1, 1, tz="Asia/Bangkok"),
 
@@ -129,7 +129,7 @@ with DAG(
     default_args=default_args,
 ) as dag:
 
-    # Task 1: Scrape raw data from HDC
+    # Task 1: Fetch raw data from HDC OpenData API
     scrape_task = PythonOperator(
         task_id="scrape_hdc_data",
         python_callable=_run_script,
@@ -140,7 +140,7 @@ with DAG(
         },
     )
 
-    # Task 2: Merge raw data into long format (merged.py)
+    # Task 2: Clean raw API data into long format (merged.py)
     merge_task = PythonOperator(
         task_id="merge_hdc_data",
         python_callable=_run_script,
