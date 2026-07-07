@@ -207,18 +207,21 @@ def create_driver():
     options.add_argument(f"--user-data-dir={user_data_dir}")
 
     if HEADLESS:
-        logger.info("Running in HEADLESS mode")
-        options.add_argument("--headless") # ใช้ --headless มาตรฐานสำหรับ Linux
+        logger.info("Running in HEADLESS mode (--headless=old)")
+        # ใน Chromium 120+ (Debian Bookworm) --headless จะกลายเป็น --headless=new ซึ่งต้องใช้จอ/Ozone ใน Docker จึงแครช
+        # ต้องใช้ --headless=old เพื่อรันแบบ Pure Headless ที่ไม่ต้องพึ่งระบบจอ X11/Wayland
+        options.add_argument("--headless=old")
         options.add_argument("--window-size=1920,1080")
     else:
         logger.info("Running in HEADED mode")
         options.add_argument("--start-maximized")
 
-    # Critical modern Docker flags (เฉพาะ flag ที่จำเป็นและปลอดภัยสำหรับ Chromium 120+ ใน Docker)
+    # Critical modern Docker flags
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--remote-allow-origins=*")
+    options.add_argument("--disable-dbus") # ป้องกัน error dbus/bus.cc ใน Docker ที่ไม่มี DBus daemon
 
     # Anti-bot and clean session flags
     options.add_argument("--disable-blink-features=AutomationControlled")
