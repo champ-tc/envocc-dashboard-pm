@@ -137,7 +137,6 @@ with DAG(
             "script_name": SCRIPT_SCRAPING,
             "timeout_sec": 14400, # 4 hours for full scraping
         },
-        on_success_callback=on_success,
     )
 
     # Task 2: Merge raw data into long format (merged.py)
@@ -149,7 +148,6 @@ with DAG(
             "script_name": SCRIPT_MERGED,
             "timeout_sec": 600,
         },
-        on_success_callback=on_success,
     )
 
     # Task 3: Concatenate all years into final dataset (cell.py)
@@ -161,7 +159,6 @@ with DAG(
             "script_name": SCRIPT_CELL,
             "timeout_sec": 300,
         },
-        on_success_callback=on_success,
     )
 
     # Workflow: Scrape >> Merge >> Cell
