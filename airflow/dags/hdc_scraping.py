@@ -4,8 +4,8 @@ import pendulum
 from datetime import timedelta
 
 from airflow import DAG
-from airflow.providers.standard.operators.python import PythonOperator
-from airflow.providers.standard.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
 
 # ทำให้ import โฟลเดอร์ dags/ ได้
 DAGS_DIR = os.path.dirname(os.path.abspath(__file__))
