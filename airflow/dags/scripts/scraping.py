@@ -183,8 +183,22 @@ def get_target_years():
     return [str(y) for y in range(START_YEAR_THAI, END_YEAR_THAI + 1)]
 
 def create_driver():
-    logger.info("Initializing Chrome driver...")
+    import shutil
+    logger.info("Initializing Chrome/Chromium driver...")
     options = webdriver.ChromeOptions()
+
+    # ตรวจสอบหาตำแหน่ง binary ของ Chrome หรือ Chromium ในระบบ (จำเป็นมากในระบบ Docker ที่ใช้ Chromium)
+    chrome_bin = (
+        shutil.which("chromium")
+        or shutil.which("chromium-browser")
+        or shutil.which("google-chrome")
+        or shutil.which("google-chrome-stable")
+    )
+    if chrome_bin:
+        logger.info(f"Setting browser binary location to: {chrome_bin}")
+        options.binary_location = chrome_bin
+    else:
+        logger.warning("No Chrome/Chromium binary found via shutil.which; relying on default Selenium discovery")
 
     if HEADLESS:
         logger.info("Running in HEADLESS mode")
@@ -219,11 +233,14 @@ def create_driver():
     }
     options.add_experimental_option("prefs", prefs)
 
+    chromedriver_bin = shutil.which("chromedriver") or "/usr/bin/chromedriver"
+    logger.info(f"Using chromedriver binary at: {chromedriver_bin}")
+    service = Service(chromedriver_bin) if os.path.exists(chromedriver_bin) else Service()
 
     driver = webdriver.Chrome(
-    service=Service("/usr/bin/chromedriver"),
-    options=options
-)
+        service=service,
+        options=options
+    )
 
     driver.set_page_load_timeout(60)
 
