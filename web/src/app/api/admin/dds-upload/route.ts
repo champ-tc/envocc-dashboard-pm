@@ -23,6 +23,7 @@ const DEFAULT_AIRFLOW_BASE_URLS = [
     'http://127.0.0.1:8080/airflow',
     'http://127.0.0.1:8080',
 ];
+const AIRFLOW_AUTH_PATHS = ['/auth/token', '/api/v2/auth/token'];
 
 
 async function isSuperadmin() {
@@ -60,25 +61,125 @@ function isXlsxFile(file: File, bytes: Uint8Array) {
 }
 
 
-function getAirflowAuthHeader() {
+function getAirflowCredentials() {
     const username = process.env.AIRFLOW_API_USERNAME || process.env._AIRFLOW_WWW_USER_USERNAME;
     const password = process.env.AIRFLOW_API_PASSWORD || process.env._AIRFLOW_WWW_USER_PASSWORD;
     if (!username || !password) {
         throw new Error('Airflow API credentials are not configured');
     }
 
-    return `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+    return { username, password };
+}
+
+
+function getAirflowBasicAuthHeader(credentials: { username: string; password: string }) {
+    return `Basic ${Buffer.from(`${credentials.username}:${credentials.password}`).toString('base64')}`;
 }
 
 
 function getAirflowBaseUrls() {
-    const configured = process.env.AIRFLOW_API_BASE_URL
-        ? [process.env.AIRFLOW_API_BASE_URL]
-        : [];
+    const baseUrls = process.env.AIRFLOW_API_BASE_URL
+        ? process.env.AIRFLOW_API_BASE_URL.split(',')
+        : DEFAULT_AIRFLOW_BASE_URLS;
 
-    return Array.from(new Set([...configured, ...DEFAULT_AIRFLOW_BASE_URLS]
+    return Array.from(new Set(baseUrls
         .map((url) => url.trim().replace(/\/$/, ''))
         .filter(Boolean)));
+}
+
+
+async function fetchWithTimeout(url: string, init: RequestInit) {
+    return fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(AIRFLOW_REQUEST_TIMEOUT_MS),
+    });
+}
+
+
+function describeError(error: unknown) {
+    if (!(error instanceof Error)) return String(error);
+
+    const cause = (error as Error & {
+        cause?: {
+            code?: string;
+            errno?: string | number;
+            syscall?: string;
+            hostname?: string;
+            address?: string;
+            port?: number;
+            message?: string;
+        };
+    }).cause;
+
+    const details = [
+        cause?.code,
+        cause?.errno,
+        cause?.syscall,
+        cause?.hostname,
+        cause?.address,
+        cause?.port,
+        cause?.message,
+    ].filter((value) => value !== undefined && value !== '');
+
+    return details.length > 0
+        ? `${error.message} (${details.join(', ')})`
+        : error.message;
+}
+
+
+async function createAirflowToken(
+    baseUrl: string,
+    credentials: { username: string; password: string },
+) {
+    const attempts: RequestInit[] = [
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify(credentials),
+        },
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Accept: 'application/json',
+            },
+            body: new URLSearchParams(credentials),
+        },
+    ];
+
+    const errors: string[] = [];
+    for (const authPath of AIRFLOW_AUTH_PATHS) {
+        const tokenEndpoint = `${baseUrl}${authPath}`;
+        for (const attempt of attempts) {
+            try {
+                const response = await fetchWithTimeout(tokenEndpoint, attempt);
+                const responseBody = await response.text();
+                if (!response.ok) {
+                    errors.push(`${tokenEndpoint}: ${response.status} ${responseBody.slice(0, 300)}`);
+                    continue;
+                }
+
+                const tokenBody = JSON.parse(responseBody) as {
+                    access_token?: string;
+                    token?: string;
+                };
+                const token = tokenBody.access_token || tokenBody.token;
+                if (!token) {
+                    errors.push(`${tokenEndpoint}: 200 missing access_token ${responseBody.slice(0, 300)}`);
+                    continue;
+                }
+
+                return token;
+            } catch (error) {
+                errors.push(`${tokenEndpoint}: ${describeError(error)}`);
+            }
+        }
+    }
+
+    throw new Error(errors.join(' | '));
 }
 
 
@@ -94,24 +195,20 @@ async function triggerAirflowPipeline(fileMetadata: { size: number; updatedAt: s
         },
     };
 
-    const authHeader = getAirflowAuthHeader();
-    const endpoints = getAirflowBaseUrls().flatMap((baseUrl) => [
-        `${baseUrl}/api/v2/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`,
-        `${baseUrl}/api/v1/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`,
-    ]);
-
+    const credentials = getAirflowCredentials();
     const errors: string[] = [];
-    for (const endpoint of endpoints) {
+    for (const baseUrl of getAirflowBaseUrls()) {
+        const endpoint = `${baseUrl}/api/v2/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`;
         try {
-            const response = await fetch(endpoint, {
+            const token = await createAirflowToken(baseUrl, credentials);
+            const response = await fetchWithTimeout(endpoint, {
                 method: 'POST',
                 headers: {
-                    Authorization: authHeader,
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
                 },
                 body: JSON.stringify(body),
-                signal: AbortSignal.timeout(AIRFLOW_REQUEST_TIMEOUT_MS),
             });
 
             const responseBody = await response.text();
@@ -124,7 +221,31 @@ async function triggerAirflowPipeline(fileMetadata: { size: number; updatedAt: s
 
             errors.push(`${endpoint}: ${response.status} ${responseBody.slice(0, 300)}`);
         } catch (error) {
-            errors.push(`${endpoint}: ${error instanceof Error ? error.message : String(error)}`);
+            errors.push(`${endpoint}: ${describeError(error)}`);
+        }
+
+        try {
+            const response = await fetchWithTimeout(endpoint, {
+                method: 'POST',
+                headers: {
+                    Authorization: getAirflowBasicAuthHeader(credentials),
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            const responseBody = await response.text();
+            if (response.ok) {
+                return {
+                    dagId: AIRFLOW_DDS_DAG_ID,
+                    dagRunId,
+                };
+            }
+
+            errors.push(`${endpoint} basic-auth fallback: ${response.status} ${responseBody.slice(0, 300)}`);
+        } catch (error) {
+            errors.push(`${endpoint} basic-auth fallback: ${describeError(error)}`);
         }
     }
 
