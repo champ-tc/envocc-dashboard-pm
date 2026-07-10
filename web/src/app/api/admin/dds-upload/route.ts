@@ -184,9 +184,11 @@ async function createAirflowToken(
 
 
 async function triggerAirflowPipeline(fileMetadata: { size: number; updatedAt: string }) {
-    const dagRunId = `dds_upload__${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    const logicalDate = new Date().toISOString();
+    const dagRunId = `dds_upload__${logicalDate.replace(/[:.]/g, '-')}`;
     const body = {
         dag_run_id: dagRunId,
+        logical_date: logicalDate,
         conf: {
             source: 'web_dds_upload',
             filename: 'original_dds.xlsx',
