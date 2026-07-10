@@ -3,7 +3,6 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 from datetime import timedelta
 from pathlib import Path
 from typing import Dict
@@ -11,8 +10,6 @@ from typing import Dict
 import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.sdk import Variable
-from airflow.sensors.base import BaseSensorOperator
 
 from notify.discord_notify import discord_failure_callback
 
@@ -28,7 +25,6 @@ PUBLISHED_FILE = Path(
     os.getenv("DUCKDB_DATA_DIR", "/opt/airflow/data")
 ) / "dashboard_dds.csv"
 
-FILE_SIGNATURE_VARIABLE = "dds_original_file_last_processed"
 DISCORD_VAR_KEY = "dds_dashboard"
 
 
@@ -38,53 +34,6 @@ def get_file_signature(path: Path) -> Dict[str, int]:
         "mtime_ns": stat.st_mtime_ns,
         "size": stat.st_size,
     }
-
-
-class NewOriginalDdsFileSensor(BaseSensorOperator):
-    """Wait until a new, fully written original_dds.xlsx is available."""
-
-    template_fields = ("filepath",)
-
-    def __init__(
-        self,
-        *,
-        filepath: str,
-        signature_variable: str,
-        min_file_age_seconds: int = 60,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.filepath = filepath
-        self.signature_variable = signature_variable
-        self.min_file_age_seconds = min_file_age_seconds
-
-    def poke(self, context) -> bool:
-        path = Path(self.filepath)
-        if not path.is_file():
-            self.log.info("Waiting for file: %s", path)
-            return False
-
-        stat = path.stat()
-        age_seconds = time.time() - stat.st_mtime
-        if age_seconds < self.min_file_age_seconds:
-            self.log.info(
-                "File %s is only %.1f seconds old; waiting until it is stable.",
-                path,
-                age_seconds,
-            )
-            return False
-
-        signature = f"{stat.st_mtime_ns}:{stat.st_size}"
-        last_processed = Variable.get(
-            self.signature_variable,
-            default="",
-        )
-        if signature == last_processed:
-            self.log.info("File has already been processed: %s", signature)
-            return False
-
-        self.log.info("Detected new DDS file: %s (%s)", path, signature)
-        return True
 
 
 def capture_source_signature() -> Dict[str, int]:
@@ -126,21 +75,6 @@ def publish_dashboard_file(source_signature: Dict[str, int]) -> None:
     print(f"Published DDS dashboard file: {PUBLISHED_FILE}")
 
 
-def mark_source_processed(source_signature: Dict[str, int]) -> None:
-    current_signature = get_file_signature(SOURCE_FILE)
-    if current_signature != source_signature:
-        raise RuntimeError(
-            "original_dds.xlsx changed during processing; "
-            "the new version will be processed on the next DAG run"
-        )
-
-    signature = (
-        f"{source_signature['mtime_ns']}:{source_signature['size']}"
-    )
-    Variable.set(FILE_SIGNATURE_VARIABLE, signature)
-    print(f"Marked DDS source as processed: {signature}")
-
-
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -152,25 +86,15 @@ default_args = {
 
 
 with DAG(
-    dag_id="dds_dashboard_file_sensor",
-    description="Process a newly replaced original_dds.xlsx for the DDS dashboard",
+    dag_id="dds_dashboard_pipeline",
+    description="Process original_dds.xlsx uploaded from the web admin UI for the DDS dashboard",
     default_args=default_args,
-    schedule="@continuous",
+    schedule=None,
     start_date=pendulum.datetime(2026, 1, 1, tz="Asia/Bangkok"),
     catchup=False,
     max_active_runs=1,
-    tags=["dds", "file-sensor", "dashboard"],
+    tags=["dds", "upload-trigger", "dashboard"],
 ) as dag:
-    wait_for_new_file = NewOriginalDdsFileSensor(
-        task_id="wait_for_new_original_dds",
-        filepath=str(SOURCE_FILE),
-        signature_variable=FILE_SIGNATURE_VARIABLE,
-        min_file_age_seconds=10,
-        poke_interval=30,
-        timeout=7 * 24 * 60 * 60,
-        mode="reschedule",
-    )
-
     capture_signature = PythonOperator(
         task_id="capture_source_signature",
         python_callable=capture_source_signature,
@@ -187,16 +111,4 @@ with DAG(
         op_args=[capture_signature.output],
     )
 
-    mark_processed = PythonOperator(
-        task_id="mark_source_processed",
-        python_callable=mark_source_processed,
-        op_args=[capture_signature.output],
-    )
-
-    (
-        wait_for_new_file
-        >> capture_signature
-        >> process_dds
-        >> publish_dashboard
-        >> mark_processed
-    )
+    capture_signature >> process_dds >> publish_dashboard

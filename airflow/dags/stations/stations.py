@@ -10,12 +10,26 @@ from urllib.parse import quote_plus
 import numpy as np
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from requests.exceptions import SSLError
 from sqlalchemy import create_engine, text
+from urllib3.exceptions import InsecureRequestWarning
+from urllib3.util.retry import Retry
 
 # ---------------------------------------------------------
 # CONFIGURATION & CONSTANTS
 # ---------------------------------------------------------
-AIR4_URL = "http://air4thai.pcd.go.th/services/getNewAQI_JSON.php"
+AIR4THAI_HOST = "air4thai.pcd.go.th"
+AIR4_URLS = [
+    "https://air4thai.pcd.go.th/services/getNewAQI_JSON.php",
+    "http://air4thai.pcd.go.th/services/getNewAQI_JSON.php",
+]
+REQ_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; envocc-airflow/1.0)",
+    "Accept": "application/json,text/plain,*/*",
+    "Accept-Language": "th-TH,th;q=0.9,en;q=0.8",
+    "Connection": "close",
+}
 DEFAULT_PROVINCE_XLSX = "/opt/airflow/dags/resources/Province.xlsx"
 DEFAULT_SHEET = "Province"
 BKK_ALIASES = {"กรุงเทพฯ", "กรุงเทพมหานคร", "กทม.", "กทม"}
@@ -148,10 +162,99 @@ def load_province_map() -> Dict[str, str]:
         logger.error(f"Failed to load province map from {path}: {e}")
         raise
 
+def _bool_env(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+def _air4thai_ssl_fallback_enabled() -> bool:
+    """
+    Air4Thai can serve an incomplete TLS chain. Keep normal verification first,
+    then allow a scoped fallback for this host.
+    """
+    return _bool_env("AIR4THAI_ALLOW_INSECURE_SSL", default=True)
+
+def _session_with_retries() -> requests.Session:
+    sess = requests.Session()
+    retry = Retry(
+        total=5,
+        connect=5,
+        read=5,
+        backoff_factor=1.0,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
+    sess.mount("https://", adapter)
+    sess.mount("http://", adapter)
+    return sess
+
+def _request_air4thai_get(
+    session: requests.Session,
+    url: str,
+    *,
+    verify_ssl: bool = True,
+) -> requests.Response:
+    return session.get(
+        url,
+        headers=REQ_HEADERS,
+        timeout=(10, 30),
+        allow_redirects=True,
+        verify=verify_ssl,
+    )
+
+def _fetch_air4thai_response(session: requests.Session) -> requests.Response:
+    last_err: Optional[Exception] = None
+
+    for url in AIR4_URLS:
+        try:
+            response = _request_air4thai_get(session, url, verify_ssl=True)
+            logger.info(
+                "Air4Thai response: url=%s final=%s status=%s",
+                url,
+                response.url,
+                response.status_code,
+            )
+            response.raise_for_status()
+            return response
+        except SSLError as e:
+            last_err = e
+            if AIR4THAI_HOST not in url or not _air4thai_ssl_fallback_enabled():
+                logger.warning("Air4Thai SSL verification failed without fallback: %r", e)
+                continue
+
+            logger.warning(
+                "Air4Thai SSL verification failed; retrying this host with "
+                "verify_ssl=off. Set AIR4THAI_ALLOW_INSECURE_SSL=false to disable. error=%r",
+                e,
+            )
+            requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+            try:
+                response = _request_air4thai_get(session, url, verify_ssl=False)
+                logger.info(
+                    "Air4Thai response: url=%s final=%s status=%s verify_ssl=off",
+                    url,
+                    response.url,
+                    response.status_code,
+                )
+                response.raise_for_status()
+                return response
+            except Exception as fallback_err:
+                last_err = fallback_err
+                logger.warning("Air4Thai insecure SSL fallback failed for %s: %r", url, fallback_err)
+        except Exception as e:
+            last_err = e
+            logger.warning("Air4Thai request failed for %s: %r", url, e)
+
+    raise RuntimeError(f"Failed to fetch Air4Thai station data: {last_err}")
+
 def fetch_air4thai(province_map: Dict[str, str]) -> pd.DataFrame:
     """Fetches and cleans station data from Air4Thai API."""
-    with requests.get(AIR4_URL, timeout=30) as r:
-        r.raise_for_status()
+    with _session_with_retries() as session:
+        r = _fetch_air4thai_response(session)
         data = r.json().get("stations", [])
     
     rows = []

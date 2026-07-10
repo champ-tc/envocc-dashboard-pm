@@ -13,6 +13,8 @@ export const dynamic = 'force-dynamic';
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const INPUT_DIR = process.env.DDS_INPUT_DIR || path.join(process.cwd(), 'uploads', 'dds');
 const TARGET_FILE = path.join(INPUT_DIR, 'original_dds.xlsx');
+const AIRFLOW_API_BASE_URL = (process.env.AIRFLOW_API_BASE_URL || 'http://airflow-webserver:8080/airflow').replace(/\/$/, '');
+const AIRFLOW_DDS_DAG_ID = process.env.AIRFLOW_DDS_DAG_ID || 'dds_dashboard_pipeline';
 
 
 async function isSuperadmin() {
@@ -47,6 +49,66 @@ function isXlsxFile(file: File, bytes: Uint8Array) {
         && bytes[2] === 0x03
         && bytes[3] === 0x04;
     return extensionValid && mimeValid && zipSignatureValid;
+}
+
+
+function getAirflowAuthHeader() {
+    const username = process.env.AIRFLOW_API_USERNAME || process.env._AIRFLOW_WWW_USER_USERNAME;
+    const password = process.env.AIRFLOW_API_PASSWORD || process.env._AIRFLOW_WWW_USER_PASSWORD;
+    if (!username || !password) {
+        throw new Error('Airflow API credentials are not configured');
+    }
+
+    return `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+}
+
+
+async function triggerAirflowPipeline(fileMetadata: { size: number; updatedAt: string }) {
+    const dagRunId = `dds_upload__${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    const body = {
+        dag_run_id: dagRunId,
+        conf: {
+            source: 'web_dds_upload',
+            filename: 'original_dds.xlsx',
+            size: fileMetadata.size,
+            updatedAt: fileMetadata.updatedAt,
+        },
+    };
+
+    const authHeader = getAirflowAuthHeader();
+    const endpoints = [
+        `${AIRFLOW_API_BASE_URL}/api/v2/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`,
+        `${AIRFLOW_API_BASE_URL}/api/v1/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`,
+    ];
+
+    const errors: string[] = [];
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    Authorization: authHeader,
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            const responseBody = await response.text();
+            if (response.ok) {
+                return {
+                    dagId: AIRFLOW_DDS_DAG_ID,
+                    dagRunId,
+                };
+            }
+
+            errors.push(`${endpoint}: ${response.status} ${responseBody.slice(0, 300)}`);
+        } catch (error) {
+            errors.push(`${endpoint}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    throw new Error(`Airflow trigger failed. ${errors.join(' | ')}`);
 }
 
 
@@ -111,11 +173,19 @@ export async function POST(request: Request) {
         temporaryFile = '';
 
         const metadata = await stat(TARGET_FILE);
+        const updatedAt = metadata.mtime.toISOString();
+        const dagRun = await triggerAirflowPipeline({
+            size: metadata.size,
+            updatedAt,
+        });
+
         return NextResponse.json({
-            message: 'อัปโหลดสำเร็จ Airflow จะเริ่มประมวลผลไฟล์ใหม่',
+            message: 'อัปโหลดสำเร็จ และเริ่ม DDS pipeline แล้ว',
             filename: 'original_dds.xlsx',
             size: metadata.size,
-            updatedAt: metadata.mtime.toISOString(),
+            updatedAt,
+            dagId: dagRun.dagId,
+            dagRunId: dagRun.dagRunId,
         });
     } catch (error) {
         console.error('DDS upload error:', error);

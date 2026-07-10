@@ -124,6 +124,8 @@ services:
     environment:
       DUCKDB_DATA_DIR: /app/public/duckdb
       DDS_INPUT_DIR: /app/uploads/dds
+      AIRFLOW_API_BASE_URL: http://airflow-webserver:8080/airflow
+      AIRFLOW_DDS_DAG_ID: dds_dashboard_pipeline
     volumes:
       - duckdb-data-volume:/app/public/duckdb
       - dds-input-volume:/app/uploads/dds

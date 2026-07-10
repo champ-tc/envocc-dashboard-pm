@@ -184,7 +184,7 @@ export default function DdsUploadPage() {
                                 </div>
                             </dl>
                             <p className="text-xs leading-5 text-slate-500">
-                                File Sensor ตรวจทุก 5 นาที และรอให้ไฟล์นิ่งอย่างน้อย 60 วินาทีก่อนเริ่มคลีนข้อมูล
+                                เมื่ออัปโหลดไฟล์สำเร็จ ระบบจะ trigger Airflow DDS pipeline ทันที
                             </p>
                         </div>
                     ) : (
