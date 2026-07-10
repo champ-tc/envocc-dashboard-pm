@@ -13,8 +13,16 @@ export const dynamic = 'force-dynamic';
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const INPUT_DIR = process.env.DDS_INPUT_DIR || path.join(process.cwd(), 'uploads', 'dds');
 const TARGET_FILE = path.join(INPUT_DIR, 'original_dds.xlsx');
-const AIRFLOW_API_BASE_URL = (process.env.AIRFLOW_API_BASE_URL || 'http://airflow-webserver:8080/airflow').replace(/\/$/, '');
 const AIRFLOW_DDS_DAG_ID = process.env.AIRFLOW_DDS_DAG_ID || 'dds_dashboard_pipeline';
+const AIRFLOW_REQUEST_TIMEOUT_MS = 10_000;
+const DEFAULT_AIRFLOW_BASE_URLS = [
+    'http://airflow-webserver:8080/airflow',
+    'http://airflow-webserver:8080',
+    'http://localhost:8080/airflow',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080/airflow',
+    'http://127.0.0.1:8080',
+];
 
 
 async function isSuperadmin() {
@@ -63,6 +71,17 @@ function getAirflowAuthHeader() {
 }
 
 
+function getAirflowBaseUrls() {
+    const configured = process.env.AIRFLOW_API_BASE_URL
+        ? [process.env.AIRFLOW_API_BASE_URL]
+        : [];
+
+    return Array.from(new Set([...configured, ...DEFAULT_AIRFLOW_BASE_URLS]
+        .map((url) => url.trim().replace(/\/$/, ''))
+        .filter(Boolean)));
+}
+
+
 async function triggerAirflowPipeline(fileMetadata: { size: number; updatedAt: string }) {
     const dagRunId = `dds_upload__${new Date().toISOString().replace(/[:.]/g, '-')}`;
     const body = {
@@ -76,10 +95,10 @@ async function triggerAirflowPipeline(fileMetadata: { size: number; updatedAt: s
     };
 
     const authHeader = getAirflowAuthHeader();
-    const endpoints = [
-        `${AIRFLOW_API_BASE_URL}/api/v2/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`,
-        `${AIRFLOW_API_BASE_URL}/api/v1/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`,
-    ];
+    const endpoints = getAirflowBaseUrls().flatMap((baseUrl) => [
+        `${baseUrl}/api/v2/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`,
+        `${baseUrl}/api/v1/dags/${encodeURIComponent(AIRFLOW_DDS_DAG_ID)}/dagRuns`,
+    ]);
 
     const errors: string[] = [];
     for (const endpoint of endpoints) {
@@ -92,6 +111,7 @@ async function triggerAirflowPipeline(fileMetadata: { size: number; updatedAt: s
                     Accept: 'application/json',
                 },
                 body: JSON.stringify(body),
+                signal: AbortSignal.timeout(AIRFLOW_REQUEST_TIMEOUT_MS),
             });
 
             const responseBody = await response.text();
@@ -189,6 +209,18 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         console.error('DDS upload error:', error);
+        if (
+            error instanceof Error
+            && error.message.startsWith('Airflow trigger failed.')
+        ) {
+            return NextResponse.json(
+                {
+                    error: `อัปโหลดไฟล์แล้ว แต่ไม่สามารถเริ่ม Airflow DDS pipeline ได้: ${error.message}`,
+                },
+                { status: 502 },
+            );
+        }
+
         return NextResponse.json(
             { error: 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์ DDS' },
             { status: 500 },
