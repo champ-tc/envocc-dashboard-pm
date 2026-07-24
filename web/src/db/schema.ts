@@ -19,7 +19,7 @@ export const users = pgTable('users', {
     level: varchar('level', { length: 100 }),
     workplaceProvince: varchar('workplace_province', { length: 150 }), // สิทธิ์เข้าถึงระดับจังหวัด
     ddcRegion: varchar('ddc_region', { length: 150 }), // สิทธิ์เข้าถึงระดับเขต (สคร.)
-    role: varchar('role', { enum: ['superadmin', 'admin', 'admin_region', 'admin_province', 'user'] }).default('user'),
+    role: varchar('role', { enum: ['superadmin', 'adminenvocc', 'admin', 'admin_region', 'admin_province', 'user'] }).default('user'),
     status: varchar('status', { enum: ['pending', 'approved'] }).default('pending'),
     createdAt: timestamp('created_at').defaultNow(),
 });

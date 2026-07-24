@@ -13,7 +13,7 @@ async function checkAdmin() {
         const secretKey = process.env.JWT_SECRET || 'my-super-secret';
         const SECRET = new TextEncoder().encode(secretKey);
         const { payload } = await jwtVerify(token, SECRET);
-        return payload.role === 'admin' || payload.role === 'superadmin';
+        return payload.role === 'admin' || payload.role === 'adminenvocc' || payload.role === 'superadmin';
     } catch {
         return false;
     }

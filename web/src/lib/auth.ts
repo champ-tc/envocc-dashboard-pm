@@ -29,7 +29,7 @@ export async function requireRoles(allowedRoles: string[]) {
 
         // กำหนด Scope การกรองข้อมูล
         const scope = {
-            isGlobal: user.role === 'superadmin' || user.role === 'admin',
+            isGlobal: user.role === 'superadmin' || user.role === 'adminenvocc' || user.role === 'admin',
             isRegion: user.role === 'admin_region',
             isProvince: user.role === 'admin_province',
             region: user.ddcRegion,
@@ -60,7 +60,7 @@ export async function getOptionalUser() {
 
         const user = latestUser[0];
         const scope = {
-            isGlobal: user.role === 'superadmin' || user.role === 'admin',
+            isGlobal: user.role === 'superadmin' || user.role === 'adminenvocc' || user.role === 'admin',
             isRegion: user.role === 'admin_region',
             isProvince: user.role === 'admin_province',
             region: user.ddcRegion,

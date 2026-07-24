@@ -8,7 +8,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: 'superadmin' | 'admin' | 'user';
+    role: 'superadmin' | 'adminenvocc' | 'admin' | 'user';
     status: 'pending' | 'approved';
 }
 
@@ -54,7 +54,7 @@ export default function UserList({ refreshTrigger = 0 }: UserListProps) {
         fetchUsers();
     }, [fetchUsers, refreshTrigger]);
 
-    const isAdmin = session.role === 'admin' || session.role === 'superadmin';
+    const isAdmin = session.role === 'admin' || session.role === 'adminenvocc' || session.role === 'superadmin';
 
     const handleRoleChange = async (user: User) => {
         if (!isAdmin) return;
@@ -166,6 +166,7 @@ export default function UserList({ refreshTrigger = 0 }: UserListProps) {
                                     <td>
                                         <span className={`badge badge-sm font-semibold ${
                                             user.role === 'superadmin' ? 'badge-error' : 
+                                            user.role === 'adminenvocc' ? 'badge-secondary' :
                                             user.role === 'admin' ? 'badge-primary' : 'badge-ghost'
                                         }`}>
                                             {user.role}

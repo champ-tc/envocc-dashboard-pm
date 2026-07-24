@@ -32,6 +32,7 @@ type MenuGroup = {
 
 const roleLabels: Record<string, string> = {
     superadmin: 'ผู้ดูแลระบบสูงสุด',
+    adminenvocc: 'ผู้ดูแล EnvOcc',
     admin: 'ผู้ดูแลระบบ',
     user: 'ผู้ใช้งาน',
 };
@@ -47,7 +48,7 @@ export default function Sidebar({
 }) {
     const pathname = usePathname();
     const safeRole = role || 'user';
-    const isAdmin = safeRole === 'admin' || safeRole === 'superadmin';
+    const isAdmin = safeRole === 'admin' || safeRole === 'adminenvocc' || safeRole === 'superadmin';
     const isSuperAdmin = safeRole === 'superadmin';
     const homePath = isAdmin ? '/admin' : '/user/main';
     const profilePath = isAdmin ? '/admin/profile' : '/user/profile';

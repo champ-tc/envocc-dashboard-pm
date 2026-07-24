@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
 
         // ถ้าล็อกอินแล้วและพยายามเข้าหน้า Login/Register ให้ Redirect
         if (publicAuthRoutes.includes(pathname)) {
-            if (role === 'admin' || role === 'superadmin') {
+            if (role === 'admin' || role === 'adminenvocc' || role === 'superadmin') {
                 return NextResponse.redirect(new URL('/admin', request.url));
             } else {
                 return NextResponse.redirect(new URL('/user', request.url));
@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
 
         // จัดการการเข้าถึง /admin/*
         if (isAdminRoute) {
-            if (role !== 'admin' && role !== 'superadmin') {
+            if (role !== 'admin' && role !== 'adminenvocc' && role !== 'superadmin') {
                 return NextResponse.redirect(new URL('/user', request.url)); // ถ้าเป็น user ให้ไปหน้า /user
             }
             // เฉพาะหน้าที่จำกัดสำหรับ superadmin

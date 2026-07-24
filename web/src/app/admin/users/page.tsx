@@ -158,9 +158,10 @@ export default function UserManagementPage() {
                                             value={user.role || 'user'}
                                             onChange={(e) => handleUpdate(user.id, 'role', e.target.value)}
                                         >
-                                            <option value="user">User</option>
-                                            <option value="admin">Admin</option>
                                             <option value="superadmin">Superadmin</option>
+                                            <option value="adminenvocc">Admin EnvOcc</option>
+                                            <option value="admin">Admin</option>
+                                            <option value="user">User</option>
                                         </select>
                                     </td>
                                     <td className="px-6 py-4 text-center">

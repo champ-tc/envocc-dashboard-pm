@@ -2,7 +2,7 @@ import { requireRoles } from '@/lib/auth';
 import ProfileForm from '@/components/ProfileForm';
 
 export default async function AdminProfilePage() {
-    const session = await requireRoles(['admin', 'superadmin']);
+    const session = await requireRoles(['admin', 'adminenvocc', 'superadmin']);
 
     return (
         <div className="auth-page max-w-5xl">

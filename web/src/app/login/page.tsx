@@ -40,7 +40,7 @@ export default function LoginPage() {
             // เก็บ Token ใน Cookie (อายุ 1 ชั่วโมง)
             Cookies.set('token', data.token, { expires: 1 / 24, sameSite: 'lax' });
             // 2. แยกหน้าจอตาม Role
-            const redirectPath = (data.role === 'admin' || data.role === 'superadmin')
+            const redirectPath = (data.role === 'admin' || data.role === 'adminenvocc' || data.role === 'superadmin')
                 ? '/admin'
                 : '/user';
 

@@ -21,9 +21,11 @@ export default function Navbar({
     const isUser = session?.role === 'user';
     const roleLabel = session?.role === 'superadmin'
         ? 'ผู้ดูแลระบบสูงสุด'
-        : session?.role === 'admin'
-            ? 'ผู้ดูแลระบบ'
-            : 'ผู้ใช้งาน';
+        : session?.role === 'adminenvocc'
+            ? 'ผู้ดูแล EnvOcc'
+            : session?.role === 'admin'
+                ? 'ผู้ดูแลระบบ'
+                : 'ผู้ใช้งาน';
 
     return (
         <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 shadow-sm shadow-slate-200/30 backdrop-blur-xl md:px-7">

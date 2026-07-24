@@ -269,6 +269,35 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
         return max > 0 ? max * 1.1 : 100;
     }, [dataGroup]);
 
+    const axisDates = useMemo(() => (
+        Array.from(new Set(
+            Object.values(dataGroup || {}).flatMap((points: any) =>
+                points.map((point: TrendPoint) => point.date)
+            )
+        )).sort((a, b) => String(a).localeCompare(String(b))) as string[]
+    ), [dataGroup]);
+
+    const xAxisLabels = useMemo(() => {
+        const maxLabels = 7;
+        if (axisDates.length <= maxLabels) return axisDates;
+
+        return Array.from({ length: maxLabels }, (_, index) => {
+            const dateIndex = Math.round((index / (maxLabels - 1)) * (axisDates.length - 1));
+            return axisDates[dateIndex];
+        });
+    }, [axisDates]);
+
+    const yAxisTicks = useMemo(
+        () => [maxValue, maxValue * 0.75, maxValue * 0.5, maxValue * 0.25, 0],
+        [maxValue]
+    );
+
+    const getXPosition = (date: string) => {
+        if (axisDates.length <= 1) return 50;
+        const dateIndex = axisDates.indexOf(date);
+        return (Math.max(dateIndex, 0) / (axisDates.length - 1)) * 100;
+    };
+
     return (
         <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
             <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase mb-8 shrink-0">
@@ -281,26 +310,62 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                 )}
             </h4>
             <div className="flex-1 flex gap-4 min-h-0 relative">
-                <div className="flex-1 relative border-r border-white/5 pr-4">
+                <div className="flex-1 relative border-r border-white/5 pr-4 flex min-w-0">
+                    <div className="w-5 shrink-0 flex items-center justify-center">
+                        <span className="text-[9px] font-bold text-white/50 whitespace-nowrap [writing-mode:vertical-rl] rotate-180">
+                            ค่าเฉลี่ยฝุ่น (มคก./ลบ.ม.)
+                        </span>
+                    </div>
                     {loading ? <div className="w-full h-full bg-white/5 animate-pulse rounded-2xl"></div> : (
-                        <div className="w-full h-full relative">
-                            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-5">
-                                {[...Array(5)].map((_, i) => <div key={i} className="w-full h-px bg-white"></div>)}
+                        <div className="flex-1 min-w-0 h-full flex flex-col">
+                            <div className="flex-1 min-h-0 flex">
+                                <div className="w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-[8px] font-bold text-white/40 tabular-nums">
+                                    {yAxisTicks.map((tick, index) => (
+                                        <span key={index}>{Math.round(tick)}</span>
+                                    ))}
+                                </div>
+                                <div className="flex-1 min-w-0 relative border-l border-b border-white/30">
+                                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-10">
+                                        {[...Array(5)].map((_, i) => <div key={i} className="w-full h-px bg-white"></div>)}
+                                    </div>
+                                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-hidden relative z-10">
+                                        {labels.map((label, idx) => {
+                                            if (hiddenLabels.has(label)) return null;
+                                            const points = [...(dataGroup[label] || [])].sort((a, b) => a.date.localeCompare(b.date));
+                                            if (points.length === 0) return null;
+                                            const color = colors[idx % colors.length];
+                                            if (points.length === 1) {
+                                                const y = 100 - (points[0].value / maxValue) * 100;
+                                                return <circle key={label} cx={getXPosition(points[0].date)} cy={y} r="2" fill={color} />;
+                                            }
+                                            const polyPoints = points.map((d) => `${getXPosition(d.date)},${100 - (d.value / maxValue) * 100}`).join(' ');
+                                            return <polyline key={label} points={polyPoints} fill="none" stroke={color} strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" opacity="0.8" />;
+                                        })}
+                                    </svg>
+                                </div>
                             </div>
-                            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-hidden relative z-10">
-                                {labels.map((label, idx) => {
-                                    if (hiddenLabels.has(label)) return null;
-                                    const points = [...(dataGroup[label] || [])].sort((a, b) => a.date.localeCompare(b.date));
-                                    if (points.length === 0) return null;
-                                    const color = colors[idx % colors.length];
-                                    if (points.length === 1) {
-                                        const y = 100 - (points[0].value / maxValue) * 100;
-                                        return <circle key={label} cx="50" cy={y} r="2" fill={color} />;
-                                    }
-                                    const polyPoints = points.map((d, i) => `${(i / (points.length - 1)) * 100},${100 - (d.value / maxValue) * 100}`).join(' ');
-                                    return <polyline key={label} points={polyPoints} fill="none" stroke={color} strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" opacity="0.8" />;
-                                })}
-                            </svg>
+                            <div
+                                className="ml-9 mt-1 grid text-[8px] font-bold text-white/40 tabular-nums"
+                                style={{ gridTemplateColumns: `repeat(${Math.max(xAxisLabels.length, 1)}, minmax(0, 1fr))` }}
+                            >
+                                {xAxisLabels.map((date, index) => (
+                                    <span
+                                        key={date}
+                                        className={`whitespace-nowrap ${
+                                            xAxisLabels.length === 1
+                                                ? 'text-center'
+                                                : index === 0
+                                                    ? 'text-left'
+                                                    : index === xAxisLabels.length - 1
+                                                        ? 'text-right'
+                                                        : 'text-center'
+                                        }`}
+                                    >
+                                        {formatDateShort(date)}
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="ml-9 text-center text-[9px] font-bold text-white/50">วันที่</div>
                         </div>
                     )}
                 </div>
