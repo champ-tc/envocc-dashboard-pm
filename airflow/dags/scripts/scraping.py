@@ -33,6 +33,7 @@ FAIL_ON_PROVINCE_ERROR = os.getenv("HDC_FAIL_ON_PROVINCE_ERROR", "true").lower()
     "false",
     "no",
 }
+MAX_FAILED_PROVINCES = int(os.getenv("HDC_MAX_FAILED_PROVINCES", "1"))
 
 
 PROVINCE_ID_MAPPING = {
@@ -271,11 +272,24 @@ def export_year(year, output_dir):
     logger.info("summary csv=%s", summary_csv)
     logger.info("=" * 80)
 
-    if FAIL_ON_PROVINCE_ERROR and not failed_df.empty:
+    if not failed_df.empty:
         failed_items = "; ".join(
             f"{row.province}({row.provinceId}): {row.detail}" for row in failed_df.itertuples()
         )
-        raise RuntimeError(f"HDC API failed for {len(failed_df)} province(s): {failed_items}")
+        logger.warning(
+            "HDC API partial failure | year=%s failed=%s allowed=%s | %s",
+            year,
+            len(failed_df),
+            MAX_FAILED_PROVINCES,
+            failed_items,
+        )
+
+        if FAIL_ON_PROVINCE_ERROR and len(failed_df) > MAX_FAILED_PROVINCES:
+            raise RuntimeError(
+                "HDC API failed for "
+                f"{len(failed_df)} province(s), exceeding allowed "
+                f"{MAX_FAILED_PROVINCES}: {failed_items}"
+            )
 
     return raw_df, summary_df
 

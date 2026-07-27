@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions, getUserAction } from './actions';
@@ -499,6 +499,7 @@ export default function DashboardHDC() {
         dates: [], regions: [], provinces: [], districts: [], subdistricts: [], diseases: [], diagnosisTypes: [], hierarchy: []
     });
     const [loading, setLoading] = useState(true);
+    const latestRequestId = useRef(0);
     const [filters, setFilters] = useState<HDCFilters>({ 
         startDate: '', endDate: '', regions: [], provinces: [], 
         districts: [], subdistricts: [], diseases: [], 
@@ -570,14 +571,21 @@ export default function DashboardHDC() {
 
     const fetchData = useCallback(async (currentFilters: HDCFilters, scope: any) => {
         if (!currentFilters.startDate || !currentFilters.endDate) return;
+        const requestId = ++latestRequestId.current;
         setLoading(true);
         try {
             const res = await getDashboardData(currentFilters, scope);
-            setData(res);
+            if (requestId === latestRequestId.current) {
+                setData(res);
+            }
         } catch (error) {
-            console.error(error);
+            if (requestId === latestRequestId.current) {
+                console.error(error);
+            }
         } finally {
-            setLoading(false);
+            if (requestId === latestRequestId.current) {
+                setLoading(false);
+            }
         }
     }, []);
 

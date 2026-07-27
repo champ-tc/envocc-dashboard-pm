@@ -1,7 +1,7 @@
 'use server';
 
-import type duckdbTypes from 'duckdb';
-const duckdb = typeof window === 'undefined' ? eval('require("duckdb")') : null;
+import duckdb from 'duckdb';
+import type * as duckdbTypes from 'duckdb';
 import fs from 'fs';
 import path from 'path';
 import { DDS_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';

@@ -244,6 +244,14 @@ function DDatePicker({ label, options, value, onChange, thaiMonths }: any) {
 
 const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading }: any) {
     const [hiddenLabels, setHiddenLabels] = useState<Set<string>>(new Set());
+    const [hoveredPoint, setHoveredPoint] = useState<{
+        label: string;
+        date: string;
+        value: number;
+        x: number;
+        y: number;
+        color: string;
+    } | null>(null);
     const labels = useMemo(() => {
         const keys = Object.keys(dataGroup || {});
         if (title.includes('เขต')) {
@@ -342,6 +350,58 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                             return <polyline key={label} points={polyPoints} fill="none" stroke={color} strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" opacity="0.8" />;
                                         })}
                                     </svg>
+                                    <div className="absolute inset-0 z-20">
+                                        {labels.flatMap((label, idx) => {
+                                            if (hiddenLabels.has(label)) return [];
+                                            const color = colors[idx % colors.length];
+                                            return (dataGroup[label] || []).map((point: TrendPoint) => {
+                                                const x = getXPosition(point.date);
+                                                const y = 100 - (point.value / maxValue) * 100;
+                                                return (
+                                                    <button
+                                                        key={`${label}-${point.date}`}
+                                                        type="button"
+                                                        aria-label={`${label} วันที่ ${formatDateShort(point.date)} ค่าฝุ่น ${point.value} มคก./ลบ.ม.`}
+                                                        className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-transparent focus:outline-none"
+                                                        style={{ left: `${x}%`, top: `${y}%` }}
+                                                        onMouseEnter={() => setHoveredPoint({ label, date: point.date, value: point.value, x, y, color })}
+                                                        onMouseLeave={() => setHoveredPoint(null)}
+                                                        onFocus={() => setHoveredPoint({ label, date: point.date, value: point.value, x, y, color })}
+                                                        onBlur={() => setHoveredPoint(null)}
+                                                    />
+                                                );
+                                            });
+                                        })}
+                                        {hoveredPoint && (
+                                            <>
+                                                <span
+                                                    className="absolute z-30 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg pointer-events-none"
+                                                    style={{ left: `${hoveredPoint.x}%`, top: `${hoveredPoint.y}%`, backgroundColor: hoveredPoint.color }}
+                                                />
+                                                <div
+                                                    className="absolute z-40 min-w-48 rounded-xl border border-white/15 bg-slate-950/95 p-3 text-[11px] text-white shadow-2xl backdrop-blur-xl pointer-events-none"
+                                                    style={{
+                                                        left: `${hoveredPoint.x}%`,
+                                                        top: `${hoveredPoint.y}%`,
+                                                        transform: `translate(${hoveredPoint.x > 70 ? '-100%' : hoveredPoint.x < 30 ? '0' : '-50%'}, ${hoveredPoint.y < 35 ? '12px' : 'calc(-100% - 12px)'})`
+                                                    }}
+                                                >
+                                                    <div className="mb-2 flex items-center gap-2 font-extrabold text-white">
+                                                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hoveredPoint.color }} />
+                                                        {hoveredPoint.label}
+                                                    </div>
+                                                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-white/70">
+                                                        <span>วันที่</span>
+                                                        <span className="text-right font-bold text-white">{formatDateShort(hoveredPoint.date)}</span>
+                                                        <span>พื้นที่</span>
+                                                        <span className="text-right font-bold text-white">{hoveredPoint.label}</span>
+                                                        <span>ค่าฝุ่น PM2.5</span>
+                                                        <span className="text-right font-bold text-blue-300">{hoveredPoint.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} มคก./ลบ.ม.</span>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div
@@ -680,12 +740,6 @@ export default function DashboardPM25() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1.1fr] gap-4 flex-1 min-h-0 relative z-[10]">
                     <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
-                        <div className="flex items-center justify-between mb-8 shrink-0">
-                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
-                                <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
-                                แนวโน้มค่าฝุ่นรายพื้นที่
-                            </h4>
-                        </div>
                         <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar scrollbar-hide">
                             <div className="h-[430px] shrink-0"><TopExceedRanking data={data?.top10Exceed || []} loading={loading} /></div>
                             <div className="h-[350px] shrink-0"><MultiLineChart title="เฉลี่ยรายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></div>
@@ -699,7 +753,7 @@ export default function DashboardPM25() {
                             <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
                                 <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
                                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40 shrink-0"></div>
-                                    แผนที่รายงานระดับค่าฝุ่น
+                                    แผนที่รายงานระดับค่าฝุ่น PM2.5
                                 </h4>
                                 {filters.startDate && filters.endDate && (
                                     <div className="text-[11px] font-bold text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
@@ -711,9 +765,9 @@ export default function DashboardPM25() {
                                 )}
                             </div>
                             <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
-                                <button onClick={() => setActiveMap('avg')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'avg' ? 'bg-blue-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>ค่าฝุ่นPM2.5</button>
-                                <button onClick={() => setActiveMap('streak37')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak37' ? 'bg-orange-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>เกิน 37.5</button>
-                                <button onClick={() => setActiveMap('streak75')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak75' ? 'bg-rose-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>เกิน 75</button>
+                                <button onClick={() => setActiveMap('avg')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'avg' ? 'bg-blue-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>ค่าฝุ่น PM2.5</button>
+                                <button onClick={() => setActiveMap('streak37')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak37' ? 'bg-orange-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>ค่าฝุ่น PM2.5 &gt; 37.5 มคก./ลบ.ม.</button>
+                                <button onClick={() => setActiveMap('streak75')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak75' ? 'bg-rose-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>ค่าฝุ่น PM2.5 &gt; 75 มคก./ลบ.ม.</button>
                             </div>
                         </div>
                         <div className="flex-1 w-full min-h-[500px] relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-inner bg-slate-800/50">
