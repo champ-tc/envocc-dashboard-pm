@@ -133,7 +133,6 @@ const getDB = (): Promise<duckdbTypes.Database> => {
                 ['กรุงเทพมหานคร', 'เขตสุขภาพที่ 13']
             ].map(([p, r]) => `('${p}', '${r}')`).join(', ');
 
-            console.log('Initializing DuckDB for DDS Dashboard...');
             db.exec(`
                 CREATE TABLE province_map(en VARCHAR, th VARCHAR);
                 INSERT INTO province_map VALUES ${mappingValues};
@@ -168,7 +167,6 @@ const getDB = (): Promise<duckdbTypes.Database> => {
                     dbPromise = null;
                     return reject(err);
                 }
-                console.log('DuckDB tables initialized successfully');
                 resolve(db);
             });
         } catch (error) {
@@ -271,8 +269,6 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         let ddsDateFilter = 'AND 1=1';
         let pm25DateFilter = 'AND 1=1';
 
-        console.log('Fetching DDS Dashboard data with filters:', JSON.stringify(filters));
-
         if (filters.startDate === 'ล่าสุด') {
             ddsDateFilter = `AND (CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0')) = (SELECT MAX(CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0')) FROM dds_raw)`;
             pm25DateFilter = `AND strftime(date, '%Y-%m') = (SELECT MAX(CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0')) FROM dds_raw)`;
@@ -326,8 +322,6 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
             const codesStr = allowedCodes.map(c => `'${c}'`).join(',');
             ddsDiagnosisFilter = `AND TRIM(icd10_code) IN (${codesStr})`;
         }
-
-        console.log(`[DDS] Filtering for Type: "${diagType}" | SQL: ${ddsDiagnosisFilter}`);
 
         // --- Build individual ICD10 filters for each disease group ---
         const icdFilters: Record<string, string> = {};

@@ -44,7 +44,6 @@ default_args = {
 def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
     import subprocess
     import sys
-    import shutil
     
     full_script_path = os.path.join(script_path, script_name)
 
@@ -55,17 +54,6 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
     env["PYTHONUNBUFFERED"] = "1"
 
     cmd = [sys.executable, full_script_path]
-
-    print("=" * 80)
-    print(f">>> RUN: {script_name}")
-    print(f">>> CWD: {script_path}")
-    print(f">>> TIMEOUT: {timeout_sec}s")
-    print(f">>> PYTHON: {sys.executable}")
-    print(f">>> SCRIPT EXISTS: {os.path.exists(full_script_path)}")
-    print(f">>> CHROMIUM: {shutil.which('chromium') or shutil.which('chromium-browser') or '(missing)'}")
-    print(f">>> CHROMEDRIVER: {shutil.which('chromedriver') or '(missing)'}")
-    print(f">>> FILES: {sorted(os.listdir(script_path))[:30]}")
-    print("=" * 80)
 
     preflight = subprocess.run(
         [
@@ -79,7 +67,6 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
         text=True,
         timeout=60,
     )
-    print(preflight.stdout.strip() or "(dependency preflight produced no stdout)")
     if preflight.returncode != 0:
         print(preflight.stderr.strip())
         raise RuntimeError("Dependency preflight failed")
@@ -108,7 +95,6 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
             process.kill()
         raise e
 
-    print(f"\n>>> RETURN CODE: {returncode}")
     if returncode != 0:
         raise RuntimeError(f"Script Error ({script_name}): non-zero exit code {returncode}")
 

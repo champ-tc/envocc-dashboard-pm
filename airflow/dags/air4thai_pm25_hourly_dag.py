@@ -91,10 +91,6 @@ def run_air4thai_job(**context):
     try:
         import pm25.air4thai_pm25 as job
 
-        # context จะมีหรือไม่มีก็ไม่เป็นไร เราแค่พิมพ์เท่าที่มี
-        print("[DEBUG] run_id:", context.get("run_id"))
-        print("[DEBUG] task_id:", getattr(context.get("task"), "task_id", None))
-
         job = importlib.reload(job)
         job.run(timeout=30)
 

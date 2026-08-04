@@ -12,6 +12,12 @@ import pandas as pd
 BASE_DIR = Path(__file__).resolve().parent
 START_YEAR_THAI = int(os.getenv("HDC_START_YEAR_THAI", "2569"))
 END_YEAR_THAI = int(os.getenv("HDC_END_YEAR_THAI", str(START_YEAR_THAI)))
+HEALTH_OFFICE_PATH = Path(
+    os.getenv(
+        "HDC_HEALTH_OFFICE_PATH",
+        str(BASE_DIR.parent / "dds" / "health_office.xlsx"),
+    )
+)
 
 
 PROVINCE_TO_COUNTY = {
@@ -72,9 +78,13 @@ MEASURE_SUFFIX_MAPPING = [
 
 FINAL_COLUMNS = [
     "no",
+    "hospcode",
+    "hospcode_name",
     "province_code",
     "province_name",
     "county",
+    "district_name",
+    "subdistrict_name",
     "year",
     "week",
     "month",
@@ -96,11 +106,113 @@ def get_year_label(target_years):
 
 
 def norm_text(value):
+    if pd.isna(value):
+        return ""
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
-def to_numeric_series(series):
-    return pd.to_numeric(series, errors="coerce").fillna(0)
+def clean_code(value):
+    if pd.isna(value):
+        return pd.NA
+
+    value = str(value).strip()
+    if value.endswith(".0"):
+        value = value[:-2]
+    return value or pd.NA
+
+
+def load_health_office(path=HEALTH_OFFICE_PATH):
+    if not path.exists():
+        raise FileNotFoundError(f"ไม่พบไฟล์ health_office: {path.resolve()}")
+
+    health_office = pd.read_excel(path, dtype=str)
+    required = [
+        "hospcode",
+        "hospcode_name",
+        "county",
+        "province_id",
+        "province_name",
+        "district_name",
+        "subdistrict_name",
+    ]
+    missing = [column for column in required if column not in health_office.columns]
+    if missing:
+        raise KeyError(f"health_office schema ไม่ถูกต้อง: ไม่พบคอลัมน์ {missing}")
+
+    for column in ("hospcode9", "hospcode9old", "hospcode"):
+        if column in health_office.columns:
+            health_office[column] = health_office[column].map(clean_code)
+    return health_office
+
+
+def enrich_hospital_details(df, health_office):
+    """Match API hospcode and make health_office the location source of truth."""
+    if "hospcode" not in df.columns:
+        raise KeyError("raw API schema ไม่ถูกต้อง: ไม่พบคอลัมน์ hospcode")
+
+    result = df.copy()
+    result["hospcode"] = result["hospcode"].map(clean_code)
+    result["api_province_name"] = result["provinceName"].map(norm_text)
+
+    detail_columns = [
+        "hospcode_name",
+        "county",
+        "province_id",
+        "province_name",
+        "district_name",
+        "subdistrict_name",
+    ]
+    lookup_parts = []
+    # HDC's hospcode field is normally the current 5-digit code. Prefer an
+    # exact match in the same health_office column before legacy alternatives;
+    # otherwise values such as 10000 can collide with hospcode9old.
+    for priority, code_column in enumerate(("hospcode", "hospcode9old", "hospcode9")):
+        if code_column not in health_office.columns:
+            continue
+        part = health_office[[code_column, *detail_columns]].dropna(subset=[code_column]).copy()
+        part[code_column] = part[code_column].map(clean_code)
+        part = part.rename(columns={code_column: "hospcode_key"})
+        part["match_priority"] = priority
+        lookup_parts.append(part)
+
+    lookup = pd.concat(lookup_parts, ignore_index=True)
+    lookup = (
+        lookup.sort_values("match_priority")
+        .drop_duplicates(subset=["hospcode_key"], keep="first")
+        .drop(columns="match_priority")
+    )
+    result = result.merge(
+        lookup,
+        left_on="hospcode",
+        right_on="hospcode_key",
+        how="left",
+        validate="many_to_one",
+    ).drop(columns="hospcode_key")
+
+    matched = result["province_name"].notna()
+    mismatch = matched & (
+        result["api_province_name"].map(norm_text)
+        != result["province_name"].map(norm_text)
+    )
+
+    # A matched health_office row is authoritative, especially when the API
+    # province conflicts with the hospital's registered province.
+    result["provinceName"] = result["province_name"].where(
+        matched, result["api_province_name"]
+    )
+    result["provinceId"] = result["province_id"].where(
+        matched, result["provinceId"]
+    )
+    result["county"] = result["county"].where(matched, pd.NA)
+    for column in ("hospcode_name", "district_name", "subdistrict_name"):
+        result[column] = result[column].fillna("ไม่พบ")
+
+    print(
+        "Hospital lookup: "
+        f"matched={int(matched.sum())} unmatched={int((~matched).sum())} "
+        f"province_mismatch_corrected={int(mismatch.sum())}"
+    )
+    return result.drop(columns=["province_id", "province_name"])
 
 
 def thai_year_to_ad(value):
@@ -153,7 +265,7 @@ def read_raw_api(input_file):
 
 
 def validate_raw_api_columns(df):
-    required = ["provinceName", "provinceId", "yearThai", "diag_main"]
+    required = ["provinceName", "provinceId", "yearThai", "hospcode", "diag_main"]
     missing = [column for column in required if column not in df.columns]
     if missing:
         raise KeyError(
@@ -162,65 +274,97 @@ def validate_raw_api_columns(df):
         )
 
 
-def transform_group_to_long(group_df, province_name, province_id, year_thai):
-    province_name = norm_text(province_name)
-    province_code = int(float(str(province_id).strip()))
-    year = thai_year_to_ad(year_thai)
-    county = PROVINCE_TO_COUNTY.get(province_name)
-    rows = []
-
-    group_df = group_df.copy()
-    group_df["diag_main"] = pd.to_numeric(group_df["diag_main"], errors="coerce")
-
-    for diag_main, typediag_id, typediag, icd10 in DIAG_MAIN_MAPPING:
-        diag_df = group_df[group_df["diag_main"] == diag_main]
-        typediag_name = TYPE_NAME_MAP.get(icd10)
-
-        for suffix, diagnosis in MEASURE_SUFFIX_MAPPING:
-            for week in range(1, 54):
-                api_col = f"w_{week:02d}_{suffix}"
-                case = int(to_numeric_series(diag_df[api_col]).sum()) if api_col in diag_df.columns else 0
-                rows.append(
-                    {
-                        "province_code": province_code,
-                        "province_name": province_name,
-                        "county": county,
-                        "year": year,
-                        "week": week,
-                        "month": week_to_month(year, week),
-                        "typediag_id": typediag_id,
-                        "typediag": typediag,
-                        "icd10": icd10,
-                        "Typediag_name": typediag_name,
-                        "diagnosis": diagnosis,
-                        "case": case,
-                    }
-                )
-
-    return rows
-
-
-def transform_raw_api_to_long(df):
+def transform_raw_api_to_long(df, health_office=None):
     validate_raw_api_columns(df)
     df = df.copy()
     df.columns = [norm_text(column) for column in df.columns]
+    if health_office is None:
+        health_office = load_health_office()
+    df = enrich_hospital_details(df, health_office)
 
-    all_rows = []
-    grouped = df.groupby(["provinceName", "provinceId", "yearThai"], dropna=False, sort=False)
-    for (province_name, province_id, year_thai), group_df in grouped:
-        all_rows.extend(transform_group_to_long(group_df, province_name, province_id, year_thai))
+    group_columns = [
+        "hospcode",
+        "hospcode_name",
+        "provinceName",
+        "provinceId",
+        "county",
+        "district_name",
+        "subdistrict_name",
+        "yearThai",
+    ]
+    diagnosis_lookup = pd.DataFrame(
+        DIAG_MAIN_MAPPING,
+        columns=["diag_main", "typediag_id", "typediag", "icd10"],
+    )
+    diagnosis_lookup["Typediag_name"] = diagnosis_lookup["icd10"].map(
+        TYPE_NAME_MAP
+    )
+    measure_name_lookup = dict(MEASURE_SUFFIX_MAPPING)
+    measure_pattern = re.compile(r"^w_(\d{2})_(m|z|y|zy)$")
+    measure_frames = []
 
-    if not all_rows:
+    df["diag_main"] = pd.to_numeric(df["diag_main"], errors="coerce")
+    for api_column in df.columns:
+        match = measure_pattern.fullmatch(api_column)
+        if not match:
+            continue
+
+        values = pd.to_numeric(df[api_column], errors="coerce").fillna(0)
+        nonzero = values.ne(0)
+        if not nonzero.any():
+            continue
+
+        measure_df = df.loc[nonzero, [*group_columns, "diag_main"]].copy()
+        measure_df["case"] = values.loc[nonzero].astype("int64")
+        measure_df = (
+            measure_df.groupby(
+                [*group_columns, "diag_main"],
+                dropna=False,
+                sort=False,
+                as_index=False,
+            )["case"]
+            .sum()
+        )
+        measure_df["week"] = int(match.group(1))
+        measure_df["diagnosis"] = measure_name_lookup[match.group(2)]
+        measure_frames.append(measure_df)
+
+    if not measure_frames:
         return pd.DataFrame(columns=FINAL_COLUMNS)
 
-    final_df = pd.DataFrame(all_rows)
-    final_df["province_name"] = final_df["province_name"].astype(str).map(norm_text)
+    final_df = pd.concat(measure_frames, ignore_index=True)
+    final_df = final_df.merge(
+        diagnosis_lookup,
+        on="diag_main",
+        how="inner",
+        validate="many_to_one",
+    ).drop(columns="diag_main")
+    final_df = final_df.rename(
+        columns={"provinceName": "province_name"}
+    )
+    final_df["hospcode"] = final_df["hospcode"].map(clean_code)
+    final_df["hospcode_name"] = final_df["hospcode_name"].map(norm_text)
+    final_df["province_code"] = pd.to_numeric(
+        final_df["provinceId"], errors="raise"
+    ).astype(int)
+    final_df["province_name"] = final_df["province_name"].map(norm_text)
+    final_df["county"] = pd.to_numeric(final_df["county"], errors="coerce")
+    fallback_county = final_df["province_name"].map(PROVINCE_TO_COUNTY)
+    final_df["county"] = final_df["county"].fillna(fallback_county).astype("Int64")
+    final_df["district_name"] = final_df["district_name"].map(norm_text)
+    final_df["subdistrict_name"] = final_df["subdistrict_name"].map(norm_text)
+    final_df["year"] = final_df["yearThai"].map(thai_year_to_ad).astype("Int64")
+    final_df["month"] = [
+        week_to_month(year, week)
+        for year, week in zip(final_df["year"], final_df["week"])
+    ]
     final_df["typediag"] = final_df["typediag"].astype(str).map(norm_text)
     final_df["diagnosis"] = final_df["diagnosis"].astype(str).map(norm_text)
+    final_df = final_df.drop(columns=["provinceId", "yearThai"])
 
     final_df = final_df.sort_values(
-        by=["province_code", "year", "typediag_id", "typediag", "diagnosis", "week"],
-        ascending=[True, True, True, True, True, True],
+        by=["province_code", "hospcode", "year", "typediag_id", "typediag", "diagnosis", "week"],
+        ascending=[True, True, True, True, True, True, True],
     ).reset_index(drop=True)
 
     final_df.insert(0, "no", range(1, len(final_df) + 1))
@@ -247,18 +391,12 @@ def merged():
     input_file = resolve_input_file(output_dir, target_years)
     output_file = output_dir / f"hdc_merged_long_{year_label}.csv"
 
-    print(f"[LOAD] {input_file}")
     raw_df = read_raw_api(input_file)
-    print(f"[RAW] shape = {raw_df.shape}")
 
     final_df = transform_raw_api_to_long(raw_df)
     write_csv_atomic(final_df, output_file)
 
-    print("\n========== DONE ==========")
-    print(final_df.head(20))
-    print(f"\nrows = {final_df.shape[0]}")
-    print(f"columns = {list(final_df.columns)}")
-    print(f"[SAVE] {output_file}")
+    print(f"HDC merge completed: {final_df.shape[0]} rows -> {output_file}")
 
 
 if __name__ == "__main__":

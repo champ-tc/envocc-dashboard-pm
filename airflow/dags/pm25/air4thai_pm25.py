@@ -16,7 +16,6 @@ pm25/air4thai_pm25_hourly.py
 - รองรับเวลา: HH:MM, HH:MM:SS, 1000, 930, 9:30 ฯลฯ -> normalize เป็น HH:MM:SS
 - ตีความเวลาจาก Air4Thai เป็น "เวลาไทย" (Asia/Bangkok) แบบ tz-aware
 - ก่อน insert ลง timestamptz จะ convert เป็น UTC (best practice) เพื่อกันแสดงผลเหลื่อมตาม environment
-- เพิ่ม debug sample 5 แถวแรกให้เห็นชัด ๆ ว่าจาก API -> parsed เป็นอะไร
 
 ✅ FIX mapping รองรับสถานีย้ายตำแหน่ง:
 - สร้าง station_id_new รูปแบบ station_id_latitude_longitude โดยพิกัดมีทศนิยม 6 ตำแหน่ง
@@ -25,7 +24,6 @@ pm25/air4thai_pm25_hourly.py
 
 import os
 import re
-import socket
 import requests
 import numpy as np
 import pandas as pd
@@ -150,21 +148,6 @@ def _engine():
         f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}",
         pool_pre_ping=True,
     )
-
-
-def _debug_env_network():
-    """print DNS + proxy env for debugging"""
-    host = AIR4THAI_HOST
-    try:
-        ip = socket.gethostbyname(host)
-        print(f"[NET] DNS {host} -> {ip}")
-    except Exception as e:
-        print(f"[NET] DNS resolve failed for {host}: {repr(e)}")
-
-    for k in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "NO_PROXY", "no_proxy"]:
-        v = os.getenv(k)
-        if v:
-            print(f"[NET] {k}={v}")
 
 
 def _session_with_retries() -> requests.Session:
@@ -334,7 +317,6 @@ def _fetch_xml(sess: requests.Session, timeout_s: int) -> pd.DataFrame:
 
 def fetch_air4thai(timeout_s: int = 30) -> pd.DataFrame:
     """fetch stations AQI data (flattened)"""
-    _debug_env_network()
     with _session_with_retries() as sess:
         try:
             return _fetch_json(sess, timeout_s=timeout_s)
@@ -484,10 +466,6 @@ def run(timeout: int = 30):
     5) build and validate station_id_new from station_id + latitude + longitude
     6) upsert pm25_hourly (only station_id_new + values)
     """
-    print("[DEBUG] __file__ =", __file__)
-    print("[DEBUG] JSON_URLS =", AIR4_JSON_URLS)
-    print("[DEBUG] XML_URLS  =", AIR4_XML_URLS)
-
     _load_env()
     engine = _engine()
 
@@ -514,15 +492,6 @@ def run(timeout: int = 30):
 
     # 3) parse datetime -> UTC tz-aware
     dt_utc = parse_air4_datetime_th(raw.get("AQILast.date"), raw.get("AQILast.time"))
-
-    # debug sample 5 rows
-    print("[DEBUG] sample api date/time -> parsed (TH + UTC)")
-    for i in range(min(5, len(raw))):
-        d0 = str(raw.get("AQILast.date").iloc[i]) if raw.get("AQILast.date") is not None else ""
-        t0 = str(raw.get("AQILast.time").iloc[i]) if raw.get("AQILast.time") is not None else ""
-        u0 = dt_utc.iloc[i]
-        th0 = u0.tz_convert(TH_TZ) if pd.notna(u0) else None
-        print(f"  api=({d0} {t0}) -> th={th0} | utc={u0}")
 
     poll = pd.DataFrame(
         {

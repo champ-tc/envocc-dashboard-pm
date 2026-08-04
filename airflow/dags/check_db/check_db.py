@@ -25,8 +25,6 @@ def check_db():
     dbname = _must("DB_NAME")
 
     url = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{dbname}"
-    print("DB =", f"{host}:{port}/{dbname} (user={user})")
-
     engine = create_engine(url, pool_pre_ping=True)
 
     with engine.connect() as conn:
