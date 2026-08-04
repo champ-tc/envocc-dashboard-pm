@@ -121,6 +121,18 @@ def clean_code(value):
     return value or pd.NA
 
 
+def normalize_code_key(value):
+    """Normalize a code for matching without changing the exported hospcode."""
+    value = clean_code(value)
+    if pd.isna(value):
+        return pd.NA
+
+    value = str(value).strip().upper()
+    if value.isdigit():
+        return value.lstrip("0") or "0"
+    return value
+
+
 def load_health_office(path=HEALTH_OFFICE_PATH):
     if not path.exists():
         raise FileNotFoundError(f"ไม่พบไฟล์ health_office: {path.resolve()}")
@@ -152,6 +164,7 @@ def enrich_hospital_details(df, health_office):
 
     result = df.copy()
     result["hospcode"] = result["hospcode"].map(clean_code)
+    result["hospcode_key"] = result["hospcode"].map(normalize_code_key)
     result["api_province_name"] = result["provinceName"].map(norm_text)
 
     detail_columns = [
@@ -170,7 +183,7 @@ def enrich_hospital_details(df, health_office):
         if code_column not in health_office.columns:
             continue
         part = health_office[[code_column, *detail_columns]].dropna(subset=[code_column]).copy()
-        part[code_column] = part[code_column].map(clean_code)
+        part[code_column] = part[code_column].map(normalize_code_key)
         part = part.rename(columns={code_column: "hospcode_key"})
         part["match_priority"] = priority
         lookup_parts.append(part)
@@ -183,7 +196,7 @@ def enrich_hospital_details(df, health_office):
     )
     result = result.merge(
         lookup,
-        left_on="hospcode",
+        left_on="hospcode_key",
         right_on="hospcode_key",
         how="left",
         validate="many_to_one",

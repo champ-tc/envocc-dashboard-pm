@@ -25,7 +25,23 @@ def main():
             "ไม่พบไฟล์ต่อไปนี้:\n" + "\n".join(missing_files)
         )
 
-    hdc = pd.concat([pd.read_csv(file) for file in raw_files], ignore_index=True)
+    hdc = pd.concat(
+        [
+            pd.read_csv(file, dtype={"hospcode": "string"})
+            for file in raw_files
+        ],
+        ignore_index=True,
+    )
+
+    if "hospcode" in hdc.columns:
+        # Hospital codes are identifiers, not numbers. Keep leading zeroes and
+        # remove decimal suffixes introduced by older CSV type inference.
+        hdc["hospcode"] = (
+            hdc["hospcode"]
+            .astype("string")
+            .str.strip()
+            .str.replace(r"\.0$", "", regex=True)
+        )
 
     csv_path = output_dir / "hdc.csv"
     csv_temp_path = output_dir / ".hdc.csv.tmp"
