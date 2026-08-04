@@ -255,9 +255,9 @@ export default function StationManagementPage() {
 
             <div className="auth-surface overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[1100px]">
+                    <table className="w-full text-left min-w-table-stations">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold text-[11px] uppercase tracking-widest">
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold text-compact-plus uppercase tracking-widest">
                                 <th className="px-5 py-4">รหัส</th>
                                 <th className="px-5 py-4">สถานี</th>
                                 <th className="px-5 py-4">พื้นที่</th>
@@ -311,8 +311,8 @@ export default function StationManagementPage() {
             </div>
 
             {isFormOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-4">
-                    <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+                <div className="fixed inset-0 z-overlay flex items-center justify-center bg-slate-900/50 p-4">
+                    <div className="w-full max-w-3xl max-h-dialog overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-black text-slate-800">{editingStation ? 'แก้ไขสถานี' : 'เพิ่มสถานี'}</h2>
                             <button onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-slate-700 text-2xl">&times;</button>

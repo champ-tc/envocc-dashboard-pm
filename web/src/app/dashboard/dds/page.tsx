@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions, getCurrentUser, DDSOptions, DDSFilters, DDSDashboardData, MonthlyTrendData } from './actions';
 import { DDS_DISEASES } from '@/lib/constants';
-import DashboardNavMenu from '@/components/DashboardNavMenu';
+import DashboardNavbar from '../_components/DashboardNavbar';
+import DashboardBusyAlert from '../_components/DashboardBusyAlert';
+
+const BUSY_MESSAGE = 'ระบบกำลังประมวลผลคำขอก่อนหน้า กรุณารอสักครู่แล้วลองใหม่อีกครั้ง';
 
 // --- Shared Components ---
 
@@ -39,8 +41,8 @@ function SingleSelect({ label, options, selected, onChange }: { label?: string, 
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-[200] mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                    <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
+                    <div className="absolute z-dropdown mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
                         {safeOptions.map((opt: string) => (
                             <div key={opt} onClick={() => { onChange(opt); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${selected === opt ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
@@ -99,8 +101,8 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => { setIsOpen(false); setSearchText(''); }}></div>
-                    <div className="absolute z-[200] mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                    <div className="fixed inset-0 z-overlay" onClick={() => { setIsOpen(false); setSearchText(''); }}></div>
+                    <div className="absolute z-dropdown mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
                         <input
                             type="search"
                             value={searchText}
@@ -170,8 +172,8 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-[200] mt-3 w-80 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-96 overflow-y-auto p-5 flex flex-col gap-6 ring-1 ring-white/20 scrollbar-hide">
+                    <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
+                    <div className="absolute z-dropdown mt-3 w-80 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-96 overflow-y-auto p-5 flex flex-col gap-6 ring-1 ring-white/20 scrollbar-hide">
                         {years.map(year => (
                             <div key={year} className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3 px-2">
@@ -257,6 +259,8 @@ export default function DDSDashboardPage() {
         icd10_by_disease: {}, diagnosisTypes: [], hierarchy: []
     });
     const [loading, setLoading] = useState(true);
+    const [busyMessage, setBusyMessage] = useState<string | null>(null);
+    const latestRequestId = useRef(0);
 
     const initialGroupedIcd10 = DISEASE_CARDS.reduce((acc, card) => {
         acc[card.id] = getDiagnosisCodes(card.id, ENVOCC_WITH_Z581_TYPE);
@@ -276,6 +280,7 @@ export default function DDSDashboardPage() {
         getCurrentUser().then(setUser);
 
         getFilterOptions().then(opts => {
+            setBusyMessage(null);
             if (!opts || !opts.dates || opts.dates.length === 0) return;
             const sortedDates = [...opts.dates].sort((a, b) => b.localeCompare(a));
             setOptions({ ...opts, dates: sortedDates });
@@ -288,7 +293,10 @@ export default function DDSDashboardPage() {
 
                 setFilters(prev => ({ ...prev, startDate: startDate, endDate: latestDateStr }));
             }
-        }).catch(console.error);
+        }).catch(() => {
+            setBusyMessage(BUSY_MESSAGE);
+            setLoading(false);
+        });
     }, []);
 
     // Handle User Scope
@@ -304,19 +312,34 @@ export default function DDSDashboardPage() {
     // Data Fetching
     useEffect(() => {
         if (!filters.startDate || !filters.endDate) return;
-        setLoading(true);
-        const apiFilters = {
-            ...filters,
-            regions: filters.regions.length ? filters.regions : undefined,
-            provinces: filters.provinces.length ? filters.provinces : undefined,
-            districts: filters.districts.length ? filters.districts : undefined,
-            subdistricts: filters.subdistricts.length ? filters.subdistricts : undefined,
-            diseases: filters.diseases.length ? filters.diseases : undefined
-        };
-        getDashboardData(apiFilters).then((res) => {
-            setData(res);
-            setLoading(false);
-        }).catch(console.error);
+        const requestId = ++latestRequestId.current;
+        const timeout = window.setTimeout(async () => {
+            setLoading(true);
+            const apiFilters = {
+                ...filters,
+                regions: filters.regions.length ? filters.regions : undefined,
+                provinces: filters.provinces.length ? filters.provinces : undefined,
+                districts: filters.districts.length ? filters.districts : undefined,
+                subdistricts: filters.subdistricts.length ? filters.subdistricts : undefined,
+                diseases: filters.diseases.length ? filters.diseases : undefined
+            };
+            try {
+                const res = await getDashboardData(apiFilters);
+                if (requestId === latestRequestId.current) {
+                    setData(res);
+                    setBusyMessage(null);
+                }
+            } catch (error) {
+                if (requestId === latestRequestId.current) {
+                    console.error(error);
+                    setBusyMessage(BUSY_MESSAGE);
+                }
+            } finally {
+                if (requestId === latestRequestId.current) setLoading(false);
+            }
+        }, 350);
+
+        return () => window.clearTimeout(timeout);
     }, [filters]);
 
     // Filtering Helpers
@@ -375,27 +398,24 @@ export default function DDSDashboardPage() {
             <div className="absolute inset-0 bg-slate-900/40 z-0"></div>
 
             <main className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 relative z-[60]">
-                    <div className="flex items-center gap-4">
-                        <div className="shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10">
-                            <Image src="/img/ddc-logo.png" alt="DDC Logo" width={50} height={50} className="rounded-xl object-contain" style={{ width: 'auto', height: 'auto' }} priority />
-                        </div>
-                        <div className="shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10">
-                            <Image src="/img/logo_doe.jpg" alt="DOE Logo" width={50} height={50} style={{ width: 'auto', height: 'auto' }} className="rounded-xl object-contain" priority />
-                        </div>
-                        <div className="flex flex-col">
-                            <h5 className="text-lg md:text-xl font-extrabold text-white leading-tight drop-shadow-md">การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้อง</h5>
-                            <p className="text-xs md:text-xs font-bold text-blue-200 uppercase tracking-widest opacity-80">
-                                {user?.role === 'admin_province' ? `จังหวัด: ${user.workplaceProvince}` : user?.role === 'admin_region' ? `เขต: ${user.ddcRegion}` : 'ผู้ดูแลระบบส่วนกลาง'}
-                            </p>
-                        </div>
-                    </div>
-                    <DashboardNavMenu className="self-end md:self-auto" />
-                </div>
+                <DashboardNavbar
+                    logos={[
+                        { src: '/img/ddc-logo.png', alt: 'DDC Logo' },
+                        { src: '/img/logo_doe.jpg', alt: 'DOE Logo' },
+                    ]}
+                    title="การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้อง"
+                    subtitle={
+                        user?.role === 'admin_province' ? `จังหวัด: ${user.workplaceProvince}` :
+                        user?.role === 'admin_region' ? `เขต: ${user.ddcRegion}` :
+                        'ผู้ดูแลระบบส่วนกลาง'
+                    }
+                    className="relative z-header"
+                    titleClassName="drop-shadow-md"
+                />
+                <DashboardBusyAlert message={busyMessage} />
 
                 {/* Filters */}
-                <div className="relative z-[50]">
+                <div className="relative z-toolbar">
                     <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/10">
                         <CustomDatePicker label="จากเดือน" options={options.dates} value={filters.startDate} onChange={(v) => setFilters(f => ({ ...f, startDate: v }))} thaiMonths={THAI_MONTHS_SHORT} />
                         <CustomDatePicker label="ถึงเดือน" options={options.dates} value={filters.endDate} onChange={(v) => setFilters(f => ({ ...f, endDate: v }))} thaiMonths={THAI_MONTHS_SHORT} />
@@ -418,7 +438,7 @@ export default function DDSDashboardPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="flex flex-col gap-4 relative z-[30]">
+                <div className="flex flex-col gap-4 relative z-section-raised">
                     {/* Top Row: General Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/30 min-h-32 flex flex-col justify-between group overflow-hidden relative">
@@ -428,7 +448,7 @@ export default function DDSDashboardPage() {
                                 {loading ? <div className="h-10 w-32 bg-white/20 animate-pulse rounded-xl"></div> : data?.totalPatients?.toLocaleString()}
                                 <div className="text-sm font-bold text-white/50 uppercase mb-1.5">ราย</div>
                             </div>
-                            <div className="text-[10px] font-bold text-white/90 uppercase mt-auto bg-white/10 p-2.5 rounded-2xl border border-white/20 backdrop-blur-sm line-clamp-2">
+                            <div className="text-compact font-bold text-white/90 uppercase mt-auto bg-white/10 p-2.5 rounded-2xl border border-white/20 backdrop-blur-sm line-clamp-2">
                                 นับตามรายบุคคล (Unique Patients)
                             </div>
                         </div>
@@ -440,7 +460,7 @@ export default function DDSDashboardPage() {
                                 {loading ? <div className="h-10 w-32 bg-white/10 animate-pulse rounded-xl"></div> : data?.totalVisits?.toLocaleString()}
                                 <div className="text-sm font-bold text-white/30 uppercase mb-1.5">ครั้ง</div>
                             </div>
-                            <div className="text-[10px] font-bold text-white/40 uppercase mt-auto bg-white/5 p-2.5 rounded-2xl border border-white/5 line-clamp-2">
+                            <div className="text-compact font-bold text-white/40 uppercase mt-auto bg-white/5 p-2.5 rounded-2xl border border-white/5 line-clamp-2">
                                 รวมทุกรายการวินิจฉัยที่ตรงเงื่อนไข
                             </div>
                         </div>
@@ -464,8 +484,8 @@ export default function DDSDashboardPage() {
                             }
 
                             return (
-                                <div key={i} className="bg-white/10 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/20 min-h-32 flex flex-col justify-between relative hover:z-[60] group ring-1 ring-white/5 transition-all hover:bg-white/15">
-                                    <div className="text-[11px] font-bold text-white/80 uppercase tracking-tight mb-2 leading-tight" title={card.label}>{card.label}</div>
+                                <div key={i} className="bg-white/10 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/20 min-h-32 flex flex-col justify-between relative hover:z-header group ring-1 ring-white/5 transition-all hover:bg-white/15">
+                                    <div className="text-compact-plus font-bold text-white/80 uppercase tracking-tight mb-2 leading-tight" title={card.label}>{card.label}</div>
                                     <div className="text-2xl font-extrabold text-white tracking-tight tabular-nums flex items-end gap-2 mb-3">
                                         {loading ? <div className="h-8 w-20 bg-white/10 animate-pulse rounded-lg"></div> : stat.value?.toLocaleString()}
                                         <div className="w-1.5 h-6 rounded-full mb-1 shadow-lg" style={{ backgroundColor: card.color === 'rose' ? '#f43f5e' : (card.color === 'orange' ? '#f97316' : (card.color === 'emerald' ? '#10b981' : (card.color === 'blue' ? '#3b82f6' : '#a855f7'))) }}></div>
@@ -486,9 +506,9 @@ export default function DDSDashboardPage() {
                 </div>
 
                 {/* Visualizations */}
-                <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1.1fr] gap-4 flex-1 min-h-0 relative z-[20]">
+                <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     {/* Monthly Trend Chart */}
-                    <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-[400px] lg:min-h-0">
+                    <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-8 shrink-0">
                             <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div>แนวโน้มจำนวนผู้ป่วยรายเดือน</h4>
                             {options.dates[0] && (
@@ -498,17 +518,17 @@ export default function DDSDashboardPage() {
                             )}
                         </div>
                         <div className="flex-1 relative flex flex-col justify-end px-14 min-h-0">
-                            <div className="absolute left-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-[-25px] left-0 text-[10px] font-black text-white/40 uppercase">จำนวนผู้ป่วย (ราย)</div></div>
-                            <div className="absolute right-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-[-25px] right-0 text-[10px] font-black text-rose-500/60 uppercase text-right">เฉลี่ย PM2.5 (มคก./ลบ.ม.)</div></div>
+                            <div className="absolute left-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-chart-caption left-0 text-compact font-black text-white/40 uppercase">จำนวนผู้ป่วย (ราย)</div></div>
+                            <div className="absolute right-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-chart-caption right-0 text-compact font-black text-rose-500/60 uppercase text-right">เฉลี่ย PM2.5 (มคก./ลบ.ม.)</div></div>
                             {!loading && data?.monthlyTrend && data.monthlyTrend.length > 0 && (() => {
                                 const maxVal = Math.max(...data.monthlyTrend.map(x => x.total || 0), 1);
                                 const pm25Max = Math.max(...data.monthlyTrend.map(x => x.avg_pm25 || 0), 50);
                                 return (
                                     <>
-                                        <div className="absolute left-7 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-[9px] font-bold text-white/40 tabular-nums">
+                                        <div className="absolute left-7 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-2xs-plus font-bold text-white/40 tabular-nums">
                                             {[...Array(5)].map((_, i) => <span key={i}>{Math.round(maxVal * (1 - i / 4)).toLocaleString()}</span>)}
                                         </div>
-                                        <div className="absolute right-7 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-[9px] font-bold text-rose-500/60 tabular-nums">
+                                        <div className="absolute right-7 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-2xs-plus font-bold text-rose-500/60 tabular-nums">
                                             {[...Array(5)].map((_, i) => <span key={i}>{Math.round(pm25Max * (1 - i / 4)).toLocaleString()}</span>)}
                                         </div>
                                         <div className="absolute inset-x-14 inset-y-0 flex flex-col justify-between opacity-20">{[...Array(5)].map((_, i) => <div key={i} className="w-full h-px bg-white/10"></div>)}</div>
@@ -523,27 +543,27 @@ export default function DDSDashboardPage() {
                                                     const monthShortLabel = parts && parts.length >= 2 ? `${THAI_MONTHS_SHORT[parseInt(parts[1]) - 1]} ${(parseInt(parts[0]) + 543).toString().slice(-2)}` : m.month;
                                                     const yPm25 = pm25Max > 0 ? (m.avg_pm25 / pm25Max) * 100 : 0;
                                                     return (
-                                                        <div key={i} className="flex-1 flex flex-col items-center group h-full relative z-10 hover:z-[60]">
+                                                        <div key={i} className="flex-1 flex flex-col items-center group h-full relative z-10 hover:z-header">
                                                             <div className="flex-1 w-full flex items-end justify-center relative">
                                                                 <div className="absolute w-2 h-2 bg-rose-500 rounded-full z-40 shadow-sm transition-all group-hover:scale-150 group-hover:bg-white group-hover:ring-4 group-hover:ring-rose-500/30" style={{ bottom: `${yPm25}%`, left: '50%', transform: 'translate(-50%, 50%)' }}></div>
-                                                                <div className={`absolute top-[-3.5rem] ${i < data.monthlyTrend.length / 2 ? 'left-0' : 'right-0'} bg-slate-900/98 backdrop-blur-3xl text-white p-4 rounded-3xl opacity-0 group-hover:opacity-100 transition-all duration-300 z-[500] pointer-events-none shadow-2xl min-w-[300px] border border-white/20`}>
+                                                                <div className={`absolute top-chart-tooltip ${i < data.monthlyTrend.length / 2 ? 'left-0' : 'right-0'} bg-slate-900/98 backdrop-blur-3xl text-white p-4 rounded-3xl opacity-0 group-hover:opacity-100 transition-all duration-300 z-map-overlay pointer-events-none shadow-2xl min-w-tooltip-sm border border-white/20`}>
                                                                     <div className="font-black mb-2 border-b border-white/10 pb-2 flex justify-between items-center">
-                                                                        <div className="flex flex-col"><span className="text-[10px] text-blue-400 uppercase">สถิติเดือน</span><span className="text-sm">{monthLabel}</span></div>
-                                                                        <div className="text-right"><div className="text-[9px] text-rose-400 uppercase">PM2.5</div><span className="text-xl text-rose-500 font-black">{m.avg_pm25 || 0}</span></div>
+                                                                        <div className="flex flex-col"><span className="text-compact text-blue-400 uppercase">สถิติเดือน</span><span className="text-sm">{monthLabel}</span></div>
+                                                                        <div className="text-right"><div className="text-2xs-plus text-rose-400 uppercase">PM2.5</div><span className="text-xl text-rose-500 font-black">{m.avg_pm25 || 0}</span></div>
                                                                     </div>
                                                                     {DDS_DISEASES.map(d => (m[d.id] as number) > 0 && (
                                                                         <div key={d.id} className="flex justify-between items-center bg-white/5 p-1.5 rounded-xl mb-1">
-                                                                            <span className="text-[10px] text-white/90 truncate">{d.shortLabel || d.label}</span>
-                                                                            <b className="text-[10px] text-white">{(m[d.id] as number || 0).toLocaleString()} ราย</b>
+                                                                            <span className="text-compact text-white/90 truncate">{d.shortLabel || d.label}</span>
+                                                                            <b className="text-compact text-white">{(m[d.id] as number || 0).toLocaleString()} ราย</b>
                                                                         </div>
                                                                     ))}
-                                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span className="text-[10px] text-white/40 uppercase">ผู้ป่วยรวม</span><span className="text-xl text-blue-400 font-black">{(m.total || 0).toLocaleString()}</span></div>
+                                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span className="text-compact text-white/40 uppercase">ผู้ป่วยรวม</span><span className="text-xl text-blue-400 font-black">{(m.total || 0).toLocaleString()}</span></div>
                                                                 </div>
                                                                 <div className="w-full flex flex-col justify-end h-full max-w-6 transition-all duration-500 group-hover:scale-x-110">
                                                                     {DDS_DISEASES.map(d => <div key={d.id} style={{ height: `${((Number(m[d.id] || 0)) / maxVal) * 100}%`, backgroundColor: d.hex }} className="w-full opacity-60 group-hover:opacity-100 shadow-sm first:rounded-t last:rounded-b"></div>)}
                                                                 </div>
                                                             </div>
-                                                            <span className="absolute bottom-[-28px] text-[9px] font-extrabold text-white/70 whitespace-nowrap">{monthShortLabel}</span>
+                                                            <span className="absolute bottom-chart-label text-2xs-plus font-extrabold text-white/70 whitespace-nowrap">{monthShortLabel}</span>
                                                         </div>
                                                     );
                                                 })}
@@ -554,8 +574,8 @@ export default function DDSDashboardPage() {
                             })()}
                         </div>
                         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-10 shrink-0">
-                            {DDS_DISEASES.map(d => <div key={d.id} className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.hex }}></div><span className="text-[10px] font-extrabold text-white/70">{d.shortLabel || d.label}</span></div>)}
-                            <div className="flex items-center gap-2"><div className="w-6 h-0.5 bg-rose-500 rounded-full"></div><span className="text-[10px] font-extrabold text-rose-400 uppercase">ค่าเฉลี่ย PM2.5</span></div>
+                            {DDS_DISEASES.map(d => <div key={d.id} className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.hex }}></div><span className="text-compact font-extrabold text-white/70">{d.shortLabel || d.label}</span></div>)}
+                            <div className="flex items-center gap-2"><div className="w-6 h-0.5 bg-rose-500 rounded-full"></div><span className="text-compact font-extrabold text-rose-400 uppercase">ค่าเฉลี่ย PM2.5</span></div>
                         </div>
                     </div>
 
@@ -565,7 +585,7 @@ export default function DDSDashboardPage() {
                             <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>สถิติผู้ป่วยราย{mapLevel}</h4>
                             <div className="bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full text-xs font-extrabold border border-blue-500/20 uppercase tracking-widest">{mapAreaCount} พื้นที่</div>
                         </div>
-                        <div className="flex-1 w-full min-h-[500px] relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 bg-slate-800/50">
+                        <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 bg-slate-800/50">
                             <ThailandMap
                                 data={mapData}
                                 stations={data?.stations || []}

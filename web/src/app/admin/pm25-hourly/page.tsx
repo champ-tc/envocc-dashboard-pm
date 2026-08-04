@@ -290,9 +290,9 @@ export default function Pm25HourlyManagementPage() {
 
             <div className="auth-surface overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[760px] text-left">
+                    <table className="w-full min-w-table-md text-left">
                         <thead>
-                            <tr className="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                            <tr className="border-b border-slate-100 bg-slate-50 text-compact-plus font-bold uppercase tracking-widest text-slate-400">
                                 <th className="px-5 py-4">วัน-เวลา</th>
                                 <th className="px-5 py-4">สถานี</th>
                                 {tablePollutantFields.map((field) => <th key={field.key} className="px-4 py-4">{field.label}</th>)}
@@ -340,7 +340,7 @@ export default function Pm25HourlyManagementPage() {
             </div>
 
             {isFormOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-4">
+                <div className="fixed inset-0 z-overlay flex items-center justify-center bg-slate-900/50 p-4">
                     <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
                         <div className="mb-6 flex items-center justify-between">
                             <h2 className="text-xl font-black text-slate-800">{editingRow ? 'แก้ไขข้อมูลค่าฝุ่น' : 'เพิ่มข้อมูลค่าฝุ่น'}</h2>

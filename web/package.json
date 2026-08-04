@@ -6,7 +6,7 @@
     "dev": "node scripts/dev-with-server-db.mjs",
     "db:push:server": "node scripts/push-server-schema.mjs",
     "db:seed": "node scripts/seed-users.mjs",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },

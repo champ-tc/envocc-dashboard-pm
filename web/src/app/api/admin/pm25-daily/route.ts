@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { and, asc, eq, gte, lte } from 'drizzle-orm';
+import { and, asc, eq, gte, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -116,7 +116,19 @@ export async function GET(request: Request) {
             so2Avg: pm25Daily.so2Avg,
         })
             .from(pm25Daily)
-            .leftJoin(stations, eq(pm25Daily.stationIdNew, stations.stationIdNew))
+            .leftJoin(stations, and(
+                eq(pm25Daily.stationIdNew, stations.stationIdNew),
+                sql`${stations}.ctid = (
+                    SELECT station_latest.ctid
+                    FROM stations AS station_latest
+                    WHERE station_latest.station_id_new = ${pm25Daily.stationIdNew}
+                    ORDER BY
+                        (NULLIF(BTRIM(station_latest.district), '') IS NOT NULL) DESC,
+                        station_latest.created_at DESC NULLS LAST,
+                        station_latest.ctid DESC
+                    LIMIT 1
+                )`,
+            ))
             .where(and(gte(pm25Daily.air4Date, parsedStartDate), lte(pm25Daily.air4Date, parsedEndDate)))
             .orderBy(asc(pm25Daily.air4Date), asc(pm25Daily.stationIdNew));
         return NextResponse.json({ rows });

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { and, asc, eq, gte, lt } from 'drizzle-orm';
+import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -102,7 +102,19 @@ export async function GET(request: Request) {
             so2: pm25Hourly.so2,
         })
             .from(pm25Hourly)
-            .leftJoin(stations, eq(pm25Hourly.stationIdNew, stations.stationIdNew))
+            .leftJoin(stations, and(
+                eq(pm25Hourly.stationIdNew, stations.stationIdNew),
+                sql`${stations}.ctid = (
+                    SELECT station_latest.ctid
+                    FROM stations AS station_latest
+                    WHERE station_latest.station_id_new = ${pm25Hourly.stationIdNew}
+                    ORDER BY
+                        (NULLIF(BTRIM(station_latest.district), '') IS NOT NULL) DESC,
+                        station_latest.created_at DESC NULLS LAST,
+                        station_latest.ctid DESC
+                    LIMIT 1
+                )`,
+            ))
             .where(and(gte(pm25Hourly.air4Time, start), lt(pm25Hourly.air4Time, end)))
             .orderBy(asc(pm25Hourly.air4Time), asc(pm25Hourly.stationIdNew));
         return NextResponse.json({ rows });

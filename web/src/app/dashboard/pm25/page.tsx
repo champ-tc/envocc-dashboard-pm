@@ -1,9 +1,11 @@
 'use client';
-import { useEffect, useState, memo, useMemo, useCallback } from 'react';
-import Image from 'next/image';
+import { useEffect, useState, memo, useMemo, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions } from './actions';
-import DashboardNavMenu from '@/components/DashboardNavMenu';
+import DashboardNavbar from '../_components/DashboardNavbar';
+import DashboardBusyAlert from '../_components/DashboardBusyAlert';
+
+const BUSY_MESSAGE = 'ระบบกำลังประมวลผลคำขอก่อนหน้า กรุณารอสักครู่แล้วลองใหม่อีกครั้ง';
 
 // --- Types ---
 interface FilterOptions {
@@ -140,7 +142,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
         <div className="relative col-span-1">
             <label className="block text-xs uppercase font-bold text-white/70 mb-2 ml-2 tracking-wider">{label}</label>
             <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-xs font-bold text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
-                <div className="truncate max-w-[150px]">
+                <div className="truncate max-w-filter-label">
                     {safeSelected.length === 0 ? placeholder : (safeSelected.length === safeOptions.length ? 'ทั้งหมด' : safeSelected.join(', '))}
                 </div>
                 <svg className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -149,8 +151,8 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-[200] mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                    <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
+                    <div className="absolute z-dropdown mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
                         <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
                             <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
                                 {safeSelected.length === safeOptions.length && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
@@ -198,7 +200,7 @@ function DDatePicker({ label, options, value, onChange, thaiMonths }: any) {
         <div className="relative col-span-1">
             <label className="block text-xs uppercase font-bold text-white/70 mb-2 ml-2 tracking-wider">{label}</label>
             <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-xs font-bold text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
-                <div className="truncate max-w-[150px]">
+                <div className="truncate max-w-filter-label">
                     {formatDate(value)}
                 </div>
                 <svg className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -207,8 +209,8 @@ function DDatePicker({ label, options, value, onChange, thaiMonths }: any) {
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-[200] mt-3 w-80 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-96 overflow-y-auto p-5 flex flex-col gap-6 ring-1 ring-white/20 scrollbar-hide">
+                    <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
+                    <div className="absolute z-dropdown mt-3 w-80 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-96 overflow-y-auto p-5 flex flex-col gap-6 ring-1 ring-white/20 scrollbar-hide">
                         {years.map(year => (
                             <div key={year} className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3 px-2">
@@ -217,14 +219,14 @@ function DDatePicker({ label, options, value, onChange, thaiMonths }: any) {
                                 </div>
                                 {Object.keys(grouped[year]).sort((a, b) => b.localeCompare(a)).map(month => (
                                     <div key={month} className="flex flex-col gap-2">
-                                        <span className="text-[10px] font-bold text-white/30 uppercase px-2">{thaiMonths[parseInt(month) - 1]}</span>
+                                        <span className="text-compact font-bold text-white/30 uppercase px-2">{thaiMonths[parseInt(month) - 1]}</span>
                                         <div className="grid grid-cols-7 gap-1">
                                             {grouped[year][month].sort((a: string, b: string) => a.localeCompare(b)).map((day: string) => {
                                                 const dateStr = `${year}-${month}-${day}`;
                                                 const isActive = value === dateStr;
                                                 return (
                                                     <div key={day} onClick={() => { onChange(dateStr); setIsOpen(false); }}
-                                                        className={`flex items-center justify-center h-8 rounded-lg cursor-pointer transition-all border text-[10px] font-bold
+                                                        className={`flex items-center justify-center h-8 rounded-lg cursor-pointer transition-all border text-compact font-bold
                                                         ${isActive ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/40' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:border-white/20 hover:text-white'}`}>
                                                         {parseInt(day)}
                                                     </div>
@@ -320,14 +322,14 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
             <div className="flex-1 flex gap-4 min-h-0 relative">
                 <div className="flex-1 relative border-r border-white/5 pr-4 flex min-w-0">
                     <div className="w-5 shrink-0 flex items-center justify-center">
-                        <span className="text-[9px] font-bold text-white/50 whitespace-nowrap [writing-mode:vertical-rl] rotate-180">
+                        <span className="text-2xs-plus font-bold text-white/50 whitespace-nowrap writing-mode-vertical rotate-180">
                             ค่าเฉลี่ยฝุ่น (มคก./ลบ.ม.)
                         </span>
                     </div>
                     {loading ? <div className="w-full h-full bg-white/5 animate-pulse rounded-2xl"></div> : (
                         <div className="flex-1 min-w-0 h-full flex flex-col">
                             <div className="flex-1 min-h-0 flex">
-                                <div className="w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-[8px] font-bold text-white/40 tabular-nums">
+                                <div className="w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-2xs font-bold text-white/40 tabular-nums">
                                     {yAxisTicks.map((tick, index) => (
                                         <span key={index}>{Math.round(tick)}</span>
                                     ))}
@@ -379,7 +381,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                                     style={{ left: `${hoveredPoint.x}%`, top: `${hoveredPoint.y}%`, backgroundColor: hoveredPoint.color }}
                                                 />
                                                 <div
-                                                    className="absolute z-40 min-w-48 rounded-xl border border-white/15 bg-slate-950/95 p-3 text-[11px] text-white shadow-2xl backdrop-blur-xl pointer-events-none"
+                                                    className="absolute z-40 min-w-48 rounded-xl border border-white/15 bg-slate-950/95 p-3 text-compact-plus text-white shadow-2xl backdrop-blur-xl pointer-events-none"
                                                     style={{
                                                         left: `${hoveredPoint.x}%`,
                                                         top: `${hoveredPoint.y}%`,
@@ -390,7 +392,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                                         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hoveredPoint.color }} />
                                                         {hoveredPoint.label}
                                                     </div>
-                                                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-white/70">
+                                                    <div className="grid grid-cols-metric gap-x-3 gap-y-1 text-white/70">
                                                         <span>วันที่</span>
                                                         <span className="text-right font-bold text-white">{formatDateShort(hoveredPoint.date)}</span>
                                                         <span>พื้นที่</span>
@@ -405,7 +407,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                 </div>
                             </div>
                             <div
-                                className="ml-9 mt-1 grid text-[8px] font-bold text-white/40 tabular-nums"
+                                className="ml-9 mt-1 grid text-2xs font-bold text-white/40 tabular-nums"
                                 style={{ gridTemplateColumns: `repeat(${Math.max(xAxisLabels.length, 1)}, minmax(0, 1fr))` }}
                             >
                                 {xAxisLabels.map((date, index) => (
@@ -425,7 +427,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                     </span>
                                 ))}
                             </div>
-                            <div className="ml-9 text-center text-[9px] font-bold text-white/50">วันที่</div>
+                            <div className="ml-9 text-center text-2xs-plus font-bold text-white/50">วันที่</div>
                         </div>
                     )}
                 </div>
@@ -444,13 +446,13 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                 }}
                                 className={`flex items-center gap-2 min-w-0 cursor-pointer transition-all ${isHidden ? 'opacity-40 grayscale' : 'hover:opacity-80'}`}>
                                 <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isHidden ? '#475569' : colors[idx % colors.length] }}></div>
-                                <span className={`text-[10px] font-bold truncate transition-colors ${isHidden ? 'text-white/30' : 'text-white/60'}`} title={label}>{label}</span>
+                                <span className={`text-compact font-bold truncate transition-colors ${isHidden ? 'text-white/30' : 'text-white/60'}`} title={label}>{label}</span>
                             </div>
                         );
                     })}
                 </div>
             </div>
-            {!loading && <div className="absolute top-8 right-8 text-[9px] font-black text-white/20 uppercase tracking-widest text-right">Scale: {Math.round(maxValue)}<br />(มคก./ลบ.ม.)</div>}
+            {!loading && <div className="absolute top-8 right-8 text-2xs-plus font-black text-white/20 uppercase tracking-widest text-right">Scale: {Math.round(maxValue)}<br />(มคก./ลบ.ม.)</div>}
         </div>
     );
 });
@@ -466,7 +468,7 @@ function TopExceedRanking({ data, loading }: { data?: { province: string; exceed
                     <div className="w-2 h-6 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
                     10 อันดับจังหวัดที่มีจำนวนวันเกินมาตรฐานมากที่สุด
                 </h4>
-                <span className="text-[10px] font-black text-orange-200 bg-orange-500/15 px-2.5 py-1 rounded-xl border border-orange-500/20 whitespace-nowrap">
+                <span className="text-compact font-black text-orange-200 bg-orange-500/15 px-2.5 py-1 rounded-xl border border-orange-500/20 whitespace-nowrap">
                     &gt; 37.5 มคก./ลบ.ม.
                 </span>
             </div>
@@ -493,7 +495,7 @@ function TopExceedRanking({ data, loading }: { data?: { province: string; exceed
                                 <div key={`${row.province}-${idx}`} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/5 px-2.5 py-0.5 min-h-7">
                                     <div className={`absolute inset-y-0 left-0 rounded-xl ${isTopThree ? 'bg-orange-500/25' : 'bg-blue-500/15'}`} style={{ width: `${percent}%` }}></div>
                                     <div className="relative z-10 flex items-center gap-2.5 min-w-0">
-                                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black tabular-nums shrink-0 ${isTopThree ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-white/10 text-white/70'}`}>
+                                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-compact font-black tabular-nums shrink-0 ${isTopThree ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-white/10 text-white/70'}`}>
                                             {idx + 1}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -501,7 +503,7 @@ function TopExceedRanking({ data, loading }: { data?: { province: string; exceed
                                         </div>
                                         <div className="text-right shrink-0 flex items-baseline gap-1">
                                             <div className="text-sm font-black text-white tabular-nums leading-none">{days.toLocaleString()}</div>
-                                            <div className="text-[10px] font-bold text-white/35">วัน</div>
+                                            <div className="text-compact font-bold text-white/35">วัน</div>
                                         </div>
                                     </div>
                                 </div>
@@ -519,13 +521,16 @@ function useDashboard() {
     const [data, setData] = useState<DashboardData | null>(null);
     const [options, setOptions] = useState<FilterOptions>({ dates: [], regions: [], provinces: [], hierarchy: [] });
     const [loading, setLoading] = useState(true);
+    const [busyMessage, setBusyMessage] = useState<string | null>(null);
     const [filters, setFilters] = useState<Filters>({ startDate: '', endDate: '', regions: [], provinces: [], districts: [] });
+    const latestRequestId = useRef(0);
 
     const now = new Date();
     const limitFullDate = now.toISOString().split('T')[0];
 
     useEffect(() => {
         getFilterOptions().then((opts: any) => {
+            setBusyMessage(null);
             if (!opts) return;
             const allDates = opts.dates || [];
             const sortedDates = [...allDates].sort((a, b) => b.localeCompare(a));
@@ -545,19 +550,37 @@ function useDashboard() {
 
                 setFilters(f => ({ ...f, startDate: startDate, endDate: latestDateStr }));
             }
+        }).catch(() => {
+            setBusyMessage(BUSY_MESSAGE);
+            setLoading(false);
         });
     }, []);
 
     useEffect(() => {
         if (!filters.startDate || !filters.endDate) return;
-        setLoading(true);
-        const apiFilters = {
-            ...filters,
-            regions: filters.regions?.length ? filters.regions : undefined,
-            provinces: filters.provinces?.length ? filters.provinces : undefined,
-            districts: filters.districts?.length ? filters.districts : undefined,
-        };
-        getDashboardData(apiFilters).then((res: any) => { setData(res); setLoading(false); });
+        const requestId = ++latestRequestId.current;
+        const timeout = window.setTimeout(async () => {
+            setLoading(true);
+            const apiFilters = {
+                ...filters,
+                regions: filters.regions?.length ? filters.regions : undefined,
+                provinces: filters.provinces?.length ? filters.provinces : undefined,
+                districts: filters.districts?.length ? filters.districts : undefined,
+            };
+            try {
+                const res: any = await getDashboardData(apiFilters);
+                if (requestId === latestRequestId.current) {
+                    setData(res);
+                    setBusyMessage(null);
+                }
+            } catch {
+                if (requestId === latestRequestId.current) setBusyMessage(BUSY_MESSAGE);
+            } finally {
+                if (requestId === latestRequestId.current) setLoading(false);
+            }
+        }, 350);
+
+        return () => window.clearTimeout(timeout);
     }, [filters]);
 
     const baseProvinces = useMemo(() => (filters.regions.length === 0 ? options.provinces : Array.from(new Set(options.hierarchy?.filter(h => filters.regions.includes(h.region)).map(h => h.province)))).sort((a: string, b: string) => a.localeCompare(b, 'th')), [filters.regions, options.provinces, options.hierarchy]);
@@ -658,12 +681,12 @@ function useDashboard() {
         return { count: exceedingProvinces.length, tooltip };
     }, [data?.provinceMaxes, provinceToRegion]);
 
-    return { data, options, loading, filters, setFilters, baseProvinces, baseDistricts, provinceMaxes, exceedData37, exceedData75 };
+    return { data, options, loading, busyMessage, filters, setFilters, baseProvinces, baseDistricts, provinceMaxes, exceedData37, exceedData75 };
 }
 
 // --- Main Page Component ---
 export default function DashboardPM25() {
-    const { data, options, loading, filters, setFilters, baseProvinces, baseDistricts, provinceMaxes, exceedData37, exceedData75 } = useDashboard();
+    const { data, options, loading, busyMessage, filters, setFilters, baseProvinces, baseDistricts, provinceMaxes, exceedData37, exceedData75 } = useDashboard();
     const [activeMap, setActiveMap] = useState<'avg' | 'streak37' | 'streak75'>('avg');
 
     return (
@@ -672,27 +695,27 @@ export default function DashboardPM25() {
             <div className="absolute inset-0 bg-slate-900/40 z-0"></div>
 
             <main className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 h-screen flex flex-col gap-4">
-                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2 shrink-0 relative z-[60]">
-                    <div className="flex items-center gap-4">
-                        <div className="flex -space-x-3">
-                            <div className="relative shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10 w-12 h-12 sm:w-14 sm:h-14 z-20">
-                                <Image src="/img/ddc-logo.png" alt="DDC Logo" fill sizes="60px" className="rounded-xl object-contain p-1" priority />
-                            </div>
-                        </div>
-                        <div className="flex flex-col">
-                            <h5 className="text-lg md:text-xl font-extrabold text-white leading-tight drop-shadow-md uppercase">
-                                ระบบรายงานเฝ้าระวัง <span className="text-blue-400">สถานการณ์ฝุ่น PM2.5 ประเทศไทย</span>
-                            </h5>
-                            <p className="text-xs font-bold text-blue-200 uppercase tracking-widest opacity-80">กรมควบคุมโรค | กองโรคจากการประกอบอาชีพและสิ่งแวดล้อม</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <DashboardNavMenu />
-                    </div>
-                </header>
+                <DashboardNavbar
+                    logos={[
+                        {
+                            src: '/img/ddc-logo.png',
+                            alt: 'DDC Logo',
+                            fill: true,
+                            sizes: '60px',
+                            wrapperClassName: 'relative z-20 h-12 w-12 shrink-0 rounded-2xl border border-white/50 bg-white p-1.5 shadow-2xl ring-4 ring-white/10 sm:h-14 sm:w-14',
+                            imageClassName: 'rounded-xl object-contain p-1',
+                        },
+                    ]}
+                    title={<>ระบบรายงานเฝ้าระวัง <span className="text-blue-400">สถานการณ์ฝุ่น PM2.5 ประเทศไทย</span></>}
+                    subtitle="กรมควบคุมโรค | กองโรคจากการประกอบอาชีพและสิ่งแวดล้อม"
+                    className="relative z-header mb-2"
+                    titleClassName="uppercase drop-shadow-md"
+                    navClassName=""
+                />
+                <DashboardBusyAlert message={busyMessage} />
 
                 {/* Filters Section - Exactly like HDC */}
-                <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-[100]">
+                <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-overlay">
                     <DDatePicker label="จากวันที่" options={options.dates} value={filters.startDate} onChange={(v: string) => setFilters({ ...filters, startDate: v })} thaiMonths={thaiMonthsShort} />
                     <DDatePicker label="ถึงวันที่" options={options.dates} value={filters.endDate} onChange={(v: string) => setFilters({ ...filters, endDate: v })} thaiMonths={thaiMonthsShort} />
                     <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val: string[]) => setFilters({ ...filters, regions: val, provinces: [] })} />
@@ -700,7 +723,7 @@ export default function DashboardPM25() {
                     <MultiSelect label="อำเภอ/เขต" options={baseDistricts} selected={filters.districts} onChange={(val: string[]) => setFilters({ ...filters, districts: val })} />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 relative z-[90]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 relative z-summary">
                     {[
                         { label: 'ค่าเฉลี่ย 24 ชั่วโมงฝุ่น PM2.5', value: data?.avgPM25, unit: 'มคก./ลบ.ม.', color: '#3b82f6', isPrimary: true },
                         { label: 'ค่าเฉลี่ย 24 ชั่วโมงฝุ่น PM2.5 สูงสุด', value: data?.maxPM25, unit: 'มคก./ลบ.ม.', color: '#f43f5e', isPrimary: false },
@@ -715,18 +738,18 @@ export default function DashboardPM25() {
                                 {loading ? <div className={`h-9 w-24 animate-pulse rounded-lg ${stat.isPrimary ? 'bg-white/20' : 'bg-white/10'}`}></div> : stat.value?.toLocaleString()}
                                 {!stat.isPrimary && <div className="w-1.5 h-6 rounded-full mb-1" style={{ backgroundColor: stat.color }}></div>}
                             </div>
-                            <div className={`text-[10px] font-bold uppercase mt-1 ${stat.isPrimary ? 'text-white/50' : 'text-white/30'}`}>{stat.unit}</div>
+                            <div className={`text-compact font-bold uppercase mt-1 ${stat.isPrimary ? 'text-white/50' : 'text-white/30'}`}>{stat.unit}</div>
                             
                             {stat.tooltip && Array.isArray(stat.tooltip) && stat.tooltip.length > 0 && (
-                                <div className={`absolute top-full mt-3 w-[300px] sm:w-[450px] lg:w-[550px] max-h-[50vh] overflow-y-auto custom-scrollbar p-5 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none ${i >= 2 ? 'right-0' : 'left-0'}`}>
+                                <div className={`absolute top-full mt-3 w-tooltip-sm sm:w-tooltip-md lg:w-tooltip-lg max-h-dashboard-tooltip overflow-y-auto custom-scrollbar p-5 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl z-overlay opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none ${i >= 2 ? 'right-0' : 'left-0'}`}>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                                         {stat.tooltip.map((item: any, idx: number) => (
                                             <div key={idx} className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span className="text-xs font-extrabold text-blue-400 drop-shadow-sm">{item.region}</span>
-                                                    <span className="text-[10px] font-extrabold text-blue-100 bg-blue-500/20 px-2.5 py-1 rounded-full border border-blue-500/30 whitespace-nowrap">{item.count} จังหวัด</span>
+                                                    <span className="text-compact font-extrabold text-blue-100 bg-blue-500/20 px-2.5 py-1 rounded-full border border-blue-500/30 whitespace-nowrap">{item.count} จังหวัด</span>
                                                 </div>
-                                                <div className="text-[11px] text-white/80 leading-relaxed font-medium">
+                                                <div className="text-compact-plus text-white/80 leading-relaxed font-medium">
                                                     {item.provinces}
                                                 </div>
                                             </div>
@@ -738,13 +761,13 @@ export default function DashboardPM25() {
                     ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1.1fr] gap-4 flex-1 min-h-0 relative z-[10]">
+                <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-content">
                     <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar scrollbar-hide">
-                            <div className="h-[430px] shrink-0"><TopExceedRanking data={data?.top10Exceed || []} loading={loading} /></div>
-                            <div className="h-[350px] shrink-0"><MultiLineChart title="เฉลี่ยรายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></div>
-                            <div className="h-[350px] shrink-0"><MultiLineChart title="สถิติรายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></div>
-                            <div className="h-[350px] shrink-0"><MultiLineChart title="สถิติรายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></div>
+                            <div className="h-ranking-chart shrink-0"><TopExceedRanking data={data?.top10Exceed || []} loading={loading} /></div>
+                            <div className="h-chart-standard shrink-0"><MultiLineChart title="เฉลี่ยรายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></div>
+                            <div className="h-chart-standard shrink-0"><MultiLineChart title="สถิติรายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></div>
+                            <div className="h-chart-standard shrink-0"><MultiLineChart title="สถิติรายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></div>
                         </div>
                     </div>
 
@@ -756,7 +779,7 @@ export default function DashboardPM25() {
                                     แผนที่รายงานระดับค่าฝุ่น PM2.5
                                 </h4>
                                 {filters.startDate && filters.endDate && (
-                                    <div className="text-[11px] font-bold text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
+                                    <div className="text-compact-plus font-bold text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
                                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                         ข้อมูล: {filters.startDate === filters.endDate 
                                             ? formatDateShort(filters.startDate) 
@@ -770,7 +793,7 @@ export default function DashboardPM25() {
                                 <button onClick={() => setActiveMap('streak75')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak75' ? 'bg-rose-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>ค่าฝุ่น PM2.5 &gt; 75 มคก./ลบ.ม.</button>
                             </div>
                         </div>
-                        <div className="flex-1 w-full min-h-[500px] relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-inner bg-slate-800/50">
+                        <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-inner bg-slate-800/50">
                             <ThailandMap
                                 data={activeMap === 'avg' ? provinceMaxes : (activeMap === 'streak37' ? (data?.provinceStreak37 || {}) : (data?.provinceStreak75 || {}))}
                                 filters={filters}
@@ -811,7 +834,7 @@ export default function DashboardPM25() {
                                                 const dateStr = summarizeDateRanges(streakDates.map(d => new Date(d).toISOString()));
                                                 extraDateText = `
                                                     <div class="flex flex-col gap-1 bg-orange-500/10 p-4 rounded-2xl border border-orange-500/20 mt-3">
-                                                        <span class="text-[10px] font-bold text-orange-400/80 uppercase tracking-widest">วันที่เกินติดต่อกันล่าสุด</span>
+                                                        <span class="text-compact font-bold text-orange-400/80 uppercase tracking-widest">วันที่เกินติดต่อกันล่าสุด</span>
                                                         <span class="text-xs font-medium text-orange-200 leading-relaxed">${dateStr}</span>
                                                     </div>
                                                 `;
@@ -852,7 +875,7 @@ export default function DashboardPM25() {
                                                 const dateStr = summarizeDateRanges(latestValidStreak.map(d => d.toISOString()));
                                                 extraDateText = `
                                                     <div class="flex flex-col gap-1 bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mt-3">
-                                                        <span class="text-[10px] font-bold text-rose-400/80 uppercase tracking-widest">วันที่เกินติดต่อกันล่าสุด</span>
+                                                        <span class="text-compact font-bold text-rose-400/80 uppercase tracking-widest">วันที่เกินติดต่อกันล่าสุด</span>
                                                         <span class="text-xs font-medium text-rose-200 leading-relaxed">${dateStr}</span>
                                                     </div>
                                                 `;

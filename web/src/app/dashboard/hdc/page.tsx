@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions, getUserAction } from './actions';
 import type { HDCFilters, HDCOptions, DashboardData, HierarchyItem, MonthlyTrendData } from './actions';
 import { HDC_DISEASES } from '@/lib/constants';
-import DashboardNavMenu from '@/components/DashboardNavMenu';
+import DashboardNavbar from '../_components/DashboardNavbar';
+import DashboardBusyAlert from '../_components/DashboardBusyAlert';
+
+const BUSY_MESSAGE = 'ระบบกำลังประมวลผลคำขอก่อนหน้า กรุณารอสักครู่แล้วลองใหม่อีกครั้ง';
 
 // --- FilterSection Component ---
 function SingleSelect({ label, options, selected, onChange }: { label: string, options: string[], selected: string, onChange: (val: string) => void }) {
@@ -25,8 +27,8 @@ function SingleSelect({ label, options, selected, onChange }: { label: string, o
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-[200] mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                    <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
+                    <div className="absolute z-dropdown mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
                         {safeOptions.map((opt: string) => (
                             <div key={opt} onClick={() => { onChange(opt); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${selected === opt ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
@@ -59,8 +61,8 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-[200] mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                    <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
+                    <div className="absolute z-dropdown mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
                         <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
                             <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
                                 {safeSelected.length === safeOptions.length && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
@@ -116,8 +118,8 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
             </div>
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-[200] mt-3 w-80 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-96 overflow-y-auto p-5 flex flex-col gap-6 ring-1 ring-white/20 scrollbar-hide">
+                    <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
+                    <div className="absolute z-dropdown mt-3 w-80 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-96 overflow-y-auto p-5 flex flex-col gap-6 ring-1 ring-white/20 scrollbar-hide">
                         {years.map(year => (
                             <div key={year} className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3 px-2">
@@ -273,12 +275,12 @@ function StatCards({ data, loading }: StatCardsProps) {
             {/* Bottom Row: Disease Group Stats */}
             <div className="flex items-center gap-3 mb-1 mt-2">
                 <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
-                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">สถิติแยกตามกลุ่มโรค (Top 5)</span>
+                <span className="text-compact font-black text-white/40 uppercase tracking-stat-label">สถิติแยกตามกลุ่มโรค (Top 5)</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 {top5Sorted.map((stat, i) => (
                     <div key={i} className="bg-white/5 backdrop-blur-lg p-4 rounded-3xl shadow-xl border border-white/10 transition-all group ring-1 ring-white/5 min-h-24 flex flex-col justify-between hover:bg-white/10">
-                        <div className="text-[10px] font-bold text-white/50 uppercase tracking-tight mb-1 leading-tight line-clamp-2" title={stat.label}>
+                        <div className="text-compact font-bold text-white/50 uppercase tracking-tight mb-1 leading-tight line-clamp-2" title={stat.label}>
                             {stat.label}
                         </div>
                         <div className="text-xl font-black text-white tracking-tight tabular-nums flex items-end gap-2">
@@ -304,7 +306,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
     return (
-        <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-[400px] lg:min-h-0">
+        <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-chart lg:min-h-0">
             <div className="flex items-center justify-between mb-8 shrink-0">
                 <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
@@ -314,13 +316,13 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
 
             <div className="flex-1 relative flex flex-col justify-end px-12 min-h-0 overflow-visible">
                 <div className="absolute left-12 top-0 bottom-0 w-px bg-white/10 z-20">
-                    <div className="absolute top-[-25px] left-0 text-[10px] font-black text-white/30 uppercase tracking-wider whitespace-nowrap">
+                    <div className="absolute top-chart-caption left-0 text-compact font-black text-white/30 uppercase tracking-wider whitespace-nowrap">
                         จำนวนผู้ป่วย (ราย)
                     </div>
                 </div>
 
                 <div className="absolute right-12 top-0 bottom-0 w-px bg-white/10 z-20">
-                    <div className="absolute top-[-25px] right-0 text-[10px] font-black text-rose-500/40 uppercase tracking-wider whitespace-nowrap text-right">
+                    <div className="absolute top-chart-caption right-0 text-compact font-black text-rose-500/40 uppercase tracking-wider whitespace-nowrap text-right">
                         เฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)
                     </div>
                 </div>
@@ -330,12 +332,12 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                     const pm25Max = Math.max(...data.map(x => x.avg_pm25 || 0), 50) * 1.1;
                     return (
                         <>
-                            <div className="absolute left-4 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-[9px] font-bold text-white/20 tabular-nums pointer-events-none z-30">
+                            <div className="absolute left-4 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-2xs-plus font-bold text-white/20 tabular-nums pointer-events-none z-30">
                                 {[...Array(5)].map((_, i) => (
                                     <span key={i}>{Math.round(maxVal * (1 - i / 4)).toLocaleString()}</span>
                                 ))}
                             </div>
-                            <div className="absolute right-4 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-[9px] font-bold text-rose-500/30 tabular-nums pointer-events-none z-30">
+                            <div className="absolute right-4 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-2xs-plus font-bold text-rose-500/30 tabular-nums pointer-events-none z-30">
                                 {[...Array(5)].map((_, i) => (
                                     <span key={i}>{Math.round(pm25Max * (1 - i / 4)).toLocaleString()}</span>
                                 ))}
@@ -360,7 +362,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                                     const y = 100 - (pm25Max > 0 ? (m.avg_pm25 / pm25Max) * 100 : 0);
                                     const x = (i + 0.5) * (100 / data.length);
                                     return (
-                                        <circle key={i} cx={x} cy={y} r="1" fill="#f43f5e" vectorEffect="non-scaling-stroke" className={`transition-all duration-300 ${hoveredIdx === i ? 'r-[3] fill-white' : ''}`} />
+                                        <circle key={i} cx={x} cy={y} r="1" fill="#f43f5e" vectorEffect="non-scaling-stroke" className={`transition-all duration-300 ${hoveredIdx === i ? 'chart-point-active fill-white' : ''}`} />
                                     );
                                 })}
                             </svg>
@@ -379,22 +381,22 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                             const isHovered = hoveredIdx === i;
 
                             return (
-                                <div key={i} className={`flex-1 flex flex-col items-center group h-full relative min-w-0 transition-all duration-300 ${isHovered ? 'z-[100]' : 'z-10'}`}
+                                <div key={i} className={`flex-1 flex flex-col items-center group h-full relative min-w-0 transition-all duration-300 ${isHovered ? 'z-overlay' : 'z-10'}`}
                                      onMouseEnter={() => setHoveredIdx(i)}
                                      onMouseLeave={() => setHoveredIdx(null)}>
                                     
                                     <div className={`absolute inset-0 bg-white/5 pointer-events-none transition-opacity rounded-xl ${isHovered ? 'opacity-100' : 'opacity-0'}`}></div>
 
                                     <div className="flex-1 w-full flex items-end justify-center relative z-10 pb-1">
-                                        <div className={`fixed-top-tooltip absolute top-[-3.5rem] ${i < data.length / 2 ? 'left-0' : 'right-0'} bg-slate-900/98 backdrop-blur-3xl text-white p-4 rounded-3xl transition-all duration-300 pointer-events-none shadow-[0_30px_70px_rgba(0,0,0,0.8)] min-w-[340px] border border-white/20 ring-1 ring-white/10 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                                        <div className={`fixed-top-tooltip absolute top-chart-tooltip ${i < data.length / 2 ? 'left-0' : 'right-0'} bg-slate-900/98 backdrop-blur-3xl text-white p-4 rounded-3xl transition-all duration-300 pointer-events-none shadow-chart-tooltip min-w-chart-tooltip-wide border border-white/20 ring-1 ring-white/10 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                             <div className="font-black mb-3 border-b border-white/10 pb-2 flex justify-between items-center shrink-0">
                                                 <div className="flex flex-col">
-                                                    <span className="text-[9px] text-blue-400 uppercase tracking-widest mb-0.5 font-bold">สถิติระบาดวิทยา</span>
+                                                    <span className="text-2xs-plus text-blue-400 uppercase tracking-widest mb-0.5 font-bold">สถิติระบาดวิทยา</span>
                                                     <span className="text-lg text-white leading-none font-black">{monthLabel}</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-[9px] text-rose-400 uppercase tracking-widest mb-0.5 font-bold">เฉลี่ยฝุ่น PM2.5</div>
-                                                    <span className="text-2xl text-rose-500 font-black tabular-nums leading-none">{m.avg_pm25 || 0} <small className="text-[10px] opacity-40 font-bold">มคก./ลบ.ม.</small></span>
+                                                    <div className="text-2xs-plus text-rose-400 uppercase tracking-widest mb-0.5 font-bold">เฉลี่ยฝุ่น PM2.5</div>
+                                                    <span className="text-2xl text-rose-500 font-black tabular-nums leading-none">{m.avg_pm25 || 0} <small className="text-compact opacity-40 font-bold">มคก./ลบ.ม.</small></span>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -402,25 +404,25 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                                                     <div key={d.id} className="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5 transition-colors">
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: d.hex }}></div>
-                                                            <span className="text-[10px] text-white/80 font-bold leading-tight truncate">{d.label}</span>
+                                                            <span className="text-compact text-white/80 font-bold leading-tight truncate">{d.label}</span>
                                                         </div>
                                                         <div className="flex items-baseline gap-1 shrink-0 ml-1">
                                                             <b className="font-black tabular-nums text-xs text-white">{(m[d.id] || 0).toLocaleString()}</b>
-                                                            <span className="text-[7px] text-white/30 font-bold uppercase">ราย</span>
+                                                            <span className="text-micro text-white/30 font-bold uppercase">ราย</span>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                             <div className="mt-3 pt-2 border-t border-white/10 flex justify-between items-center">
-                                                <span className="text-[10px] text-white/40 font-black uppercase tracking-widest">ผู้ป่วยสะสมรวม</span>
+                                                <span className="text-compact text-white/40 font-black uppercase tracking-widest">ผู้ป่วยสะสมรวม</span>
                                                 <div className="flex items-baseline gap-1.5">
-                                                    <span className="text-2xl text-blue-400 font-black tabular-nums drop-shadow-[0_0_15px_rgba(96,165,250,0.4)]">{(m.total || 0).toLocaleString()}</span>
-                                                    <span className="text-[9px] text-blue-400/50 font-bold uppercase">ราย</span>
+                                                    <span className="text-2xl text-blue-400 font-black tabular-nums drop-shadow-stat-glow">{(m.total || 0).toLocaleString()}</span>
+                                                    <span className="text-2xs-plus text-blue-400/50 font-bold uppercase">ราย</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className={`w-full flex flex-col justify-end h-full max-w-[20px] transition-all duration-300 ${isHovered ? 'scale-x-125 brightness-110' : 'group-all-hover:opacity-40'}`}>
+                                        <div className={`w-full flex flex-col justify-end h-full max-w-chart-bar transition-all duration-300 ${isHovered ? 'scale-x-125 brightness-110' : 'group-all-hover:opacity-40'}`}>
                                             {activeDiseases.map(d => {
                                                 const h = ((Number(m[d.id] || 0)) / maxVal) * 100;
                                                 if (h <= 0) return null;
@@ -431,7 +433,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                                             })}
                                         </div>
                                     </div>
-                                    <span className={`absolute bottom-[-28px] text-[9px] font-black whitespace-nowrap uppercase tracking-tighter transition-colors ${isHovered ? 'text-blue-400' : 'text-white/30'}`}>{monthShortLabel}</span>
+                                    <span className={`absolute bottom-chart-label text-2xs-plus font-black whitespace-nowrap uppercase tracking-tighter transition-colors ${isHovered ? 'text-blue-400' : 'text-white/30'}`}>{monthShortLabel}</span>
                                 </div>
                             );
                         })}
@@ -442,12 +444,12 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                     {HDC_DISEASES.map(d => (
                         <div key={d.id} className="flex items-center gap-2 group cursor-default">
                             <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: d.hex }}></div>
-                            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover:text-white transition-colors">{d.shortLabel}</span>
+                            <span className="text-compact font-black text-white/60 uppercase tracking-widest group-hover:text-white transition-colors">{d.shortLabel}</span>
                         </div>
                     ))}
                     <div className="flex items-center gap-2 group cursor-default">
                         <div className="w-6 h-0.5 bg-rose-500 rounded-full shadow-lg"></div>
-                        <span className="text-[10px] font-black text-rose-500/80 uppercase tracking-widest group-hover:text-rose-400 transition-colors">ฝุ่น PM2.5</span>
+                        <span className="text-compact font-black text-rose-500/80 uppercase tracking-widest group-hover:text-rose-400 transition-colors">ฝุ่น PM2.5</span>
                     </div>
                 </div>
             </div>
@@ -499,6 +501,7 @@ export default function DashboardHDC() {
         dates: [], regions: [], provinces: [], districts: [], subdistricts: [], diseases: [], diagnosisTypes: [], hierarchy: []
     });
     const [loading, setLoading] = useState(true);
+    const [busyMessage, setBusyMessage] = useState<string | null>(null);
     const latestRequestId = useRef(0);
     const [filters, setFilters] = useState<HDCFilters>({ 
         startDate: '', endDate: '', regions: [], provinces: [], 
@@ -555,6 +558,7 @@ export default function DashboardHDC() {
         const limitFullDate = now.toISOString().split('T')[0];
 
         getFilterOptions().then(opts => {
+            setBusyMessage(null);
             if (!opts) return;
             const filteredDates = opts.dates.filter(d => d <= limitFullDate).sort((a, b) => b.localeCompare(a));
             setOptions({ ...opts, dates: filteredDates });
@@ -566,6 +570,9 @@ export default function DashboardHDC() {
                 const startYear = month >= 10 ? year : year - 1;
                 setFilters(prev => ({ ...prev, startDate: `${startYear}-10-01`, endDate: filteredDates[0] }));
             }
+        }).catch(() => {
+            setBusyMessage(BUSY_MESSAGE);
+            setLoading(false);
         });
     }, []);
 
@@ -577,10 +584,12 @@ export default function DashboardHDC() {
             const res = await getDashboardData(currentFilters, scope);
             if (requestId === latestRequestId.current) {
                 setData(res);
+                setBusyMessage(null);
             }
         } catch (error) {
             if (requestId === latestRequestId.current) {
                 console.error(error);
+                setBusyMessage(BUSY_MESSAGE);
             }
         } finally {
             if (requestId === latestRequestId.current) {
@@ -590,7 +599,8 @@ export default function DashboardHDC() {
     }, []);
 
     useEffect(() => {
-        fetchData(filters, user?.scope);
+        const timeout = window.setTimeout(() => fetchData(filters, user?.scope), 350);
+        return () => window.clearTimeout(timeout);
     }, [filters, fetchData, user]);
 
     return (
@@ -600,27 +610,22 @@ export default function DashboardHDC() {
             <div className="absolute inset-0 bg-slate-900/40 z-0"></div>
 
             <main className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
-                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 relative z-[60]">
-                    <div className="flex items-center gap-4">
-                        <div className="shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10">
-                            <Image src="/img/ddc-logo.png" alt="DDC Logo" width={50} height={50} className="rounded-xl object-contain" style={{ width: 'auto', height: 'auto' }} priority />
-                        </div>
-                        <div className="shrink-0 bg-white p-1.5 rounded-2xl shadow-2xl border border-white/50 ring-4 ring-white/10">
-                            <Image src="/img/logo_hdc.jpg" alt="HDC Logo" width={50} height={50} className="rounded-xl object-contain" style={{ width: 'auto', height: 'auto' }} priority />
-                        </div>
-                        <div className="flex flex-col text-white">
-                            <h5 className="text-lg md:text-xl font-extrabold leading-tight">การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยที่เกี่ยวข้อง</h5>
-                            <p className="text-xs font-bold text-blue-200 uppercase tracking-widest opacity-80">
-                                {user?.role === 'admin_province' ? `ผู้ดูแลระบบระดับจังหวัด: ${user.workplaceProvince}` : 
-                                 user?.role === 'admin_region' ? `ผู้ดูแลระบบระดับเขต: ${user.ddcRegion}` : 
-                                 'ผู้ดูแลระบบส่วนกลาง'}
-                            </p>
-                        </div>
-                    </div>
-                    <DashboardNavMenu className="self-end md:self-auto" />
-                </header>
+                <DashboardNavbar
+                    logos={[
+                        { src: '/img/ddc-logo.png', alt: 'DDC Logo' },
+                        { src: '/img/logo_hdc.jpg', alt: 'HDC Logo' },
+                    ]}
+                    title="การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยที่เกี่ยวข้อง"
+                    subtitle={
+                        user?.role === 'admin_province' ? `ผู้ดูแลระบบระดับจังหวัด: ${user.workplaceProvince}` :
+                        user?.role === 'admin_region' ? `ผู้ดูแลระบบระดับเขต: ${user.ddcRegion}` :
+                        'ผู้ดูแลระบบส่วนกลาง'
+                    }
+                    className="relative z-header"
+                />
+                <DashboardBusyAlert message={busyMessage} />
 
-                <div className="relative z-[50]">
+                <div className="relative z-toolbar">
                     <FilterSection 
                         filters={filters} 
                         options={options} 
@@ -634,11 +639,11 @@ export default function DashboardHDC() {
                     />
                 </div>
 
-                <div className="relative z-[30]">
+                <div className="relative z-section-raised">
                     <StatCards data={data} loading={loading} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1.1fr] gap-4 flex-1 min-h-0 relative z-[20]">
+                <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     <MonthlyTrendChart data={data?.monthlyTrend || []} loading={loading} thaiMonthsFull={THAI_MONTHS_FULL} thaiMonthsShort={THAI_MONTHS_SHORT} />
 
                     <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 relative">
@@ -648,7 +653,7 @@ export default function DashboardHDC() {
                                 สถิติผู้ป่วยรายจังหวัด
                             </h4>
                         </div>
-                        <div className="flex-1 w-full min-h-[500px] relative rounded-xl overflow-hidden border border-white/5 bg-slate-800/50">
+                        <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 bg-slate-800/50">
                             <ThailandMap
                                 data={data?.provinceAverages || {}} 
                                 filters={filters} 

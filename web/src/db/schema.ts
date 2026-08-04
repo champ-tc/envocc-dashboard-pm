@@ -1,4 +1,16 @@
-import { pgTable, serial, varchar, text, timestamp, integer, doublePrecision, date, numeric } from "drizzle-orm/pg-core";
+import {
+    date,
+    doublePrecision,
+    index,
+    integer,
+    numeric,
+    pgTable,
+    serial,
+    text,
+    timestamp,
+    uniqueIndex,
+    varchar,
+} from "drizzle-orm/pg-core";
 
 export const users = pgTable('users', {
     id: serial('id').primaryKey(),
@@ -54,50 +66,71 @@ export const dataRequests = pgTable('data_requests', {
     adminNotes: text('admin_notes'),
 });
 
-export const stations = pgTable('stations', {
-    stationId: text('station_id'),
-    stationIdNew: text('station_id_new'),
-    stationName: text('station_name'),
-    stationType: text('station_type'),
-    latitude: doublePrecision('latitude'),
-    longitude: doublePrecision('longitude'),
-    province: text('province'),
-    district: text('district'),
-    subdistrict: text('subdistrict'),
-    healthRegion: text('health_region'),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-});
+export const stations = pgTable(
+    'stations',
+    {
+        stationId: text('station_id'),
+        stationIdNew: text('station_id_new'),
+        stationName: text('station_name'),
+        stationType: text('station_type'),
+        latitude: doublePrecision('latitude'),
+        longitude: doublePrecision('longitude'),
+        province: text('province'),
+        district: text('district'),
+        subdistrict: text('subdistrict'),
+        healthRegion: text('health_region'),
+        createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    },
+    (table) => [
+        index('idx_stations_id').on(table.stationId),
+        index('idx_stations_id_new').on(table.stationIdNew),
+    ],
+);
 
-export const pm25Hourly = pgTable('pm25_hourly', {
-    stationIdNew: text('station_id_new').notNull(),
-    air4Time: timestamp('air4_time', { withTimezone: true }).notNull(),
-    pm25: doublePrecision('pm25'),
-    pm10: doublePrecision('pm10'),
-    o3: doublePrecision('o3'),
-    co: doublePrecision('co'),
-    no2: doublePrecision('no2'),
-    so2: doublePrecision('so2'),
-});
+export const pm25Hourly = pgTable(
+    'pm25_hourly',
+    {
+        stationIdNew: text('station_id_new').notNull(),
+        air4Time: timestamp('air4_time', { withTimezone: true }).notNull(),
+        pm25: doublePrecision('pm25'),
+        pm10: doublePrecision('pm10'),
+        o3: doublePrecision('o3'),
+        co: doublePrecision('co'),
+        no2: doublePrecision('no2'),
+        so2: doublePrecision('so2'),
+    },
+    (table) => [
+        uniqueIndex('uq_pm25_hourly_station_time').on(table.stationIdNew, table.air4Time),
+        index('idx_pm25_hourly_air4_time').on(table.air4Time),
+    ],
+);
 
-export const pm25Daily = pgTable('pm25_daily', {
-    air4Date: date('air4_date').notNull(),
-    stationIdNew: text('station_id_new').notNull(),
-    pm25Max: numeric('pm25_max', { precision: 12, scale: 2, mode: 'number' }),
-    pm25Min: numeric('pm25_min', { precision: 12, scale: 2, mode: 'number' }),
-    pm25Avg: numeric('pm25_avg', { precision: 12, scale: 2, mode: 'number' }),
-    pm10Max: numeric('pm10_max', { precision: 12, scale: 2, mode: 'number' }),
-    pm10Min: numeric('pm10_min', { precision: 12, scale: 2, mode: 'number' }),
-    pm10Avg: numeric('pm10_avg', { precision: 12, scale: 2, mode: 'number' }),
-    o3Max: numeric('o3_max', { precision: 12, scale: 2, mode: 'number' }),
-    o3Min: numeric('o3_min', { precision: 12, scale: 2, mode: 'number' }),
-    o3Avg: numeric('o3_avg', { precision: 12, scale: 2, mode: 'number' }),
-    coMax: numeric('co_max', { precision: 12, scale: 2, mode: 'number' }),
-    coMin: numeric('co_min', { precision: 12, scale: 2, mode: 'number' }),
-    coAvg: numeric('co_avg', { precision: 12, scale: 2, mode: 'number' }),
-    no2Max: numeric('no2_max', { precision: 12, scale: 2, mode: 'number' }),
-    no2Min: numeric('no2_min', { precision: 12, scale: 2, mode: 'number' }),
-    no2Avg: numeric('no2_avg', { precision: 12, scale: 2, mode: 'number' }),
-    so2Max: numeric('so2_max', { precision: 12, scale: 2, mode: 'number' }),
-    so2Min: numeric('so2_min', { precision: 12, scale: 2, mode: 'number' }),
-    so2Avg: numeric('so2_avg', { precision: 12, scale: 2, mode: 'number' }),
-});
+export const pm25Daily = pgTable(
+    'pm25_daily',
+    {
+        air4Date: date('air4_date').notNull(),
+        stationIdNew: text('station_id_new').notNull(),
+        pm25Max: numeric('pm25_max', { precision: 12, scale: 2, mode: 'number' }),
+        pm25Min: numeric('pm25_min', { precision: 12, scale: 2, mode: 'number' }),
+        pm25Avg: numeric('pm25_avg', { precision: 12, scale: 2, mode: 'number' }),
+        pm10Max: numeric('pm10_max', { precision: 12, scale: 2, mode: 'number' }),
+        pm10Min: numeric('pm10_min', { precision: 12, scale: 2, mode: 'number' }),
+        pm10Avg: numeric('pm10_avg', { precision: 12, scale: 2, mode: 'number' }),
+        o3Max: numeric('o3_max', { precision: 12, scale: 2, mode: 'number' }),
+        o3Min: numeric('o3_min', { precision: 12, scale: 2, mode: 'number' }),
+        o3Avg: numeric('o3_avg', { precision: 12, scale: 2, mode: 'number' }),
+        coMax: numeric('co_max', { precision: 12, scale: 2, mode: 'number' }),
+        coMin: numeric('co_min', { precision: 12, scale: 2, mode: 'number' }),
+        coAvg: numeric('co_avg', { precision: 12, scale: 2, mode: 'number' }),
+        no2Max: numeric('no2_max', { precision: 12, scale: 2, mode: 'number' }),
+        no2Min: numeric('no2_min', { precision: 12, scale: 2, mode: 'number' }),
+        no2Avg: numeric('no2_avg', { precision: 12, scale: 2, mode: 'number' }),
+        so2Max: numeric('so2_max', { precision: 12, scale: 2, mode: 'number' }),
+        so2Min: numeric('so2_min', { precision: 12, scale: 2, mode: 'number' }),
+        so2Avg: numeric('so2_avg', { precision: 12, scale: 2, mode: 'number' }),
+    },
+    (table) => [
+        uniqueIndex('uq_pm25_daily_station_date').on(table.stationIdNew, table.air4Date),
+        index('idx_pm25_daily_air4_date').on(table.air4Date),
+    ],
+);

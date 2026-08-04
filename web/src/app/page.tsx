@@ -59,7 +59,7 @@ function DefinitionBlock({ def }: { def: typeof DEFINITIONS[0] }) {
                     {def.title}
                 </h4>
                 <div className="pl-10">
-                    <p className="text-slate-600 text-[15px] leading-relaxed mb-4">{def.desc}</p>
+                    <p className="text-slate-600 text-body-compact leading-relaxed mb-4">{def.desc}</p>
                     {def.items && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                             {def.items.map((item, idx) => (
@@ -96,7 +96,7 @@ export default async function HomePage() {
 
             {/* Background Decorative Elements */}
             <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0">
-                <div className="w-[800px] h-[600px] bg-linear-to-tr from-blue-200/20 to-white/5 rounded-full blur-[100px] opacity-40" />
+                <div className="w-data-table h-dashboard-map bg-linear-to-tr from-blue-200/20 to-white/5 rounded-full blur-hero-orb opacity-40" />
             </div>
 
             <div className="z-10 text-center space-y-8 md:space-y-12 px-4 max-w-5xl mx-auto mt-24 md:mt-32">
@@ -118,7 +118,7 @@ export default async function HomePage() {
                 </header>
 
                 {/* PM2.5 Information Section */}
-                <section className="text-left card bg-white/90 backdrop-blur-xl rounded-[2.5rem] border border-slate-100 shadow-2xl overflow-hidden">
+                <section className="text-left card bg-white/90 backdrop-blur-xl rounded-auth-card border border-slate-100 shadow-2xl overflow-hidden">
                     <div className="card-body p-6 md:p-12">
                         <div className="flex items-center gap-5 mb-10 pb-6 border-b border-slate-100">
                             <div className="bg-linear-to-br from-blue-600 to-sky-500 text-white p-3.5 rounded-2xl shadow-lg shadow-blue-500/20">

@@ -13,7 +13,7 @@ export default function AdminLayout({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen overflow-hidden bg-slate-100 text-slate-900 font-sans">
+        <div className="authenticated-shell flex h-screen overflow-hidden font-sans text-slate-900">
             <Sidebar 
                 role={session.role} 
                 isOpen={isSidebarOpen} 
@@ -25,6 +25,7 @@ export default function AdminLayout({
                     onToggleSidebar={() => setIsSidebarOpen(true)} 
                 />
                 <main className="auth-main relative flex-1 overflow-y-auto">
+                    <div className="auth-grid-pattern pointer-events-none absolute inset-0" />
                     <div className="auth-content">
                         {children}
                     </div>

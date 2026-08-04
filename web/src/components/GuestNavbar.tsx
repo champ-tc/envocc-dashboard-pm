@@ -55,7 +55,7 @@ export default function GuestNavbar() {
                     {/* Logo Segment */}
                     <div className="shrink-0 flex items-center">
                         <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
-                            <div className="w-[60px] h-[36px] sm:w-[84px] sm:h-[48px] relative flex items-center justify-center">
+                            <div className="w-brand-mobile h-brand-mobile sm:w-brand-desktop sm:h-brand-desktop relative flex items-center justify-center">
                                 <Image
                                     src="/img/ddc-logo.png"
                                     alt="DDC Logo"
@@ -115,7 +115,7 @@ export default function GuestNavbar() {
                         {isLogin ? (
                             <Link
                                 href="/register"
-                                className="cloud font-medium text-white transition-all text-sm h-[50px]! aspect-[1.8]! flex items-center justify-center"
+                                className="cloud font-medium text-white transition-all text-sm h-cloud-button! aspect-cloud-button! flex items-center justify-center"
                             >
                                 ลงทะเบียน
                             </Link>
@@ -136,7 +136,7 @@ export default function GuestNavbar() {
                                 </Link>
                                 <Link
                                     href="/register"
-                                    className="cloud font-medium text-white transition-all text-sm h-[50px]! aspect-[1.8]! flex items-center justify-center"
+                                    className="cloud font-medium text-white transition-all text-sm h-cloud-button! aspect-cloud-button! flex items-center justify-center"
                                 >
                                     ลงทะเบียน
                                 </Link>

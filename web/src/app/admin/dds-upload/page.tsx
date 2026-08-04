@@ -1,7 +1,7 @@
 'use client';
 
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
-import { FileSpreadsheet, UploadCloud } from 'lucide-react';
+import { Download, FileSpreadsheet, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 
@@ -10,6 +10,12 @@ type UploadStatus = {
     filename?: string;
     size?: number;
     updatedAt?: string;
+    etl?: {
+        exists: boolean;
+        filename?: string;
+        size?: number;
+        updatedAt?: string;
+    };
 };
 
 
@@ -195,6 +201,38 @@ export default function DdsUploadPage() {
                             </p>
                         </div>
                     )}
+                </div>
+            </div>
+
+            <div className="auth-surface p-6 mt-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                            <FileSpreadsheet className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-black text-slate-800">ไฟล์ที่ผ่าน ETL แล้ว</h2>
+                            {status?.etl?.exists ? (
+                                <p className="text-sm text-slate-500">
+                                    {status.etl.filename} · {formatFileSize(status.etl.size)} · {formatDate(status.etl.updatedAt)}
+                                </p>
+                            ) : (
+                                <p className="text-sm text-slate-500">ยังไม่มีไฟล์ผลลัพธ์จาก pipeline</p>
+                            )}
+                        </div>
+                    </div>
+                    <a
+                        href={status?.etl?.exists ? '/api/admin/dds-upload?mode=download' : undefined}
+                        aria-disabled={!status?.etl?.exists}
+                        className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 font-bold text-white transition-colors ${
+                            status?.etl?.exists
+                                ? 'bg-emerald-600 hover:bg-emerald-700'
+                                : 'pointer-events-none bg-slate-300'
+                        }`}
+                    >
+                        <Download className="w-5 h-5" />
+                        Export ไฟล์ ETL
+                    </a>
                 </div>
             </div>
         </div>

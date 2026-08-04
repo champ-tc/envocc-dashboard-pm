@@ -10,7 +10,7 @@ const authenticatedFont = Noto_Sans_Thai({
 });
 
 export default async function UserLayout({ children }: { children: React.ReactNode }) {
-    const session = await requireRoles(['user']);
+    const session = await requireRoles(['user', 'admin_region', 'admin_province']);
 
     return (
         <div className={`${authenticatedFont.variable} authenticated-font min-h-screen`}>

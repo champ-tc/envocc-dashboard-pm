@@ -122,7 +122,21 @@ services:
     expose: ["3000"]
     env_file: [.env]
     environment:
+      DB_HOST: postgres-etl
+      DB_PORT: 5432
+      DB_USER: ${ETL_POSTGRES_USER}
+      DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
+      DB_NAME: ${ETL_POSTGRES_DB}
       DUCKDB_DATA_DIR: /app/public/duckdb
+      DASHBOARD_QUERY_CONCURRENCY: ${DASHBOARD_QUERY_CONCURRENCY:-2}
+      DASHBOARD_QUERY_MAX_QUEUE: ${DASHBOARD_QUERY_MAX_QUEUE:-10}
+      DASHBOARD_QUERY_QUEUE_TIMEOUT_MS: ${DASHBOARD_QUERY_QUEUE_TIMEOUT_MS:-8000}
+      DASHBOARD_CACHE_TTL_MS: ${DASHBOARD_CACHE_TTL_MS:-180000}
+      DASHBOARD_CACHE_MAX_ENTRIES: ${DASHBOARD_CACHE_MAX_ENTRIES:-200}
+      PM25_DATA_FILE: ${PM25_DATA_FILE:-pm25.csv}
+      HDC_DATA_FILE: ${HDC_DATA_FILE:-hdc.parquet}
+      DDS_DATA_FILE: ${DDS_DATA_FILE:-dashboard_dds.csv}
+      MID_YEAR_DATA_FILE: ${MID_YEAR_DATA_FILE:-mid_year.csv}
       DDS_INPUT_DIR: /app/uploads/dds
       AIRFLOW_API_BASE_URL: http://airflow-webserver:8080/airflow
       AIRFLOW_DDS_DAG_ID: dds_dashboard_pipeline

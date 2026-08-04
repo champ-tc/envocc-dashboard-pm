@@ -34,6 +34,9 @@ RUN if [ ! -f /app/public/img/ddc-logo.png ]; then \
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nextjs /app/scripts ./scripts
+# db-schema-init runs Drizzle Kit from this shared image at container startup.
+COPY --from=builder --chown=nextjs:nextjs /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder --chown=nextjs:nextjs /app/src/db/schema.ts ./src/db/schema.ts
 
 # --- จุดสำคัญ: ดึง node_modules ทั้งหมดที่เกี่ยวข้องมาใช้ ---
 # standalone mode ของ Next.js อาจจะตัด Native modules ทิ้ง 

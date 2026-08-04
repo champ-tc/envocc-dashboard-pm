@@ -41,11 +41,19 @@ export async function POST(request: Request) {
             .setExpirationTime('1h') // Token มีอายุ 1 ชั่วโมง
             .sign(SECRET_KEY);
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             token,
             role: user.role,
             name: user.name
         });
+        response.cookies.set('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60,
+        });
+        return response;
 
     } catch (error: any) {
         console.error('Login Error:', error.message);

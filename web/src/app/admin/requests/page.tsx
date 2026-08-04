@@ -57,9 +57,9 @@ export default function AdminRequestsPage() {
 
             <div className="auth-surface flex flex-col overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[900px]">
+                    <table className="w-full text-left border-collapse min-w-table-xl">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold text-[11px] uppercase tracking-widest">
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold text-compact-plus uppercase tracking-widest">
                                 <th className="px-6 py-4">ผู้ขอเข้าถึง</th>
                                 <th className="px-6 py-4">ประเภทข้อมูล</th>
                                 <th className="px-6 py-4">วันที่ขอ</th>
@@ -93,7 +93,7 @@ export default function AdminRequestsPage() {
                                         {new Date(req.requestDate).toLocaleDateString('th-TH')}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-compact font-black uppercase tracking-wider ${
                                             req.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
                                             req.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
                                             'bg-amber-50 text-amber-600'
@@ -131,7 +131,7 @@ export default function AdminRequestsPage() {
                                             </div>
                                         )}
                                         {req.status !== 'pending' && (
-                                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">เรียบร้อยแล้ว</span>
+                                            <span className="text-compact font-bold text-slate-300 uppercase tracking-widest">เรียบร้อยแล้ว</span>
                                         )}
                                     </td>
                                 </tr>

@@ -34,7 +34,7 @@ const SectionTitle = ({ icon: Icon, num, title }: { icon: any, num: string, titl
 const FormInput = ({ label, icon: Icon, required, ...props }: any) => (
     <div className="form-control w-full">
         <label className="label px-1">
-            <span className="label-text font-bold text-slate-600 uppercase tracking-wider text-[10px]">
+            <span className="label-text font-bold text-slate-600 uppercase tracking-wider text-compact">
                 {label}{required && <span className="text-rose-500"> *</span>}
             </span>
         </label>
@@ -54,7 +54,7 @@ const FormInput = ({ label, icon: Icon, required, ...props }: any) => (
 const FormSelect = ({ label, options, required, ...props }: any) => (
     <div className="form-control w-full">
         <label className="label px-1">
-            <span className="label-text font-bold text-slate-600 uppercase tracking-wider text-[10px]">
+            <span className="label-text font-bold text-slate-600 uppercase tracking-wider text-compact">
                 {label}{required && <span className="text-rose-500"> *</span>}
             </span>
         </label>
@@ -205,7 +205,7 @@ export default function RegisterPage() {
             {/* Background */}
             <div className="absolute inset-0 z-0 bg-cover bg-center bg-fixed opacity-40 pointer-events-none"
                 style={{ backgroundImage: "url('/img/background.jpg')" }} />
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-0 pointer-events-none" />
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-soft z-0 pointer-events-none" />
 
             {/* Back Button */}
             <div className="absolute top-6 left-6 z-50">
@@ -217,12 +217,12 @@ export default function RegisterPage() {
 
             {/* Main Content */}
             <div className="z-10 w-full max-w-6xl mx-auto px-4 pt-28 pb-20 relative">
-                <form onSubmit={handlePreSubmit} className="card bg-white/85 backdrop-blur-2xl shadow-2xl border border-white/50 rounded-[3rem] overflow-hidden">
+                <form onSubmit={handlePreSubmit} className="card bg-white/85 backdrop-blur-2xl shadow-2xl border border-white/50 rounded-hero-card overflow-hidden">
                     <div className="card-body p-8 md:p-16">
 
                         {/* Header */}
                         <div className="text-center mb-12">
-                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-linear-to-br from-blue-600 to-sky-400 text-white shadow-xl shadow-blue-500/20 mb-6 transform hover:rotate-3 transition-transform duration-500">
+                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-dashboard-card bg-linear-to-br from-blue-600 to-sky-400 text-white shadow-xl shadow-blue-500/20 mb-6 transform hover:rotate-3 transition-transform duration-500">
                                 <UserPlus className="w-10 h-10" />
                             </div>
                             <h1 className="text-4xl font-black tracking-tight text-slate-800">สมัครสมาชิกใหม่</h1>
@@ -335,7 +335,7 @@ export default function RegisterPage() {
                                             {ui.showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
                                     </div>
-                                    <p className="text-[10px] text-slate-500 px-1">รหัสผ่านต้องมีอักษรพิมพ์ใหญ่ พิมพ์เล็ก และตัวเลขอย่างน้อย 1 ตัว</p>
+                                    <p className="text-compact text-slate-500 px-1">รหัสผ่านต้องมีอักษรพิมพ์ใหญ่ พิมพ์เล็ก และตัวเลขอย่างน้อย 1 ตัว</p>
                                 </div>
                             </div>
 
@@ -511,12 +511,12 @@ export default function RegisterPage() {
             {/* Modals */}
             {ui.pdpa && (
                 <div className="modal modal-open">
-                    <div className="modal-box max-w-2xl bg-white rounded-[2rem] p-8 shadow-2xl">
+                    <div className="modal-box max-w-2xl bg-white rounded-dashboard-card p-8 shadow-2xl">
                         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
                             <ShieldCheck className="w-8 h-8 text-blue-600" />
                             <h3 className="font-black text-2xl text-slate-800">นโยบายความเป็นส่วนตัว (PDPA)</h3>
                         </div>
-                        <div className="py-2 space-y-4 text-slate-600 text-sm leading-relaxed max-h-[50vh] overflow-y-auto pr-4">
+                        <div className="py-2 space-y-4 text-slate-600 text-sm leading-relaxed max-h-dashboard-tooltip overflow-y-auto pr-4">
                             <p className="font-bold text-slate-700">วัตถุประสงค์ในการเก็บรวบรวมข้อมูลส่วนบุคคล</p>
                             <ul className="list-disc pl-5 space-y-2">
                                 <li>เพื่อตรวจสอบและยืนยันตัวตนของผู้ใช้งานระบบฐานข้อมูล</li>
@@ -536,7 +536,7 @@ export default function RegisterPage() {
 
             {ui.modal && (
                 <div className="modal modal-open">
-                    <div className="modal-box rounded-[2rem] p-10 text-center bg-white shadow-2xl">
+                    <div className="modal-box rounded-dashboard-card p-10 text-center bg-white shadow-2xl">
                         <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-6" />
                         <h3 className="font-black text-2xl text-slate-800 mb-4">ยืนยันข้อมูลการลงทะเบียน?</h3>
                         <p className="text-slate-500 mb-8 text-sm">ข้อมูลจะถูกส่งไปยังผู้ดูแลระบบเพื่อตรวจสอบและอนุมัติการใช้งาน <br />โปรดตรวจสอบความถูกต้องของข้อมูลก่อนยืนยัน</p>

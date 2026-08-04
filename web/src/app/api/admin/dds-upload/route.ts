@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto';
+import { createReadStream } from 'fs';
 import { mkdir, rename, stat, unlink, writeFile } from 'fs/promises';
 import path from 'path';
+import { Readable } from 'stream';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
@@ -13,6 +15,9 @@ export const dynamic = 'force-dynamic';
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const INPUT_DIR = process.env.DDS_INPUT_DIR || path.join(process.cwd(), 'uploads', 'dds');
 const TARGET_FILE = path.join(INPUT_DIR, 'original_dds.xlsx');
+const DATA_DIR = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
+const ETL_FILENAME = process.env.DDS_DATA_FILE || 'dashboard_dds.csv';
+const ETL_FILE = path.join(DATA_DIR, ETL_FILENAME);
 const AIRFLOW_DDS_DAG_ID = process.env.AIRFLOW_DDS_DAG_ID || 'dds_dashboard_pipeline';
 const AIRFLOW_REQUEST_TIMEOUT_MS = 10_000;
 const DEFAULT_AIRFLOW_BASE_URLS = [
@@ -255,16 +260,56 @@ async function triggerAirflowPipeline(fileMetadata: { size: number; updatedAt: s
 }
 
 
-export async function GET() {
+export async function GET(request: Request) {
     if (!await isSuperadmin()) return unauthorized();
+
+    const mode = new URL(request.url).searchParams.get('mode');
+    if (mode === 'download') {
+        try {
+            const metadata = await stat(ETL_FILE);
+            const stream = Readable.toWeb(createReadStream(ETL_FILE)) as ReadableStream;
+            return new NextResponse(stream, {
+                headers: {
+                    'Content-Type': 'text/csv; charset=utf-8',
+                    'Content-Length': metadata.size.toString(),
+                    'Content-Disposition': `attachment; filename="${ETL_FILENAME}"`,
+                    'Cache-Control': 'private, no-store',
+                },
+            });
+        } catch (error: unknown) {
+            if (
+                typeof error === 'object'
+                && error !== null
+                && 'code' in error
+                && error.code === 'ENOENT'
+            ) {
+                return NextResponse.json(
+                    { error: `ยังไม่มีไฟล์ ${ETL_FILENAME} จาก pipeline` },
+                    { status: 404 },
+                );
+            }
+            console.error('DDS ETL download error:', error);
+            return NextResponse.json(
+                { error: 'ไม่สามารถดาวน์โหลดไฟล์ DDS ที่ผ่าน ETL แล้วได้' },
+                { status: 500 },
+            );
+        }
+    }
 
     try {
         const metadata = await stat(TARGET_FILE);
+        const etlMetadata = await stat(ETL_FILE).catch(() => null);
         return NextResponse.json({
             exists: true,
             filename: 'original_dds.xlsx',
             size: metadata.size,
             updatedAt: metadata.mtime.toISOString(),
+            etl: etlMetadata ? {
+                exists: true,
+                filename: ETL_FILENAME,
+                size: etlMetadata.size,
+                updatedAt: etlMetadata.mtime.toISOString(),
+            } : { exists: false },
         });
     } catch (error: unknown) {
         if (
@@ -273,7 +318,16 @@ export async function GET() {
             && 'code' in error
             && error.code === 'ENOENT'
         ) {
-            return NextResponse.json({ exists: false });
+            const etlMetadata = await stat(ETL_FILE).catch(() => null);
+            return NextResponse.json({
+                exists: false,
+                etl: etlMetadata ? {
+                    exists: true,
+                    filename: ETL_FILENAME,
+                    size: etlMetadata.size,
+                    updatedAt: etlMetadata.mtime.toISOString(),
+                } : { exists: false },
+            });
         }
         console.error('DDS upload status error:', error);
         return NextResponse.json(

@@ -2,10 +2,11 @@
 
 import duckdb from 'duckdb';
 import type * as duckdbTypes from 'duckdb';
-import fs from 'fs';
 import path from 'path';
 import { DDS_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
+import { getDashboardDataVersion } from '@/lib/dashboard-data-engine';
+import { cachedDashboardQuery, stableCacheKey } from '@/lib/dashboard-runtime';
 
 export interface HierarchyItem {
     region: string;
@@ -92,19 +93,19 @@ interface DuckDBRow {
 }
 
 let dbPromise: Promise<duckdbTypes.Database> | null = null;
-let loadedDdsMtimeMs: number | null = null;
+let loadedDataVersion: string | null = null;
 
 const getDB = (): Promise<duckdbTypes.Database> => {
     const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
     const ddsPath = path.join(dataDir, 'dashboard_dds.csv');
     const pm25Path = path.join(dataDir, 'pm25.csv');
     const midYearPath = path.join(dataDir, 'mid_year.csv');
-    const currentDdsMtimeMs = fs.statSync(ddsPath).mtimeMs;
+    const currentDataVersion = getDashboardDataVersion();
 
-    if (dbPromise && loadedDdsMtimeMs === currentDdsMtimeMs) return dbPromise;
+    if (dbPromise && loadedDataVersion === currentDataVersion) return dbPromise;
 
     dbPromise = null;
-    loadedDdsMtimeMs = currentDdsMtimeMs;
+    loadedDataVersion = currentDataVersion;
 
     dbPromise = new Promise((resolve, reject) => {
         try {
@@ -180,8 +181,10 @@ const getDB = (): Promise<duckdbTypes.Database> => {
 };
 
 export async function getFilterOptions(): Promise<DDSOptions> {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
+    const version = getDashboardDataVersion();
+    return cachedDashboardQuery(`dds:options:${version}`, async () => {
+        const db = await getDB();
+        return new Promise((resolve, reject) => {
         // 1. ดึงข้อมูลวันที่ และรหัสโรคจาก dds_raw
         db.all(`
             SELECT 
@@ -255,12 +258,16 @@ export async function getFilterOptions(): Promise<DDSOptions> {
                 });
             });
         });
+        });
     });
 }
 
 export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promise<DDSDashboardData> {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
+    const version = getDashboardDataVersion();
+    const cacheKey = `dds:data:${version}:${stableCacheKey(filters)}`;
+    return cachedDashboardQuery(cacheKey, async () => {
+        const db = await getDB();
+        return new Promise((resolve, reject) => {
         let ddsDateFilter = 'AND 1=1';
         let pm25DateFilter = 'AND 1=1';
 
@@ -625,6 +632,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     });
                 });
             });
+        });
         });
     });
 }

@@ -1,10 +1,10 @@
 'use server';
 
 import type duckdbTypes from 'duckdb';
-const duckdb = typeof window === 'undefined' ? eval('require("duckdb")') : null;
-import path from 'path';
 import { HDC_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
+import { getDashboardDataVersion, withDashboardDatabase } from '@/lib/dashboard-data-engine';
+import { cachedDashboardQuery, stableCacheKey } from '@/lib/dashboard-runtime';
 
 export interface HDCFilters {
     startDate: string;
@@ -74,26 +74,23 @@ export async function getUserAction() {
 }
 
 export async function getFilterOptions(): Promise<HDCOptions> {
-    return new Promise((resolve, reject) => {
+    const version = getDashboardDataVersion();
+    return cachedDashboardQuery(`hdc:options:${version}`, () =>
+        withDashboardDatabase((db) => new Promise((resolve, reject) => {
         try {
-            const db: duckdbTypes.Database = new duckdb.Database(':memory:');
-            const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
-            const parquetPath = path.join(dataDir, 'hdc.parquet');
-            const pm25Path = path.join(dataDir, 'pm25.csv');
-            
             const query = `
                 WITH distinct_vals AS (
                     SELECT DISTINCT 
                         make_date(CAST(year AS INT), CAST(month AS INT), 1) as dt,
                         'เขตสุขภาพที่ ' || CAST(county AS VARCHAR) as rg,
                         TRIM(province_name) as pv
-                    FROM '${parquetPath}'
+                    FROM hdc_raw
                 ),
                 diag_vals AS (
-                    SELECT DISTINCT TRIM(diagnosis) as diag FROM '${parquetPath}'
+                    SELECT DISTINCT TRIM(diagnosis) as diag FROM hdc_raw
                 ),
                 typediag_vals AS (
-                    SELECT DISTINCT TRIM(Typediag_name) as typediag FROM '${parquetPath}' WHERE TRIM(Typediag_name) IN ('Acute ischemic heart diseases', 'Acute asthma', 'Chronic obstructive pulmonary disease', 'กลุ่มโรคผิวหนังอักเสบ', 'กลุ่มโรคตาอักเสบ')
+                    SELECT DISTINCT TRIM(Typediag_name) as typediag FROM hdc_raw WHERE TRIM(Typediag_name) IN ('Acute ischemic heart diseases', 'Acute asthma', 'Chronic obstructive pulmonary disease', 'กลุ่มโรคผิวหนังอักเสบ', 'กลุ่มโรคตาอักเสบ')
                 )
                 SELECT 
                     list(DISTINCT dt::VARCHAR ORDER BY 1 DESC) as dates,
@@ -113,7 +110,7 @@ export async function getFilterOptions(): Promise<HDCOptions> {
                         TRIM(province) as province,
                         TRIM(district) as district,
                         TRIM(subdistrict) as subdistrict
-                    FROM read_csv_auto('${pm25Path}', ignore_errors=true)
+                    FROM pm25_raw
                     WHERE district IS NOT NULL AND subdistrict IS NOT NULL
                     ORDER BY 1, 2, 3, 4
                 `;
@@ -160,17 +157,16 @@ export async function getFilterOptions(): Promise<HDCOptions> {
         } catch (error) {
             reject(error);
         }
-    });
+        })),
+    );
 }
 
 export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?: any): Promise<DashboardData> {
-    return new Promise((resolve, reject) => {
+    const version = getDashboardDataVersion();
+    const cacheKey = `hdc:data:${version}:${stableCacheKey({ filters, scope })}`;
+    return cachedDashboardQuery(cacheKey, () =>
+        withDashboardDatabase((db) => new Promise((resolve, reject) => {
         try {
-            const db: duckdbTypes.Database = new duckdb.Database(':memory:');
-            const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
-            const parquetPath = path.join(dataDir, 'hdc.parquet');
-            const pm25Path = path.join(dataDir, 'pm25.csv');
-            
             let scopeHdcFilter = '';
             let scopePm25Filter = '';
 
@@ -220,7 +216,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                 hdcDateFilter = 'AND 1=1';
                 pm25DateFilter = 'AND 1=1';
             } else if (filters.startDate === 'ล่าสุด') {
-                const latestSql = `(SELECT MAX(make_date(CAST(year AS INT), CAST(month AS INT), 1)) FROM '${parquetPath}' WHERE diagnosis = 'การวินิจฉัยโรคทั้งหมด')`;
+                const latestSql = `(SELECT MAX(make_date(CAST(year AS INT), CAST(month AS INT), 1)) FROM hdc_raw WHERE diagnosis = 'การวินิจฉัยโรคทั้งหมด')`;
                 hdcDateFilter = `AND make_date(CAST(year AS INT), CAST(month AS INT), 1) = ${latestSql}`;
                 pm25DateFilter = `AND date = ${latestSql}`;
             } else if (filters.startDate && filters.endDate) {
@@ -231,7 +227,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
             const sqlStats = `
                 WITH pm25_data AS (
                     SELECT AVG(pm25) as avg_val 
-                    FROM read_csv_auto('${pm25Path}', ignore_errors=true)
+                    FROM pm25_raw
                     WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters} ${scopePm25Filter}
                 )
                 SELECT 
@@ -240,7 +236,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                     (SELECT avg_val FROM pm25_data) as avg_pm25,
                     COUNT(DISTINCT province_name) as province_count,
                     MAX(make_date(CAST(year AS INT), CAST(month AS INT), 1))::VARCHAR as latest_date
-                FROM '${parquetPath}'
+                FROM hdc_raw
                 WHERE 1=1 
                 AND TRIM(Typediag_name) IN ('Acute ischemic heart diseases', 'Acute asthma', 'Chronic obstructive pulmonary disease', 'กลุ่มโรคผิวหนังอักเสบ', 'กลุ่มโรคตาอักเสบ')
                 ${hdcDateFilter} ${hdcLocFilters} ${scopeHdcFilter};
@@ -257,7 +253,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                     SELECT 
                         TRIM(Typediag_name) as name,
                         SUM(CAST("case" AS DOUBLE)) as value
-                    FROM '${parquetPath}'
+                    FROM hdc_raw
                     WHERE 1=1 ${diagnosisFilter} 
                     AND TRIM(Typediag_name) IN ('Acute ischemic heart diseases', 'Acute asthma', 'Chronic obstructive pulmonary disease', 'กลุ่มโรคผิวหนังอักเสบ', 'กลุ่มโรคตาอักเสบ')
                     ${hdcDateFilter} ${hdcLocFilters} ${scopeHdcFilter}
@@ -273,7 +269,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                             SELECT 
                                 strftime(date, '%Y-%m') as ym,
                                 AVG(pm25) as avg_pm25
-                            FROM read_csv_auto('${pm25Path}', ignore_errors=true)
+                            FROM pm25_raw
                             WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters} ${scopePm25Filter}
                             GROUP BY 1
                         )
@@ -282,7 +278,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                             SUM(CAST("case" AS DOUBLE)) as total,
                             ANY_VALUE(mp.avg_pm25) as avg_pm25,
                             ${diseaseSqlParts}
-                        FROM '${parquetPath}' h
+                        FROM hdc_raw h
                         LEFT JOIN monthly_pm25 mp ON (h.year || '-' || lpad(h.month::VARCHAR, 2, '0')) = mp.ym
                         WHERE 1=1 ${diagnosisFilter} 
                         AND TRIM(h.Typediag_name) IN ('Acute ischemic heart diseases', 'Acute asthma', 'Chronic obstructive pulmonary disease', 'กลุ่มโรคผิวหนังอักเสบ', 'กลุ่มโรคตาอักเสบ')
@@ -296,7 +292,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
 
                         const sqlProvinceData = `
                             SELECT TRIM(province_name) as province, SUM(CAST("case" AS DOUBLE)) as patients
-                            FROM '${parquetPath}'
+                            FROM hdc_raw
                             WHERE 1=1 ${diagnosisFilter} 
                             AND TRIM(Typediag_name) IN ('Acute ischemic heart diseases', 'Acute asthma', 'Chronic obstructive pulmonary disease', 'กลุ่มโรคผิวหนังอักเสบ', 'กลุ่มโรคตาอักเสบ')
                             ${hdcDateFilter} ${hdcLocFilters} ${scopeHdcFilter}
@@ -306,8 +302,7 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                         db.all(sqlProvinceData, (err4: Error | null, res4: DuckDBRow[]) => {
                             if (err4) return reject(err4);
 
-                            const midYearPath = path.join(dataDir, 'mid_year.csv');
-                            const sqlPop = `SELECT TRIM(province_name) as province, CAST(population AS DOUBLE) as pop FROM read_csv_auto('${midYearPath}', ignore_errors=true)`;
+                            const sqlPop = `SELECT TRIM(province_name) as province, CAST(population AS DOUBLE) as pop FROM mid_year`;
 
                             db.all(sqlPop, (errPop: Error | null, resPop: DuckDBRow[]) => {
                                 if (errPop) return reject(errPop);
@@ -364,5 +359,6 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
         } catch (error) {
             reject(error);
         }
-    });
+        })),
+    );
 }

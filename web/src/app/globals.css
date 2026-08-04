@@ -5,6 +5,276 @@
     --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Named utilities replace numeric arbitrary-value classes across the application. */
+@utility w-brand-mobile {
+    width: 3.75rem;
+}
+
+@utility h-brand-mobile {
+    height: 2.25rem;
+}
+
+@utility w-brand-desktop {
+    width: 5.25rem;
+}
+
+@utility h-brand-desktop {
+    height: 3rem;
+}
+
+@utility h-cloud-button {
+    height: 3.125rem;
+}
+
+@utility aspect-cloud-button {
+    aspect-ratio: 1.8;
+}
+
+@utility backdrop-blur-subtle {
+    backdrop-filter: blur(1px);
+}
+
+@utility backdrop-blur-soft {
+    backdrop-filter: blur(2px);
+}
+
+@utility blur-hero-orb {
+    filter: blur(100px);
+}
+
+@utility bottom-chart-label {
+    bottom: -1.75rem;
+}
+
+@utility top-chart-caption {
+    top: -1.5625rem;
+}
+
+@utility top-chart-tooltip {
+    top: -3.5rem;
+}
+
+@utility tracking-menu-label {
+    letter-spacing: 0.14em;
+}
+
+@utility tracking-stat-label {
+    letter-spacing: 0.2em;
+}
+
+@utility rounded-auth-card {
+    border-radius: 2.5rem;
+}
+
+@utility rounded-dashboard-card {
+    border-radius: 2rem;
+}
+
+@utility rounded-hero-card {
+    border-radius: 3rem;
+}
+
+@utility size-menu-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+
+@utility h-divider {
+    height: 1px;
+}
+
+@utility chart-point-active {
+    r: 3px;
+}
+
+@utility writing-mode-vertical {
+    writing-mode: vertical-rl;
+}
+
+@utility drop-shadow-stat-glow {
+    filter: drop-shadow(0 0 15px rgb(96 165 250 / 40%));
+}
+
+@utility shadow-chart-tooltip {
+    box-shadow: 0 30px 70px rgb(0 0 0 / 80%);
+}
+
+@utility grid-cols-metric {
+    grid-template-columns: auto 1fr;
+}
+
+@utility grid-cols-dashboard {
+    grid-template-columns: 1.6fr 1.1fr;
+}
+
+@utility w-date-popover {
+    width: min(22rem, calc(100vw - 2rem));
+}
+
+@utility max-w-filter-label {
+    max-width: 9.375rem;
+}
+
+@utility max-w-chart-bar {
+    max-width: 1.25rem;
+}
+
+@utility w-tooltip-sm {
+    width: 18.75rem;
+}
+
+@utility w-tooltip-md {
+    width: 28.125rem;
+}
+
+@utility w-tooltip-lg {
+    width: 34.375rem;
+}
+
+@utility w-data-table {
+    width: 50rem;
+}
+
+@utility min-w-map-legend {
+    min-width: 6.25rem;
+}
+
+@utility min-w-map-legend-wide {
+    min-width: 7.5rem;
+}
+
+@utility min-w-map-popup {
+    min-width: 7.5rem;
+}
+
+@utility min-w-chart-tooltip {
+    min-width: 18.75rem;
+}
+
+@utility min-w-chart-tooltip-wide {
+    min-width: 21.25rem;
+}
+
+@utility min-w-table-md {
+    min-width: 47.5rem;
+}
+
+@utility min-w-table-lg {
+    min-width: 50rem;
+}
+
+@utility min-w-table-xl {
+    min-width: 56.25rem;
+}
+
+@utility min-w-table-stations {
+    min-width: 68.75rem;
+}
+
+@utility min-h-chart {
+    min-height: 25rem;
+}
+
+@utility min-h-map {
+    min-height: 31.25rem;
+}
+
+@utility h-chart-standard {
+    height: 21.875rem;
+}
+
+@utility h-ranking-chart {
+    height: 26.875rem;
+}
+
+@utility h-dashboard-map {
+    height: 37.5rem;
+}
+
+@utility max-h-dashboard-tooltip {
+    max-height: 50vh;
+}
+
+@utility max-h-dialog {
+    max-height: 90vh;
+}
+
+@utility text-micro {
+    font-size: 0.4375rem;
+}
+
+@utility text-2xs {
+    font-size: 0.5rem;
+}
+
+@utility text-2xs-plus {
+    font-size: 0.5625rem;
+}
+
+@utility text-compact {
+    font-size: 0.625rem;
+}
+
+@utility text-compact-plus {
+    font-size: 0.6875rem;
+}
+
+@utility text-body-compact {
+    font-size: 0.9375rem;
+}
+
+@utility z-content {
+    z-index: 10;
+}
+
+@utility z-section {
+    z-index: 20;
+}
+
+@utility z-section-raised {
+    z-index: 30;
+}
+
+@utility z-toolbar {
+    z-index: 50;
+}
+
+@utility z-header {
+    z-index: 60;
+}
+
+@utility z-summary {
+    z-index: 90;
+}
+
+@utility z-overlay {
+    z-index: 100;
+}
+
+@utility z-popover {
+    z-index: 110;
+}
+
+@utility z-dropdown {
+    z-index: 200;
+}
+
+@utility z-dashboard-nav {
+    z-index: 220;
+}
+
+@utility z-map-overlay {
+    z-index: 500;
+}
+
+@utility z-map-legend {
+    z-index: 1000;
+}
+
+@utility z-map-loading {
+    z-index: 1001;
+}
+
 .authenticated-font {
     --font-sans: var(--font-authenticated), ui-sans-serif, system-ui, sans-serif;
     font-family: var(--font-authenticated), ui-sans-serif, system-ui, sans-serif;
@@ -21,12 +291,24 @@
 
 .auth-main {
     background:
-        radial-gradient(circle at 0% 0%, rgb(219 234 254 / 55%), transparent 30rem),
-        radial-gradient(circle at 100% 15%, rgb(224 242 254 / 45%), transparent 32rem),
-        #f8fafc;
+        linear-gradient(180deg, #f8fafc 0%, #f3f8ff 100%);
+}
+
+.authenticated-shell {
+    background: #f8fafc;
+}
+
+.auth-grid-pattern {
+    opacity: 0.55;
+    background-image:
+        linear-gradient(rgb(148 163 184 / 7%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(148 163 184 / 7%) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black, transparent 70%);
 }
 
 .auth-content {
+    position: relative;
     width: min(100%, 1600px);
     min-height: 100%;
     margin-inline: auto;
@@ -63,10 +345,9 @@
 
 .auth-surface {
     border: 1px solid rgb(226 232 240 / 90%);
-    border-radius: 1.5rem;
-    background: rgb(255 255 255 / 92%);
-    box-shadow: 0 18px 45px -32px rgb(15 23 42 / 45%);
-    backdrop-filter: blur(12px);
+    border-radius: 1.25rem;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 3%), 0 12px 30px -24px rgb(15 23 42 / 28%);
 }
 
 .authenticated-font table thead tr {

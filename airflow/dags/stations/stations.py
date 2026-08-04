@@ -118,28 +118,68 @@ def resolve_province(station_id: Any, raw_province: Optional[str]) -> Optional[s
 
 def normalize_district(d: Optional[str], pv: Optional[str]) -> Optional[str]:
     if not d: return d
-    d = re.sub(r"^(อ\.|อำเภอ)\s*", "", str(d).strip())
+    d = re.sub(r"^(?:อำเภอ|เขต|อ\.?)\s*", "", str(d).strip())
+    d = re.sub(r"\s+", " ", d).strip(" ,")
     if pv and (d in {"เมือง", "เมืองฯ", "ตัวเมือง"} or d == pv):
         return f"เมือง{pv}"
     return d
+
+
+def normalize_subdistrict(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    normalized = re.sub(
+        r"^(?:ตำบล|แขวง|ต\.?)\s*",
+        "",
+        str(value).strip(),
+    )
+    normalized = re.sub(r"\s+", " ", normalized).strip(" ,")
+    return normalized or None
+
 
 def parse_area_text(area: str) -> Dict[str, Optional[str]]:
     """Extracts subdistrict, district, and province from area string."""
     if not area or not area.strip():
         return {"subdistrict": None, "district": None, "province": None}
-    
-    parts = area.split(",")
-    pv = normalize_province(parts[-1].strip()) if len(parts) > 1 else None
-    main_text = parts[0].strip()
-    
-    subd = re.search(r"(?:แขวง|ต\.|ตำบล)\s*([^\s,]+)", main_text)
-    dist = re.search(r"(?:เขต|อ\.|อำเภอ)\s*([^\s,]+)", main_text)
-    
+
+    text_value = re.sub(r"\s+", " ", str(area)).strip()
+    subd = re.search(
+        r"(?:^|[\s,])(?:ตำบล|แขวง|ต\.?)\s*"
+        r"(.+?)(?=\s+(?:อำเภอ|จังหวัด|เขต|อ\.?|จ\.?)\s*|,|$)",
+        text_value,
+    )
+    dist = re.search(
+        r"(?:^|[\s,])(?:อำเภอ|เขต|อ\.?)\s*"
+        r"(.+?)(?=\s+(?:จังหวัด|จ\.?)\s*|,|$)",
+        text_value,
+    )
+    province_match = re.search(
+        r"(?:^|[\s,])(?:จังหวัด|จ\.?)\s*(.+?)(?=,|$)",
+        text_value,
+    )
+    if province_match:
+        province = normalize_province(province_match.group(1))
+    else:
+        parts = [part.strip() for part in text_value.split(",") if part.strip()]
+        province = normalize_province(parts[-1]) if len(parts) > 1 else None
+
     return {
-        "subdistrict": subd.group(1) if subd else None,
-        "district": dist.group(1) if dist else None,
-        "province": pv,
+        "subdistrict": normalize_subdistrict(subd.group(1)) if subd else None,
+        "district": dist.group(1).strip(" ,") if dist else None,
+        "province": province,
     }
+
+
+def first_nonempty(item: Dict[str, Any], keys: List[str]) -> Any:
+    """Return the first present API value that is not null or blank."""
+    for key in keys:
+        value = item.get(key)
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        return value
+    return None
 
 def generate_id_new(sid: str, lat: Any, lon: Any) -> Optional[str]:
     if not sid: return None
@@ -259,24 +299,36 @@ def fetch_air4thai(province_map: Dict[str, str]) -> pd.DataFrame:
     
     rows = []
     for item in data:
-        # Use helper for nested or varied key names
-        get_val = lambda keys: next((item[k] for k in keys if k in item), None)
-        
-        sid = get_val(["stationID", "station_id", "stationCode"])
-        name = get_val(["nameTH", "stationNameTH", "name"])
-        area = get_val(["areaTH", "area"])
-        lat, lon = get_val(["lat", "latitude"]), get_val(["long", "longitude"])
+        sid = first_nonempty(item, ["stationID", "station_id", "stationCode"])
+        name = first_nonempty(item, ["nameTH", "stationNameTH", "name"])
+        area = first_nonempty(item, ["areaTH", "area"])
+        lat = first_nonempty(item, ["lat", "latitude"])
+        lon = first_nonempty(item, ["long", "longitude", "lon"])
         
         parsed = parse_area_text(area)
-        pv = resolve_province(sid, get_val(["province"]) or parsed["province"])
-        dist = normalize_district(get_val(["district"]) or parsed["district"], pv)
+        pv = resolve_province(
+            sid,
+            first_nonempty(item, ["province", "provinceTH", "provinceNameTH"])
+            or parsed["province"],
+        )
+        dist = normalize_district(
+            first_nonempty(item, ["district", "districtTH", "amphoe", "amphoeTH"])
+            or parsed["district"],
+            pv,
+        )
+        subdistrict = normalize_subdistrict(
+            first_nonempty(
+                item,
+                ["subdistrict", "subdistrictTH", "tambon", "tambonTH"],
+            ) or parsed["subdistrict"]
+        )
         
         rows.append({
             "station_id": str(sid) if sid else None,
             "station_name": name,
             "station_type": get_val(["stationType", "type"]),
             "latitude": lat, "longitude": lon,
-            "province": pv, "district": dist, "subdistrict": parsed["subdistrict"],
+            "province": pv, "district": dist, "subdistrict": subdistrict,
             "station_id_new": generate_id_new(sid, lat, lon),
             "health_region": province_map.get(pv)
         })
@@ -308,7 +360,14 @@ def _station_label(record: Dict[str, Any]) -> str:
 
 
 def sync_to_db(df_new: pd.DataFrame, eng: Any) -> Dict[str, Any]:
-    """Performs intelligent upsert to track station history."""
+    """Upsert station metadata while keeping history only for location changes.
+
+    ``station_id_new`` already includes the station ID and coordinates, so an
+    existing value represents the same physical station location. Metadata
+    changes for that value must update the latest row instead of creating a
+    second row. A new history row is inserted only when ``station_id_new`` is
+    new (for example, when a station moves).
+    """
     now = datetime.now(ZoneInfo("Asia/Bangkok"))
 
     insert_sql = text(
@@ -319,9 +378,9 @@ def sync_to_db(df_new: pd.DataFrame, eng: Any) -> Dict[str, Any]:
     with eng.begin() as conn:
         # Get current state
         rows = conn.execute(
-            text(f"SELECT {', '.join(DB_COLS)} FROM stations")
+            text(f"SELECT ctid::text AS row_id, {', '.join(DB_COLS)} FROM stations")
         ).mappings().all()
-        current_df = pd.DataFrame(rows, columns=DB_COLS)
+        current_df = pd.DataFrame(rows, columns=["row_id", *DB_COLS])
         
         results = {
             "inserted": 0,
@@ -333,12 +392,58 @@ def sync_to_db(df_new: pd.DataFrame, eng: Any) -> Dict[str, Any]:
         
         for _, row in df_new.iterrows():
             sid = row['station_id']
-            # Find existing record for this station
-            existing = current_df[current_df['station_id'] == sid].sort_values('created_at', ascending=False)
-            
             rec = row.to_dict()
             rec['created_at'] = now
             rec = {key: _sql_value(value) for key, value in rec.items()}
+
+            station_id_new = rec.get("station_id_new")
+            existing_location = current_df[
+                current_df["station_id_new"] == station_id_new
+            ].sort_values("created_at", ascending=False, na_position="last")
+
+            if not existing_location.empty:
+                last_rec = existing_location.iloc[0].to_dict()
+
+                # An occasionally incomplete API response must not erase good
+                # metadata already stored for the same physical location.
+                for key in COLS:
+                    incoming = rec.get(key)
+                    if incoming is None or (isinstance(incoming, str) and not incoming.strip()):
+                        prior_values = existing_location[key].dropna()
+                        prior_values = prior_values[
+                            prior_values.astype(str).str.strip() != ""
+                        ]
+                        if not prior_values.empty:
+                            rec[key] = _sql_value(prior_values.iloc[0])
+
+                changed_fields = {
+                    key: {
+                        "old": _display_value(last_rec.get(key)),
+                        "new": _display_value(rec.get(key)),
+                    }
+                    for key in COLS
+                    if _display_value(last_rec.get(key)) != _display_value(rec.get(key))
+                }
+
+                if changed_fields:
+                    set_clause = ", ".join(f"{col} = :{col}" for col in DB_COLS)
+                    conn.execute(
+                        text(f"UPDATE stations SET {set_clause} WHERE ctid::text = :row_id"),
+                        {**rec, "row_id": last_rec["row_id"]},
+                    )
+                    results["updated"] += 1
+                    results["changes"].append({
+                        "station": _station_label(rec),
+                        "type": "อัปเดตข้อมูล",
+                        "fields": changed_fields,
+                    })
+                else:
+                    results["skipped"] += 1
+                continue
+
+            # No row exists for this station/location combination. This is a
+            # genuinely new station or a station that moved coordinates.
+            existing = current_df[current_df['station_id'] == sid]
             
             if existing.empty:
                 # New station -> Insert
@@ -353,30 +458,17 @@ def sync_to_db(df_new: pd.DataFrame, eng: Any) -> Dict[str, Any]:
                     },
                 })
                 continue
-            
-            last_rec = existing.iloc[0].to_dict()
-            
-            changed_fields = {
-                key: {
-                    "old": _display_value(last_rec.get(key)),
-                    "new": _display_value(rec.get(key)),
-                }
-                for key in COLS
-                if _display_value(last_rec.get(key)) != _display_value(rec.get(key))
-            }
-            
-            if changed_fields:
-                # If area changed significantly -> Insert new history record
-                # If just filling blanks -> Update last record (Simplified for 10/10 logic)
-                conn.execute(insert_sql, rec)
-                results["updated"] += 1
-                results["changes"].append({
-                    "station": _station_label(rec),
-                    "type": "อัปเดตข้อมูล",
-                    "fields": changed_fields,
-                })
-            else:
-                results["skipped"] += 1
+
+            conn.execute(insert_sql, rec)
+            results["inserted"] += 1
+            results["changes"].append({
+                "station": _station_label(rec),
+                "type": "ย้ายตำแหน่งสถานี",
+                "location": {
+                    key: _display_value(rec.get(key))
+                    for key in LOCATION_COLS
+                },
+            })
 
         missing_df = df_new[
             df_new["subdistrict"].isna()

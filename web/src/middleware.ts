@@ -49,7 +49,8 @@ export async function middleware(request: NextRequest) {
 
         // จัดการการเข้าถึง /user/*
         if (isUserRoute) {
-            if (role !== 'user') {
+            const userRoles = ['user', 'admin_region', 'admin_province'];
+            if (!userRoles.includes(role)) {
                 return NextResponse.redirect(new URL('/admin', request.url)); // ถ้าเป็นแอดมินให้ไปหน้า admin
             }
         }

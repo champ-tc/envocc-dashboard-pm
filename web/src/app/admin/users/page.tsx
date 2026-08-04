@@ -113,9 +113,9 @@ export default function UserManagementPage() {
             
             <div className="auth-surface flex flex-col overflow-hidden">
                 <div className="overflow-x-auto scrollbar-hide">
-                    <table className="w-full text-left border-collapse min-w-[800px]">
+                    <table className="w-full text-left border-collapse min-w-data-table">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold text-[11px] uppercase tracking-widest">
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold text-compact-plus uppercase tracking-widest">
                                 <th className="px-6 py-4">ID</th>
                                 <th className="px-6 py-4">ข้อมูลผู้ใช้งาน</th>
                                 <th className="px-6 py-4">สถานะ (Status)</th>

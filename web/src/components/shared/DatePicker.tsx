@@ -57,8 +57,8 @@ export default function DatePicker({ label, options, value, onChange, thaiMonths
 
             {isOpen && (
                 <>
-                    <button type="button" aria-label="ปิดตัวเลือกเดือน" className="fixed inset-0 z-[100] cursor-default bg-slate-950/20 backdrop-blur-[1px]" onClick={() => setIsOpen(false)} />
-                    <div className="absolute left-0 z-[110] mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+                    <button type="button" aria-label="ปิดตัวเลือกเดือน" className="fixed inset-0 z-overlay cursor-default bg-slate-950/20 backdrop-blur-subtle" onClick={() => setIsOpen(false)} />
+                    <div className="absolute left-0 z-popover mt-2 w-date-popover overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
                         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
                             <button
                                 type="button"

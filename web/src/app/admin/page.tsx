@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Database, FileCheck2, Gauge, MapPinned, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowUpRight, Database, FileCheck2, Gauge, MapPinned, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 
 import { requireRoles } from '@/lib/auth';
 
@@ -22,26 +22,36 @@ export default async function AdminPage() {
 
     return (
         <div className="auth-page">
-            <section className="mb-6 overflow-hidden rounded-[2rem] bg-linear-to-br from-slate-950 via-slate-900 to-blue-950 p-6 text-white shadow-xl shadow-slate-300/40 md:p-8">
+            <section className="relative mb-8 overflow-hidden rounded-dashboard-card bg-slate-950 p-6 text-white shadow-2xl shadow-slate-300/70 md:p-9">
+                <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-blue-600/35 via-transparent to-sky-400/15" />
+                <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full border-[48px] border-white/5" />
+                <div className="pointer-events-none absolute bottom-0 right-1/3 h-32 w-32 bg-blue-500/20 blur-3xl" />
                 <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-100">
-                            <ShieldCheck className="size-4" />
+                        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-100 backdrop-blur">
+                            <Sparkles className="size-3.5" />
                             {roleLabel}
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">สวัสดีคุณ {session.name}</h1>
-                        <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">จัดการผู้ใช้งาน ชุดข้อมูล และการทำงานของระบบจากเมนูด้านล่าง</p>
+                        <h1 className="text-2xl font-semibold tracking-tight md:text-4xl">ยินดีต้อนรับ, {session.name}</h1>
+                        <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">ศูนย์กลางสำหรับบริหารข้อมูลสุขภาพ สิ่งแวดล้อม และสิทธิ์การใช้งานในที่เดียว</p>
                     </div>
-                    <div className="flex size-16 shrink-0 items-center justify-center rounded-3xl bg-white/10 text-2xl font-bold ring-1 ring-white/15">
-                        {session.name.charAt(0).toUpperCase()}
+                    <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
+                            <ShieldCheck className="size-6" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-300">สถานะระบบ</p>
+                            <p className="mt-0.5 flex items-center gap-2 text-sm font-semibold"><span className="size-2 rounded-full bg-emerald-400" /> พร้อมใช้งาน</p>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <div className="auth-page-header">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900">เมนูที่ใช้บ่อย</h2>
-                    <p className="auth-page-description">เข้าถึงงานหลักตามสิทธิ์ของบัญชีคุณ</p>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-menu-label text-blue-600">Workspace</p>
+                    <h2 className="text-xl font-bold text-slate-900">พื้นที่จัดการของคุณ</h2>
+                    <p className="auth-page-description">เครื่องมือและข้อมูลตามสิทธิ์ของบัญชี</p>
                 </div>
             </div>
 
@@ -49,13 +59,16 @@ export default async function AdminPage() {
                 {availableShortcuts.map((item) => {
                     const Icon = item.icon;
                     return (
-                        <Link key={item.href} href={item.href} className="auth-surface group flex items-start gap-4 p-5 transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
-                            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                        <Link key={item.href} href={item.href} prefetch={false} className="auth-surface group relative flex min-h-40 flex-col justify-between overflow-hidden p-5 transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100/60">
+                            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors group-hover:bg-blue-600 group-hover:text-white">
                                 <Icon className="size-5" />
                             </span>
-                            <span>
+                            <span className="mt-7 flex items-end justify-between gap-3">
+                                <span>
                                 <span className="block font-bold text-slate-900">{item.label}</span>
                                 <span className="mt-1 block text-sm leading-6 text-slate-500">{item.description}</span>
+                                </span>
+                                <ArrowUpRight className="mb-1 size-5 shrink-0 text-slate-300 transition group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-blue-600" />
                             </span>
                         </Link>
                     );

@@ -79,17 +79,17 @@ interface ThailandMapProps {
 
 function Legend({ config }: { config: ThailandMapProps['legendConfig'] }) {
     return (
-        <div className="absolute bottom-6 left-6 z-[1000] flex flex-col gap-3 pointer-events-none sm:pointer-events-auto">
-            <div className="bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-100 min-w-[100px] sm:min-w-[120px] flex flex-col gap-1.5 scale-90 sm:scale-100 origin-bottom-left transition-transform">
+        <div className="absolute bottom-6 left-6 z-map-legend flex flex-col gap-3 pointer-events-none sm:pointer-events-auto">
+            <div className="bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-100 min-w-map-legend sm:min-w-map-legend-wide flex flex-col gap-1.5 scale-90 sm:scale-100 origin-bottom-left transition-transform">
                 <div className="flex flex-col items-center text-center mb-1">
-                    <h4 className="text-[8px] sm:text-[9px] font-extrabold text-slate-800 leading-tight uppercase tracking-tight">{config.title}</h4>
-                    <div className="text-[8px] uppercase font-bold text-slate-400">({config.unit})</div>
+                    <h4 className="text-2xs sm:text-2xs-plus font-extrabold text-slate-800 leading-tight uppercase tracking-tight">{config.title}</h4>
+                    <div className="text-2xs uppercase font-bold text-slate-400">({config.unit})</div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                     {config.items.map((item) => (
                         <div key={item.range} className="flex items-center gap-2 px-1">
                             <div className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: item.color }}></div>
-                            <span className="text-[8px] font-extrabold text-slate-600 leading-none whitespace-nowrap">{item.range}</span>
+                            <span className="text-2xs font-extrabold text-slate-600 leading-none whitespace-nowrap">{item.range}</span>
                         </div>
                     ))}
                 </div>
@@ -366,11 +366,11 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     : (latestRawValue ?? 0);
 
                 const popupContent = renderPopup ? renderPopup(provinceTh, latestRawValue, popupUnit) : `
-                    <div class="font-sans p-2 min-w-[120px]">
+                    <div class="font-sans p-2 min-w-map-popup">
                         <div class="text-base font-extrabold text-slate-800 mb-2 leading-tight">${provinceTh}</div>
                         <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
                             <span class="text-2xl font-extrabold text-slate-900">${Number(displayValue).toLocaleString()}</span>
-                            <span class="text-[10px] font-bold text-slate-400 ml-1">${popupUnit}</span>
+                            <span class="text-compact font-bold text-slate-400 ml-1">${popupUnit}</span>
                         </div>
                     </div>
                 `;
@@ -402,9 +402,9 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         if (station) {
             const tooltipContent = `
                 <div class="flex flex-col gap-0.5">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">พื้นที่</div>
+                    <div class="text-compact text-slate-400 font-bold uppercase tracking-wider">พื้นที่</div>
                     <div class="text-xs font-extrabold text-white mb-1">ต.${subdistrictTh}, อ.${districtTh}</div>
-                    <div class="h-[1px] bg-slate-700 my-1"></div>
+                    <div class="h-divider bg-slate-700 my-1"></div>
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full" style="background-color: ${pm25ColorScale(station.pm25)}"></div>
                         <span class="text-xs font-extrabold text-blue-300">PM2.5: ${station.pm25.toFixed(1)} มคก./ลบ.ม.</span>
@@ -432,11 +432,11 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     : latestRawValue === dataRef.current[cleanP] ? provinceTh : `${districtTh.trim()}, ${provinceTh}`;
 
                 const popupContent = renderPopup ? renderPopup(areaName, latestRawValue, popupUnit) : `
-                    <div class="font-sans p-2 min-w-[120px]">
+                    <div class="font-sans p-2 min-w-map-popup">
                         <div class="text-base font-extrabold text-slate-800 mb-2 leading-tight">${areaName}</div>
                         <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
                             <span class="text-2xl font-extrabold text-slate-900">${Number(displayValue).toLocaleString()}</span>
-                            <span class="text-[10px] font-bold text-slate-400 ml-1">${popupUnit}</span>
+                            <span class="text-compact font-bold text-slate-400 ml-1">${popupUnit}</span>
                         </div>
                     </div>
                 `;
@@ -458,9 +458,9 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
     return (
         <div className="w-full h-full relative group">
             {loadingTambon && (
-                <div className="absolute top-6 right-6 z-[1001] bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-slate-100 shadow-sm flex items-center gap-3">
+                <div className="absolute top-6 right-6 z-map-loading bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-slate-100 shadow-sm flex items-center gap-3">
                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-[10px] font-extrabold text-slate-700 uppercase tracking-widest">Loading Map Data...</span>
+                    <span className="text-compact font-extrabold text-slate-700 uppercase tracking-widest">Loading Map Data...</span>
                 </div>
             )}
             <MapContainer

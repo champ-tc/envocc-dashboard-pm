@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
 import { ChevronLeft, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
 
@@ -31,15 +30,20 @@ export default function LoginPage() {
                 body: JSON.stringify(form)
             });
 
-            const data = await response.json();
+            const contentType = response.headers.get('content-type') || '';
+            const data = contentType.includes('application/json')
+                ? await response.json()
+                : {
+                    error: response.status === 429
+                        ? 'ขณะนี้มีผู้ใช้งานจำนวนมาก กรุณารอสักครู่แล้วลองใหม่'
+                        : 'ไม่สามารถเชื่อมต่อระบบเข้าสู่ระบบได้'
+                };
 
             if (!response.ok) {
                 throw new Error(data.error || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
             }
 
-            // เก็บ Token ใน Cookie (อายุ 1 ชั่วโมง)
-            Cookies.set('token', data.token, { expires: 1 / 24, sameSite: 'lax' });
-            // 2. แยกหน้าจอตาม Role
+            // Cookie ถูกตั้งโดย API แบบ HttpOnly แล้ว จากนั้นแยกหน้าจอตาม Role
             const redirectPath = (data.role === 'admin' || data.role === 'adminenvocc' || data.role === 'superadmin')
                 ? '/admin'
                 : '/user';
@@ -59,7 +63,7 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center relative bg-slate-50 font-sans">
             <div className="absolute inset-0 bg-cover bg-center opacity-40 pointer-events-none" style={{ backgroundImage: "url('/img/background.jpg')" }} />
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] pointer-events-none" />
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-soft pointer-events-none" />
 
             <Link href="/" className="absolute top-6 left-6 z-50 btn btn-ghost bg-white/80 backdrop-blur-sm rounded-full shadow-sm gap-2">
                 <ChevronLeft size={20} />
@@ -67,7 +71,7 @@ export default function LoginPage() {
             </Link>
 
             <div className="z-10 w-full max-w-md px-4">
-                <div className="card bg-white shadow-2xl border border-slate-100 rounded-[2.5rem]">
+                <div className="card bg-white shadow-2xl border border-slate-100 rounded-auth-card">
                     <form onSubmit={onSubmit} className="card-body p-8 sm:p-12">
 
                         <div className="text-center mb-8">
@@ -97,7 +101,6 @@ export default function LoginPage() {
                             <div className="form-control">
                                 <div className="label px-1 flex justify-between">
                                     <span className="label-text font-bold text-slate-500">รหัสผ่าน</span>
-                                    <button type="button" onClick={() => toast('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน')} className="label-text-alt link link-primary no-underline text-xs">ลืมรหัสผ่าน?</button>
                                 </div>
                                 <div className="relative">
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -117,6 +120,7 @@ export default function LoginPage() {
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
+                                <button type="button" onClick={() => toast('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน')} className="label-text-alt link link-primary no-underline text-xs">ลืมรหัสผ่าน?</button>
                             </div>
                         </div>
 
