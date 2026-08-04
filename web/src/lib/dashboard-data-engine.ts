@@ -27,7 +27,7 @@ export function getDashboardDataFiles(): DashboardDataFiles {
     return {
         pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.csv'),
         hdc: path.join(dataDir, process.env.HDC_DATA_FILE || 'hdc.parquet'),
-        dds: path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.csv'),
+        dds: path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.parquet'),
         midYear: path.join(dataDir, process.env.MID_YEAR_DATA_FILE || 'mid_year.csv'),
     };
 }
@@ -115,4 +115,3 @@ export async function withDashboardDatabase<T>(
         closeSnapshot(snapshot);
     }
 }
-

@@ -14,7 +14,7 @@ HEALTH_OFFICE_PATH = BASE_DIR / "health_office.xlsx"
 ICD10_PATH = BASE_DIR / "icd10.xlsx"
 CODE_COUNTS_PATH = BASE_DIR / "icd10_code_counts_sorted.csv"
 GROUP_SUMMARY_PATH = BASE_DIR / "icd10_group_summary.csv"
-DASHBOARD_DDS_PATH = BASE_DIR / "dashboard_dds.csv"
+DASHBOARD_DDS_PATH = BASE_DIR / "dashboard_dds.parquet"
 
 POLLUTANT_DIAGNOSIS_PREFIXES = {
     "J44",
@@ -411,7 +411,12 @@ def main() -> None:
     )
 
     dashboard = build_dashboard_rows(dds, icd)
-    dashboard.to_csv(DASHBOARD_DDS_PATH, index=False, encoding="utf-8-sig")
+    dashboard.to_parquet(
+        DASHBOARD_DDS_PATH,
+        index=False,
+        engine="pyarrow",
+        compression="snappy",
+    )
     print(f"Exported: {DASHBOARD_DDS_PATH} ({len(dashboard)} rows)")
 
 

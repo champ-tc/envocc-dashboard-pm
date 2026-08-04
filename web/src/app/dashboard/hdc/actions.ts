@@ -106,12 +106,16 @@ export async function getFilterOptions(): Promise<HDCOptions> {
                 
                 const hierarchyQuery = `
                     SELECT DISTINCT 
-                        TRIM("Regional Health") as region,
-                        TRIM(province) as province,
-                        TRIM(district) as district,
-                        TRIM(subdistrict) as subdistrict
-                    FROM pm25_raw
-                    WHERE district IS NOT NULL AND subdistrict IS NOT NULL
+                        'เขตสุขภาพที่ ' || CAST(county AS VARCHAR) as region,
+                        TRIM(province_name) as province,
+                        TRIM(district_name) as district,
+                        TRIM(subdistrict_name) as subdistrict
+                    FROM hdc_raw
+                    WHERE province_name IS NOT NULL
+                      AND district_name IS NOT NULL
+                      AND subdistrict_name IS NOT NULL
+                      AND TRIM(district_name) NOT IN ('', 'ไม่พบ')
+                      AND TRIM(subdistrict_name) NOT IN ('', 'ไม่พบ')
                     ORDER BY 1, 2, 3, 4
                 `;
                 
@@ -129,11 +133,9 @@ export async function getFilterOptions(): Promise<HDCOptions> {
                         });
 
                     const hierarchy: HierarchyItem[] = (res2 || []).map((h) => {
-                        const provinceEn = h.province as string;
-                        const provinceTh = PROVINCE_MAPPING[provinceEn] || provinceEn;
                         return {
                             region: (h.region as string) === 'เขตสุขภาพที่ 13' ? 'กรุงเทพมหานคร' : (h.region as string),
-                            province: provinceTh,
+                            province: h.province as string,
                             district: h.district as string,
                             subdistrict: h.subdistrict as string
                         };
@@ -197,6 +199,8 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
             const hdcLocFilters = [
                 mappedRegions?.length ? `AND 'เขตสุขภาพที่ ' || CAST(county AS VARCHAR) IN (${mappedRegions.map(r => `'${r.replace(/'/g, "''").trim()}'`).join(',')})` : '',
                 filters.provinces?.length ? `AND TRIM(province_name) IN (${filters.provinces.map(p => `'${p.replace(/'/g, "''").trim()}'`).join(',')})` : '',
+                filters.districts?.length ? `AND TRIM(district_name) IN (${filters.districts.map(d => `'${d.replace(/'/g, "''").trim()}'`).join(',')})` : '',
+                filters.subdistricts?.length ? `AND TRIM(subdistrict_name) IN (${filters.subdistricts.map(s => `'${s.replace(/'/g, "''").trim()}'`).join(',')})` : '',
                 mappedDiseases.length ? `AND TRIM(Typediag_name) IN (${mappedDiseases.map(d => `'${d.replace(/'/g, "''").trim()}'`).join(',')})` : ''
             ].join(' ');
 

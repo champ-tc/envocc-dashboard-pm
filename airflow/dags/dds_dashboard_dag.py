@@ -20,10 +20,10 @@ SOURCE_FILE = Path(
     os.getenv("DDS_INPUT_DIR", str(DDS_DIR))
 ) / "original_dds.xlsx"
 DDS_SCRIPT = DDS_DIR / "dashboard_dds.py"
-GENERATED_FILE = DDS_DIR / "dashboard_dds.csv"
+GENERATED_FILE = DDS_DIR / "dashboard_dds.parquet"
 PUBLISHED_FILE = Path(
     os.getenv("DUCKDB_DATA_DIR", "/opt/airflow/data")
-) / "dashboard_dds.csv"
+) / "dashboard_dds.parquet"
 
 DISCORD_VAR_KEY = "dds_dashboard"
 
@@ -64,7 +64,7 @@ def publish_dashboard_file(source_signature: Dict[str, int]) -> None:
         )
 
     PUBLISHED_FILE.parent.mkdir(parents=True, exist_ok=True)
-    temporary_file = PUBLISHED_FILE.with_suffix(".csv.tmp")
+    temporary_file = PUBLISHED_FILE.with_suffix(".parquet.tmp")
     try:
         shutil.copy2(GENERATED_FILE, temporary_file)
         os.replace(temporary_file, PUBLISHED_FILE)

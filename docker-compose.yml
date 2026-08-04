@@ -87,7 +87,7 @@ services:
       - |
         set -eu
         mkdir -p /data
-        for file in pm25.csv mid_year.csv dashboard_dds.csv; do
+        for file in pm25.csv mid_year.csv dashboard_dds.parquet; do
           if [ -f "/app/public/duckdb/$${file}" ]; then
             cp -n "/app/public/duckdb/$${file}" "/data/$${file}"
           fi
@@ -135,7 +135,7 @@ services:
       DASHBOARD_CACHE_MAX_ENTRIES: ${DASHBOARD_CACHE_MAX_ENTRIES:-200}
       PM25_DATA_FILE: ${PM25_DATA_FILE:-pm25.csv}
       HDC_DATA_FILE: ${HDC_DATA_FILE:-hdc.parquet}
-      DDS_DATA_FILE: ${DDS_DATA_FILE:-dashboard_dds.csv}
+      DDS_DATA_FILE: ${DDS_DATA_FILE:-dashboard_dds.parquet}
       MID_YEAR_DATA_FILE: ${MID_YEAR_DATA_FILE:-mid_year.csv}
       DDS_INPUT_DIR: /app/uploads/dds
       AIRFLOW_API_BASE_URL: http://airflow-webserver:8080/airflow

@@ -97,7 +97,7 @@ let loadedDataVersion: string | null = null;
 
 const getDB = (): Promise<duckdbTypes.Database> => {
     const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
-    const ddsPath = path.join(dataDir, 'dashboard_dds.csv');
+    const ddsPath = path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.parquet');
     const pm25Path = path.join(dataDir, 'pm25.csv');
     const midYearPath = path.join(dataDir, 'mid_year.csv');
     const currentDataVersion = getDashboardDataVersion();
@@ -133,6 +133,11 @@ const getDB = (): Promise<duckdbTypes.Database> => {
                 ['กรุงเทพมหานคร', 'เขตสุขภาพที่ 13']
             ].map(([p, r]) => `('${p}', '${r}')`).join(', ');
 
+            const escapedDdsPath = ddsPath.replace(/'/g, "''");
+            const ddsReader = ddsPath.toLowerCase().endsWith('.parquet')
+                ? `read_parquet('${escapedDdsPath}')`
+                : `read_csv_auto('${escapedDdsPath}', ignore_errors=true)`;
+
             db.exec(`
                 CREATE TABLE province_map(en VARCHAR, th VARCHAR);
                 INSERT INTO province_map VALUES ${mappingValues};
@@ -140,7 +145,7 @@ const getDB = (): Promise<duckdbTypes.Database> => {
                 CREATE TABLE region_map(province VARCHAR, region VARCHAR);
                 INSERT INTO region_map VALUES ${regionMapping};
 
-                CREATE TABLE dds_raw_en AS SELECT * FROM read_csv_auto('${ddsPath}', ignore_errors=true);
+                CREATE TABLE dds_raw_en AS SELECT * FROM ${ddsReader};
                 CREATE TABLE pm25_raw_en AS SELECT * FROM read_csv_auto('${pm25Path}', ignore_errors=true);
                 
                 -- Create Thai-version views
