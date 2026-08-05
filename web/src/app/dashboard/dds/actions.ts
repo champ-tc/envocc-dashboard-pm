@@ -2,11 +2,11 @@
 
 import duckdb from 'duckdb';
 import type * as duckdbTypes from 'duckdb';
+import fs from 'fs';
 import path from 'path';
 import { DDS_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
-import { getDashboardDataVersion } from '@/lib/dashboard-data-engine';
-import { cachedDashboardQuery, stableCacheKey } from '@/lib/dashboard-runtime';
+import { cachedDashboardQuery, getDataVersion, stableCacheKey } from '@/lib/dashboard-runtime';
 
 export interface HierarchyItem {
     region: string;
@@ -100,12 +100,33 @@ interface DuckDBRow {
 let dbPromise: Promise<duckdbTypes.Database> | null = null;
 let loadedDataVersion: string | null = null;
 
-const getDB = (): Promise<duckdbTypes.Database> => {
+function getDDSDataFiles() {
     const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
-    const ddsPath = path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.parquet');
-    const pm25Path = path.join(dataDir, 'pm25.csv');
-    const midYearPath = path.join(dataDir, 'mid_year.csv');
-    const currentDataVersion = getDashboardDataVersion();
+    const configuredDDSFile = process.env.DDS_DATA_FILE;
+    const parquetPath = path.join(dataDir, 'dashboard_dds.parquet');
+    const ddsPath = configuredDDSFile
+        ? path.join(dataDir, configuredDDSFile)
+        : fs.existsSync(parquetPath)
+            ? parquetPath
+            : path.join(dataDir, 'dashboard_dds.csv');
+
+    return {
+        dds: ddsPath,
+        pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.csv'),
+        midYear: path.join(dataDir, process.env.MID_YEAR_DATA_FILE || 'mid_year.csv'),
+    };
+}
+
+function getDDSDataVersion(): string {
+    return getDataVersion(Object.values(getDDSDataFiles()));
+}
+
+const getDB = (): Promise<duckdbTypes.Database> => {
+    const files = getDDSDataFiles();
+    const ddsPath = files.dds;
+    const pm25Path = files.pm25;
+    const midYearPath = files.midYear;
+    const currentDataVersion = getDDSDataVersion();
 
     if (dbPromise && loadedDataVersion === currentDataVersion) return dbPromise;
 
@@ -189,7 +210,7 @@ const getDB = (): Promise<duckdbTypes.Database> => {
 };
 
 export async function getFilterOptions(): Promise<DDSOptions> {
-    const version = getDashboardDataVersion();
+    const version = getDDSDataVersion();
     return cachedDashboardQuery(`dds:options:${version}`, async () => {
         const db = await getDB();
         return new Promise((resolve, reject) => {
@@ -271,7 +292,7 @@ export async function getFilterOptions(): Promise<DDSOptions> {
 }
 
 export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promise<DDSDashboardData> {
-    const version = getDashboardDataVersion();
+    const version = getDDSDataVersion();
     const cacheKey = `dds:data:${version}:${stableCacheKey(filters)}`;
     return cachedDashboardQuery(cacheKey, async () => {
         const db = await getDB();

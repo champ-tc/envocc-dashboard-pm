@@ -14,7 +14,6 @@ type EngineSnapshot = {
 export type DashboardDataFiles = {
     pm25: string;
     hdc: string;
-    dds: string;
     midYear: string;
 };
 
@@ -27,7 +26,6 @@ export function getDashboardDataFiles(): DashboardDataFiles {
     return {
         pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.csv'),
         hdc: path.join(dataDir, process.env.HDC_DATA_FILE || 'hdc.parquet'),
-        dds: path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.parquet'),
         midYear: path.join(dataDir, process.env.MID_YEAR_DATA_FILE || 'mid_year.csv'),
     };
 }
@@ -71,7 +69,6 @@ async function buildSnapshot(version: string): Promise<EngineSnapshot> {
         // instead of detecting schemas and scanning source files on every page refresh.
         await run(db, `CREATE TABLE pm25_raw AS SELECT * FROM ${reader(files.pm25)}`);
         await run(db, `CREATE TABLE hdc_raw AS SELECT * FROM ${reader(files.hdc)}`);
-        await run(db, `CREATE TABLE dds_raw AS SELECT * FROM ${reader(files.dds)}`);
         await run(db, `CREATE TABLE mid_year AS SELECT * FROM ${reader(files.midYear)}`);
 
         return { db, version, references: 0, retired: false };
