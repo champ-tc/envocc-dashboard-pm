@@ -231,6 +231,10 @@ const DISEASE_CARDS = [
     { id: 'health_status', label: 'กลุ่มโรคอื่นๆ', dbValue: 'ปัจจัยที่มีผลต่อสถานะสุขภาพ และการรับบริการสุขภาพ', color: 'purple' },
 ];
 
+const DISEASE_CARD_LABELS = Object.fromEntries(
+    DISEASE_CARDS.map(card => [card.id, card.label]),
+) as Record<string, string>;
+
 const DISEASE_ICD_OPTIONS: Record<string, string[]> = {
     'respiratory': ['J44', 'J45', 'J442'],
     'circulatory': ['I21', 'I22', 'I24'],
@@ -556,7 +560,7 @@ export default function DDSDashboardPage() {
                                                                     </div>
                                                                     {DDS_DISEASES.map(d => (m[d.id] as number) > 0 && (
                                                                         <div key={d.id} className="flex justify-between items-center bg-white/5 p-1.5 rounded-xl mb-1">
-                                                                            <span className="text-compact text-white/90 truncate">{d.shortLabel || d.label}</span>
+                                                                            <span className="text-compact text-white/90 truncate">{DISEASE_CARD_LABELS[d.id] || d.label}</span>
                                                                             <b className="text-compact text-white">{(m[d.id] as number || 0).toLocaleString()} ราย</b>
                                                                         </div>
                                                                     ))}
@@ -577,7 +581,7 @@ export default function DDSDashboardPage() {
                             })()}
                         </div>
                         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-10 shrink-0">
-                            {DDS_DISEASES.map(d => <div key={d.id} className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.hex }}></div><span className="text-compact font-extrabold text-white/70">{d.shortLabel || d.label}</span></div>)}
+                            {DDS_DISEASES.map(d => <div key={d.id} className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.hex }}></div><span className="text-compact font-extrabold text-white/70">{DISEASE_CARD_LABELS[d.id] || d.label}</span></div>)}
                             <div className="flex items-center gap-2"><div className="w-6 h-0.5 bg-rose-500 rounded-full"></div><span className="text-compact font-extrabold text-rose-400 uppercase">ค่าเฉลี่ย PM2.5</span></div>
                         </div>
                     </div>
