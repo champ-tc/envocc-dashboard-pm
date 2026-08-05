@@ -115,14 +115,10 @@ export async function getFilterOptions(): Promise<HDCOptions | null> {
                     SELECT DISTINCT 
                         'เขตสุขภาพที่ ' || CAST(county AS VARCHAR) as region,
                         TRIM(province_name) as province,
-                        TRIM(district_name) as district,
-                        TRIM(subdistrict_name) as subdistrict
+                        '' as district,
+                        '' as subdistrict
                     FROM hdc_raw
                     WHERE province_name IS NOT NULL
-                      AND district_name IS NOT NULL
-                      AND subdistrict_name IS NOT NULL
-                      AND TRIM(district_name) NOT IN ('', 'ไม่พบ')
-                      AND TRIM(subdistrict_name) NOT IN ('', 'ไม่พบ')
                     ORDER BY 1, 2, 3, 4
                 `;
                 
@@ -148,8 +144,8 @@ export async function getFilterOptions(): Promise<HDCOptions | null> {
                         };
                     });
 
-                    const districts = Array.from(new Set(hierarchy.map(h => h.district))).sort();
-                    const subdistricts = Array.from(new Set(hierarchy.map(h => h.subdistrict))).sort();
+                    const districts = Array.from(new Set(hierarchy.map(h => h.district).filter(Boolean))).sort();
+                    const subdistricts = Array.from(new Set(hierarchy.map(h => h.subdistrict).filter(Boolean))).sort();
 
                     resolve({
                         dates: (row1.dates as unknown as string[]) || [],

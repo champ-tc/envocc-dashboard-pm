@@ -541,7 +541,7 @@ export default function DashboardHDC() {
         const dists = filters.provinces.length === 0 
             ? options.districts 
             : Array.from(new Set(options.hierarchy.filter(h => filters.provinces.includes(h.province)).map(h => h.district)));
-        return dists.sort((a, b) => a.localeCompare(b, 'th'));
+        return dists.filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
     }, [filters.provinces, options.districts, options.hierarchy]);
 
     const handleRegionChange = useCallback((val: string[]) => {
