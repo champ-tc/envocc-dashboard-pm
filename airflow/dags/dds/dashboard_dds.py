@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import ast
 import os
 import re
 from pathlib import Path
@@ -15,19 +14,7 @@ ICD10_PATH = BASE_DIR / "icd10.xlsx"
 CODE_COUNTS_PATH = BASE_DIR / "icd10_code_counts_sorted.csv"
 GROUP_SUMMARY_PATH = BASE_DIR / "icd10_group_summary.csv"
 DASHBOARD_DDS_PATH = BASE_DIR / "dashboard_dds.parquet"
-
-POLLUTANT_DIAGNOSIS_PREFIXES = {
-    "J44",
-    "J45",
-    "I21",
-    "I22",
-    "I24",
-    "H10",
-    "L30",
-    "L50",
-}
-DIAGNOSIS_EXCEPTIONS = {"J442", "L309"}
-
+DASHBOARD_DDS_CSV_PATH = BASE_DIR / "dashboard_dds.csv"
 
 def clean_icd(value):
     if pd.isna(value):
@@ -57,63 +44,17 @@ def clean_code(value):
     return value
 
 
-def normalize_diagnosis_list(value):
-    if pd.isna(value):
-        return value
-
-    cleaned = []
-    for item in re.split(r"[,\s]+", str(value).upper()):
-        if not item:
+def merge_diagnosis_codes(primary, code_list):
+    """Merge the primary/list diagnoses for group 201 without duplicate codes."""
+    merged = []
+    for value in [primary, code_list, "Z581"]:
+        if pd.isna(value):
             continue
-
-        item = re.sub(r"[^A-Z0-9]", "", item)
-        if item in DIAGNOSIS_EXCEPTIONS:
-            cleaned.append(item)
-            continue
-
-        prefix = item[:3]
-        cleaned.append(
-            prefix if prefix in POLLUTANT_DIAGNOSIS_PREFIXES else item
-        )
-
-    return ",".join(cleaned)
-
-
-def clean_z581(value):
-    if pd.isna(value):
-        return pd.NA
-
-    if isinstance(value, str):
-        value = value.strip()
-        if value in {"", "[]", "['']", '[""]'}:
-            return pd.NA
-
-        try:
-            codes = ast.literal_eval(value)
-        except (SyntaxError, ValueError):
-            codes = [
-                item.strip().replace("'", "").replace('"', "")
-                for item in value.strip("[]").split(",")
-                if item.strip()
-            ]
-    else:
-        codes = list(value)
-
-    if isinstance(codes, str):
-        codes = [codes]
-
-    codes = [
-        str(code).strip().upper()
-        for code in codes
-        if pd.notna(code) and str(code).strip()
-    ]
-    if not codes:
-        return pd.NA
-    if len(codes) == 1 and codes[0] == "Z581":
-        return codes
-
-    cleaned = [code for code in codes if code != "Z581"]
-    return cleaned or pd.NA
+        for item in re.split(r"[,\s]+", str(value)):
+            code = clean_icd(item)
+            if code and code not in merged:
+                merged.append(code)
+    return ",".join(merged)
 
 
 def add_hospital_details(dds: pd.DataFrame, health_office: pd.DataFrame) -> pd.DataFrame:
@@ -271,25 +212,23 @@ def build_dashboard_rows(dds: pd.DataFrame, icd: pd.DataFrame) -> pd.DataFrame:
     result = result[~code_clean.str.fullmatch(r"\d+")]
     print(f"Removed numeric-only ICD rows: {before - len(result)}")
 
-    result["icd10_old"] = result["icd10_code"]
-    result["icd10_code"] = (
-        result["icd10_code"]
-        .astype(str)
-        .str.upper()
-        .str.strip()
-        .str.replace(".", "", regex=False)
-        .str.extract(r"([A-Z]\d{2})", expand=False)
-    )
+    result["icd10_code"] = result["icd10_code"].apply(clean_icd)
 
-    return result.drop(
-        columns=[
-            "hospcode",
-            "hospcode_name",
-            "province_id",
-            "icd10",
-            "icd10_list",
+    return result[
+        [
+            "person_id",
+            "year",
+            "week",
+            "month",
+            "county",
+            "province_name",
+            "district_name",
+            "subdistrict_name",
+            "icd10_code",
+            "Disease Type",
+            "disease",
         ]
-    )
+    ]
 
 
 def main() -> None:
@@ -304,6 +243,11 @@ def main() -> None:
         ~dds["ชื่อ"].astype(str).str.contains("ทดสอบ", case=False, na=False)
     ]
     print(f"Removed test rows: {before - len(dds)}")
+
+    before = len(dds)
+    group_codes = dds["รหัสกลุ่มโรค"].apply(clean_code)
+    dds = dds[group_codes == "201"].copy()
+    print(f"Rows after disease group 201 filter: {len(dds)} (removed {before - len(dds)})")
 
     dds = dds.drop(
         columns=[
@@ -369,18 +313,18 @@ def main() -> None:
         }
     )
 
-    dds = dds[dds["icd10"].astype("string").str.contains("Z581", na=False)]
-    print(f"Rows after Z581 filter: {len(dds)}")
-
     dds["icd10"] = dds["icd10"].apply(clean_icd)
     dds["icd10_list"] = dds["icd10_list"].apply(clean_icd_list)
+    dds["icd10_list"] = [
+        merge_diagnosis_codes(primary, code_list)
+        for primary, code_list in zip(dds["icd10"], dds["icd10_list"])
+    ]
     dds = add_hospital_details(dds, health_office)
 
     dds["date"] = pd.to_datetime(dds["date"], errors="coerce")
     dds["year"] = dds["date"].dt.year
     dds["week"] = dds["date"].dt.isocalendar().week
     dds["month"] = dds["date"].dt.month
-    dds["icd10_list"] = dds["icd10_list"].apply(normalize_diagnosis_list)
     dds = dds.drop(columns=["match_from", "date"], errors="ignore")
     dds = dds[
         [
@@ -401,7 +345,6 @@ def main() -> None:
 
     export_icd_summaries(dds)
 
-    dds["icd10_list"] = dds["icd10_list"].apply(clean_z581)
     dds["icd10_list"] = (
         dds["icd10_list"]
         .astype(str)
@@ -417,7 +360,13 @@ def main() -> None:
         engine="pyarrow",
         compression="snappy",
     )
+    dashboard.to_csv(
+        DASHBOARD_DDS_CSV_PATH,
+        index=False,
+        encoding="utf-8-sig",
+    )
     print(f"Exported: {DASHBOARD_DDS_PATH} ({len(dashboard)} rows)")
+    print(f"Exported: {DASHBOARD_DDS_CSV_PATH} ({len(dashboard)} rows)")
 
 
 if __name__ == "__main__":

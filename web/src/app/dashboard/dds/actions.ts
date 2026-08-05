@@ -2,7 +2,6 @@
 
 import duckdb from 'duckdb';
 import type * as duckdbTypes from 'duckdb';
-import fs from 'fs';
 import path from 'path';
 import { DDS_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
@@ -102,16 +101,9 @@ let loadedDataVersion: string | null = null;
 
 function getDDSDataFiles() {
     const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
-    const configuredDDSFile = process.env.DDS_DATA_FILE;
-    const parquetPath = path.join(dataDir, 'dashboard_dds.parquet');
-    const ddsPath = configuredDDSFile
-        ? path.join(dataDir, configuredDDSFile)
-        : fs.existsSync(parquetPath)
-            ? parquetPath
-            : path.join(dataDir, 'dashboard_dds.csv');
 
     return {
-        dds: ddsPath,
+        dds: path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.parquet'),
         pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.csv'),
         midYear: path.join(dataDir, process.env.MID_YEAR_DATA_FILE || 'mid_year.csv'),
     };
@@ -344,7 +336,21 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
             ddsDiagnosisFilter = `AND TRIM(icd10_code) IN (${codesStr})`;
         } else if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97') {
             const codesStr = diagType2Codes.map(c => `'${c}'`).join(',');
-            ddsDiagnosisFilter = `AND TRIM(icd10_code) IN (${codesStr})`;
+            ddsDiagnosisFilter = `
+                AND TRIM(icd10_code) IN (${codesStr})
+                AND person_id IN (
+                    SELECT person_id
+                    FROM dds_raw
+                    WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters}
+                    GROUP BY person_id
+                    HAVING COUNT(*) FILTER (
+                        WHERE REPLACE(UPPER(TRIM(icd10_code)), '.', '') = 'Z581'
+                    ) > 0
+                    AND COUNT(*) FILTER (
+                        WHERE REPLACE(UPPER(TRIM(icd10_code)), '.', '') = 'Y97'
+                    ) > 0
+                )
+            `;
         } else if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
             const allowedCodes = ["Z581"];
             if (filters.icd10_codes && filters.icd10_codes.length > 0) {

@@ -211,7 +211,7 @@ export default function DdsUploadPage() {
                             <FileSpreadsheet className="w-6 h-6" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-black text-slate-800">ไฟล์ที่ผ่าน ETL แล้ว</h2>
+                            <h2 className="text-lg font-black text-slate-800">ไฟล์ CSV ที่ผ่าน ETL แล้ว</h2>
                             {status?.etl?.exists ? (
                                 <p className="text-sm text-slate-500">
                                     {status.etl.filename} · {formatFileSize(status.etl.size)} · {formatDate(status.etl.updatedAt)}
@@ -231,7 +231,7 @@ export default function DdsUploadPage() {
                         }`}
                     >
                         <Download className="w-5 h-5" />
-                        Export ไฟล์ ETL
+                        ดาวน์โหลด CSV
                     </a>
                 </div>
             </div>

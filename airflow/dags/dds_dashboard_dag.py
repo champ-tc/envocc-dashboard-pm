@@ -20,10 +20,13 @@ SOURCE_FILE = Path(
     os.getenv("DDS_INPUT_DIR", str(DDS_DIR))
 ) / "original_dds.xlsx"
 DDS_SCRIPT = DDS_DIR / "dashboard_dds.py"
-GENERATED_FILE = DDS_DIR / "dashboard_dds.parquet"
-PUBLISHED_FILE = Path(
+GENERATED_PARQUET_FILE = DDS_DIR / "dashboard_dds.parquet"
+GENERATED_CSV_FILE = DDS_DIR / "dashboard_dds.csv"
+PUBLISHED_DATA_DIR = Path(
     os.getenv("DUCKDB_DATA_DIR", "/opt/airflow/data")
-) / "dashboard_dds.parquet"
+)
+PUBLISHED_PARQUET_FILE = PUBLISHED_DATA_DIR / "dashboard_dds.parquet"
+PUBLISHED_CSV_FILE = PUBLISHED_DATA_DIR / "dashboard_dds.csv"
 
 DISCORD_VAR_KEY = "dds_dashboard"
 
@@ -52,8 +55,9 @@ def run_dds_script() -> None:
         check=True,
     )
 
-    if not GENERATED_FILE.is_file() or GENERATED_FILE.stat().st_size == 0:
-        raise RuntimeError(f"DDS output was not generated: {GENERATED_FILE}")
+    for generated_file in [GENERATED_PARQUET_FILE, GENERATED_CSV_FILE]:
+        if not generated_file.is_file() or generated_file.stat().st_size == 0:
+            raise RuntimeError(f"DDS output was not generated: {generated_file}")
 
 
 def publish_dashboard_file(source_signature: Dict[str, int]) -> None:
@@ -63,16 +67,27 @@ def publish_dashboard_file(source_signature: Dict[str, int]) -> None:
             "skip publishing this result"
         )
 
-    PUBLISHED_FILE.parent.mkdir(parents=True, exist_ok=True)
-    temporary_file = PUBLISHED_FILE.with_suffix(".parquet.tmp")
+    PUBLISHED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    outputs = [
+        (GENERATED_PARQUET_FILE, PUBLISHED_PARQUET_FILE),
+        (GENERATED_CSV_FILE, PUBLISHED_CSV_FILE),
+    ]
+    temporary_files = []
     try:
-        shutil.copy2(GENERATED_FILE, temporary_file)
-        os.replace(temporary_file, PUBLISHED_FILE)
-    finally:
-        if temporary_file.exists():
-            temporary_file.unlink()
+        for generated_file, published_file in outputs:
+            temporary_file = published_file.with_suffix(f"{published_file.suffix}.tmp")
+            shutil.copy2(generated_file, temporary_file)
+            temporary_files.append(temporary_file)
 
-    print(f"Published DDS dashboard file: {PUBLISHED_FILE}")
+        for temporary_file, (_, published_file) in zip(temporary_files, outputs):
+            os.replace(temporary_file, published_file)
+    finally:
+        for temporary_file in temporary_files:
+            if temporary_file.exists():
+                temporary_file.unlink()
+
+    print(f"Published DDS dashboard file: {PUBLISHED_PARQUET_FILE}")
+    print(f"Published DDS download file: {PUBLISHED_CSV_FILE}")
 
 
 default_args = {
