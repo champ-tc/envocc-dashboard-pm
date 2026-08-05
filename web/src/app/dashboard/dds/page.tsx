@@ -277,7 +277,10 @@ export default function DDSDashboardPage() {
 
     // STEP 0: Auth & Initial Options
     useEffect(() => {
-        getCurrentUser().then(setUser);
+        getCurrentUser().then(setUser).catch((error) => {
+            console.error('Unable to load dashboard user:', error);
+            setUser(null);
+        });
 
         getFilterOptions().then(opts => {
             setBusyMessage(null);

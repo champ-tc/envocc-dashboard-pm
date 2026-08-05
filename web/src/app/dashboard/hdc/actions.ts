@@ -70,12 +70,19 @@ interface DuckDBRow {
 }
 
 export async function getUserAction() {
-    return await getOptionalUser();
+    try {
+        const user = await getOptionalUser();
+        return user ? JSON.parse(JSON.stringify(user)) : null;
+    } catch (error) {
+        console.error('[hdc] Unable to resolve optional dashboard user:', error);
+        return null;
+    }
 }
 
-export async function getFilterOptions(): Promise<HDCOptions> {
-    const version = getDashboardDataVersion();
-    return cachedDashboardQuery(`hdc:options:${version}`, () =>
+export async function getFilterOptions(): Promise<HDCOptions | null> {
+    try {
+        const version = getDashboardDataVersion();
+        return await cachedDashboardQuery(`hdc:options:${version}`, () =>
         withDashboardDatabase((db) => new Promise((resolve, reject) => {
         try {
             const query = `
@@ -160,13 +167,18 @@ export async function getFilterOptions(): Promise<HDCOptions> {
             reject(error);
         }
         })),
-    );
+        );
+    } catch (error) {
+        console.error('[hdc] Unable to load filter options:', error);
+        return null;
+    }
 }
 
-export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?: any): Promise<DashboardData> {
-    const version = getDashboardDataVersion();
-    const cacheKey = `hdc:data:${version}:${stableCacheKey({ filters, scope })}`;
-    return cachedDashboardQuery(cacheKey, () =>
+export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?: any): Promise<DashboardData | null> {
+    try {
+        const version = getDashboardDataVersion();
+        const cacheKey = `hdc:data:${version}:${stableCacheKey({ filters, scope })}`;
+        return await cachedDashboardQuery(cacheKey, () =>
         withDashboardDatabase((db) => new Promise((resolve, reject) => {
         try {
             let scopeHdcFilter = '';
@@ -364,5 +376,9 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
             reject(error);
         }
         })),
-    );
+        );
+    } catch (error) {
+        console.error('[hdc] Unable to load dashboard data:', error);
+        return null;
+    }
 }

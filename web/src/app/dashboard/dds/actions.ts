@@ -84,8 +84,13 @@ export interface DDSDashboardData {
 }
 
 export async function getCurrentUser() {
-    const user = await getOptionalUser();
-    return user ? JSON.parse(JSON.stringify(user)) : null;
+    try {
+        const user = await getOptionalUser();
+        return user ? JSON.parse(JSON.stringify(user)) : null;
+    } catch (error) {
+        console.error('[dds] Unable to resolve optional dashboard user:', error);
+        return null;
+    }
 }
 
 interface DuckDBRow {

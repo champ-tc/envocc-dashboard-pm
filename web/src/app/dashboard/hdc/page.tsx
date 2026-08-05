@@ -510,7 +510,10 @@ export default function DashboardHDC() {
     });
 
     useEffect(() => {
-        getUserAction().then(setUser);
+        getUserAction().then(setUser).catch((error) => {
+            console.error('Unable to load dashboard user:', error);
+            setUser(null);
+        });
     }, []);
 
     useEffect(() => {
@@ -558,8 +561,12 @@ export default function DashboardHDC() {
         const limitFullDate = now.toISOString().split('T')[0];
 
         getFilterOptions().then(opts => {
+            if (!opts) {
+                setBusyMessage(DASHBOARD_ERROR_MESSAGE);
+                setLoading(false);
+                return;
+            }
             setBusyMessage(null);
-            if (!opts) return;
             const filteredDates = opts.dates.filter(d => d <= limitFullDate).sort((a, b) => b.localeCompare(a));
             setOptions({ ...opts, dates: filteredDates });
 
@@ -583,8 +590,12 @@ export default function DashboardHDC() {
         try {
             const res = await getDashboardData(currentFilters, scope);
             if (requestId === latestRequestId.current) {
-                setData(res);
-                setBusyMessage(null);
+                if (res) {
+                    setData(res);
+                    setBusyMessage(null);
+                } else {
+                    setBusyMessage(DASHBOARD_ERROR_MESSAGE);
+                }
             }
         } catch (error) {
             if (requestId === latestRequestId.current) {
