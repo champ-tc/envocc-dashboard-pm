@@ -55,7 +55,7 @@ export async function getFilterOptions() {
     } catch (error) {
         if (isDashboardOverloadError(error)) throw error;
         console.error('getFilterOptions error:', error);
-        return { dates: [], regions: [], provinces: [], hierarchy: [] };
+        throw error;
     }
 }
 
@@ -207,7 +207,7 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
     } catch (error) {
         if (isDashboardOverloadError(error)) throw error;
         console.error('getDashboardData error:', error);
-        return null;
+        throw error;
     }
 }
 

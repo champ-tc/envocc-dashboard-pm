@@ -5,7 +5,7 @@ import { getDashboardData, getFilterOptions } from './actions';
 import DashboardNavbar from '../_components/DashboardNavbar';
 import DashboardBusyAlert from '../_components/DashboardBusyAlert';
 
-const BUSY_MESSAGE = 'ระบบกำลังประมวลผลคำขอก่อนหน้า กรุณารอสักครู่แล้วลองใหม่อีกครั้ง';
+const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
 // --- Types ---
 interface FilterOptions {
@@ -551,7 +551,7 @@ function useDashboard() {
                 setFilters(f => ({ ...f, startDate: startDate, endDate: latestDateStr }));
             }
         }).catch(() => {
-            setBusyMessage(BUSY_MESSAGE);
+            setBusyMessage(DASHBOARD_ERROR_MESSAGE);
             setLoading(false);
         });
     }, []);
@@ -574,7 +574,7 @@ function useDashboard() {
                     setBusyMessage(null);
                 }
             } catch {
-                if (requestId === latestRequestId.current) setBusyMessage(BUSY_MESSAGE);
+                if (requestId === latestRequestId.current) setBusyMessage(DASHBOARD_ERROR_MESSAGE);
             } finally {
                 if (requestId === latestRequestId.current) setLoading(false);
             }

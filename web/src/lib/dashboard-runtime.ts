@@ -8,8 +8,8 @@ type CacheEntry<T> = {
 const DEFAULT_CACHE_TTL_MS = 180_000;
 const DEFAULT_CACHE_MAX_ENTRIES = 200;
 const DEFAULT_QUERY_CONCURRENCY = 2;
-const DEFAULT_QUERY_MAX_QUEUE = 10;
-const DEFAULT_QUERY_QUEUE_TIMEOUT_MS = 8_000;
+const DEFAULT_QUERY_MAX_QUEUE = 20;
+const DEFAULT_QUERY_QUEUE_TIMEOUT_MS = 30_000;
 
 const resultCache = new Map<string, CacheEntry<unknown>>();
 let activeQueries = 0;
@@ -132,6 +132,9 @@ export async function cachedDashboardQuery<T>(
 
     const promise = withDashboardQuerySlot(query).catch((error) => {
         resultCache.delete(key);
+        if (!isDashboardOverloadError(error)) {
+            console.error(`[dashboard-query] Query failed for ${key}:`, error);
+        }
         throw error;
     });
 

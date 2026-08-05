@@ -8,7 +8,7 @@ import { HDC_DISEASES } from '@/lib/constants';
 import DashboardNavbar from '../_components/DashboardNavbar';
 import DashboardBusyAlert from '../_components/DashboardBusyAlert';
 
-const BUSY_MESSAGE = 'ระบบกำลังประมวลผลคำขอก่อนหน้า กรุณารอสักครู่แล้วลองใหม่อีกครั้ง';
+const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
 // --- FilterSection Component ---
 function SingleSelect({ label, options, selected, onChange }: { label: string, options: string[], selected: string, onChange: (val: string) => void }) {
@@ -571,7 +571,7 @@ export default function DashboardHDC() {
                 setFilters(prev => ({ ...prev, startDate: `${startYear}-10-01`, endDate: filteredDates[0] }));
             }
         }).catch(() => {
-            setBusyMessage(BUSY_MESSAGE);
+            setBusyMessage(DASHBOARD_ERROR_MESSAGE);
             setLoading(false);
         });
     }, []);
@@ -589,7 +589,7 @@ export default function DashboardHDC() {
         } catch (error) {
             if (requestId === latestRequestId.current) {
                 console.error(error);
-                setBusyMessage(BUSY_MESSAGE);
+                setBusyMessage(DASHBOARD_ERROR_MESSAGE);
             }
         } finally {
             if (requestId === latestRequestId.current) {
@@ -623,7 +623,7 @@ export default function DashboardHDC() {
                     }
                     className="relative z-header"
                 />
-                <DashboardBusyAlert message={busyMessage} />
+                <DashboardBusyAlert message={busyMessage} prominent />
 
                 <div className="relative z-toolbar">
                     <FilterSection 

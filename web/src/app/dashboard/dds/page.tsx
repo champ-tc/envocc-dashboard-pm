@@ -7,7 +7,7 @@ import { DDS_DISEASES } from '@/lib/constants';
 import DashboardNavbar from '../_components/DashboardNavbar';
 import DashboardBusyAlert from '../_components/DashboardBusyAlert';
 
-const BUSY_MESSAGE = 'ระบบกำลังประมวลผลคำขอก่อนหน้า กรุณารอสักครู่แล้วลองใหม่อีกครั้ง';
+const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
 // --- Shared Components ---
 
@@ -294,7 +294,7 @@ export default function DDSDashboardPage() {
                 setFilters(prev => ({ ...prev, startDate: startDate, endDate: latestDateStr }));
             }
         }).catch(() => {
-            setBusyMessage(BUSY_MESSAGE);
+            setBusyMessage(DASHBOARD_ERROR_MESSAGE);
             setLoading(false);
         });
     }, []);
@@ -332,7 +332,7 @@ export default function DDSDashboardPage() {
             } catch (error) {
                 if (requestId === latestRequestId.current) {
                     console.error(error);
-                    setBusyMessage(BUSY_MESSAGE);
+                    setBusyMessage(DASHBOARD_ERROR_MESSAGE);
                 }
             } finally {
                 if (requestId === latestRequestId.current) setLoading(false);
