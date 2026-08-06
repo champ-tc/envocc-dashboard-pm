@@ -16,7 +16,7 @@ if (!fs.existsSync(rootEnvPath)) {
 
 const rootEnv = dotenv.parse(fs.readFileSync(rootEnvPath));
 const serverHost =
-  process.env.DEV_DATABASE_HOST || rootEnv.DEV_DATABASE_HOST || "192.168.110.5";
+  process.env.DEV_DATABASE_HOST || rootEnv.DEV_DATABASE_HOST || "127.0.0.1";
 const serverPort =
   process.env.DEV_DATABASE_PORT || rootEnv.ETL_POSTGRES_PORT || "15432";
 const dbUser = rootEnv.ETL_POSTGRES_USER;

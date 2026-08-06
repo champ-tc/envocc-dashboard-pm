@@ -105,7 +105,7 @@ def _run_script(script_path: str, script_name: str, timeout_sec: int) -> str:
 # DAG
 # ==============================================================================
 with DAG(
-    dag_id="hdc_scraping",
+    dag_id="hdc_service",
     description="Pipeline for fetching HDC PM2.5 patient API data, cleaning it, and concatenating yearly outputs",
     schedule="0 6 * * *",
     start_date=pendulum.datetime(2024, 1, 1, tz="Asia/Bangkok"),

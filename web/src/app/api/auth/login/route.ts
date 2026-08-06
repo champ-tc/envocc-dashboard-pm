@@ -1,17 +1,30 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
-import { SignJWT } from 'jose';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { createSessionToken } from '@/lib/session-token';
+
+const loginSchema = z.object({
+    username: z.string().trim().min(1),
+    password: z.string().min(1),
+});
 
 export async function POST(request: Request) {
     try {
-        const { username: rawUsername, password } = await request.json();
-        const username = typeof rawUsername === 'string' ? rawUsername.trim() : rawUsername;
-        const result = await db.select().from(users).where(eq(users.username, username));
-        const user = result[0];
-        const isPasswordCorrect = user && await bcrypt.compare(password, user.password);
+        const parsed = loginSchema.safeParse(await request.json());
+
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: 'กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน' },
+                { status: 400 },
+            );
+        }
+
+        const { username, password } = parsed.data;
+        const [user] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+        const isPasswordCorrect = user ? await bcrypt.compare(password, user.password) : false;
 
         if (!user || !isPasswordCorrect) {
             return NextResponse.json(
@@ -20,29 +33,20 @@ export async function POST(request: Request) {
             );
         }
 
-        if (user.status === 'pending') {
+        if (user.status !== 'approved') {
             return NextResponse.json(
                 { error: 'บัญชีของท่านยังไม่ได้รับการอนุมัติจากผู้ดูแลระบบ' },
                 { status: 403 }
             );
         }
 
-        const secret = process.env.JWT_SECRET;
-        if (!secret) throw new Error('JWT_SECRET is not defined in environment');
-
-        const SECRET_KEY = new TextEncoder().encode(secret);
-
-        const token = await new SignJWT({
+        const token = await createSessionToken({
             id: user.id,
-            role: user.role,
+            role: user.role ?? 'user',
             name: user.name
-        })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setExpirationTime('1h') // Token มีอายุ 1 ชั่วโมง
-            .sign(SECRET_KEY);
+        });
 
         const response = NextResponse.json({
-            token,
             role: user.role,
             name: user.name
         });
@@ -52,11 +56,12 @@ export async function POST(request: Request) {
             sameSite: 'lax',
             path: '/',
             maxAge: 60 * 60,
+            priority: 'high',
         });
         return response;
 
-    } catch (error: any) {
-        console.error('Login Error:', error.message);
+    } catch (error) {
+        console.error('Login Error:', error);
         return NextResponse.json(
             { error: 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์' },
             { status: 500 }

@@ -1,25 +1,22 @@
 import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { verifySessionToken } from '@/lib/session-token';
 
 const getVerifiedUser = cache(async () => {
     const token = (await cookies()).get('token')?.value;
     if (!token) return null;
 
     try {
-        const secretKey = process.env.JWT_SECRET || 'my-super-secret';
-        const secret = new TextEncoder().encode(secretKey);
-        const { payload } = await jwtVerify(token, secret);
-        const [user] = await db.select().from(users).where(eq(users.id, payload.id as number));
+        const payload = await verifySessionToken(token);
+        const [user] = await db.select().from(users).where(eq(users.id, payload.id)).limit(1);
 
-        if (!user) return null;
+        if (!user || user.status !== 'approved') return null;
 
         return {
-            payloadRole: payload.role as string,
             user,
         };
     } catch {
@@ -45,7 +42,7 @@ function withScope<T extends typeof users.$inferSelect>(user: T) {
  */
 export async function requireRoles(allowedRoles: string[]) {
     const verified = await getVerifiedUser();
-    if (!verified || !allowedRoles.includes(verified.payloadRole)) redirect('/login');
+    if (!verified || !verified.user.role || !allowedRoles.includes(verified.user.role)) redirect('/login');
 
     return withScope(verified.user);
 }

@@ -9,6 +9,16 @@ function getDatabaseUrl(): string {
         return `postgresql://${encodeURIComponent(process.env.DB_USER)}:${encodeURIComponent(process.env.DB_PASSWORD)}@${process.env.DB_HOST}:${port}/${encodeURIComponent(process.env.DB_NAME)}`;
     }
 
+    if (
+        process.env.ETL_POSTGRES_USER &&
+        process.env.ETL_POSTGRES_PASSWORD &&
+        process.env.ETL_POSTGRES_DB
+    ) {
+        const host = process.env.DEV_DATABASE_HOST || '127.0.0.1';
+        const port = process.env.DEV_DATABASE_PORT || process.env.ETL_POSTGRES_PORT || '15432';
+        return `postgresql://${encodeURIComponent(process.env.ETL_POSTGRES_USER)}:${encodeURIComponent(process.env.ETL_POSTGRES_PASSWORD)}@${host}:${port}/${encodeURIComponent(process.env.ETL_POSTGRES_DB)}`;
+    }
+
     if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
     throw new Error('Database configuration is missing');
 }

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { verifySessionToken } from '@/lib/session-token';
 
 export async function GET() {
     try {
@@ -11,16 +14,24 @@ export async function GET() {
             return NextResponse.json({ role: null, id: null });
         }
 
-        const secretKey = process.env.JWT_SECRET || 'my-super-secret';
-        const SECRET = new TextEncoder().encode(secretKey);
-        const { payload } = await jwtVerify(token, SECRET);
+        const payload = await verifySessionToken(token);
+        const [user] = await db.select({
+            id: users.id,
+            role: users.role,
+            name: users.name,
+            status: users.status,
+        }).from(users).where(eq(users.id, payload.id)).limit(1);
+
+        if (!user || user.status !== 'approved') {
+            return NextResponse.json({ role: null, id: null, name: null });
+        }
 
         return NextResponse.json({
-            role: payload.role,
-            id: payload.id,
-            name: payload.name
+            role: user.role,
+            id: user.id,
+            name: user.name,
         });
-    } catch (error) {
-        return NextResponse.json({ role: null, id: null });
+    } catch {
+        return NextResponse.json({ role: null, id: null, name: null });
     }
 }
