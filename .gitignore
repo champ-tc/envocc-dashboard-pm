@@ -1,6 +1,7 @@
 # Secrets & Environments
 **/.env*
 !.env.template
+airflow/config/variables.json
 
 # Next.js / Node.js
 **/node_modules/
