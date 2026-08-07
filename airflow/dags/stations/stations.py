@@ -326,7 +326,7 @@ def fetch_air4thai(province_map: Dict[str, str]) -> pd.DataFrame:
         rows.append({
             "station_id": str(sid) if sid else None,
             "station_name": name,
-            "station_type": get_val(["stationType", "type"]),
+            "station_type": first_nonempty(item, ["stationType", "type"]),
             "latitude": lat, "longitude": lon,
             "province": pv, "district": dist, "subdistrict": subdistrict,
             "station_id_new": generate_id_new(sid, lat, lon),
