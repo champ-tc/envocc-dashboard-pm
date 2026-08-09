@@ -4,7 +4,7 @@ import { ArrowUpRight, Database, FileCheck2, Gauge, MapPinned, ShieldCheck, Spar
 import { requireRoles } from '@/lib/auth';
 
 const shortcuts = [
-    { href: '/admin/requests', label: 'คำขอข้อมูล', description: 'ตรวจสอบและอนุมัติคำขอ', icon: FileCheck2, roles: ['admin', 'adminenvocc', 'superadmin'] },
+    { href: '/admin/requests', label: 'คำขอข้อมูล', description: 'ตรวจสอบและอนุมัติคำขอ', icon: FileCheck2, roles: ['admin', 'adminenvocc', 'admin_department', 'superadmin'] },
     { href: '/admin/users', label: 'ผู้ใช้งาน', description: 'จัดการสิทธิ์และสถานะบัญชี', icon: UsersRound, roles: ['superadmin'] },
     { href: '/admin/stations', label: 'สถานีตรวจวัด', description: 'จัดการข้อมูลสถานี Air4Thai', icon: MapPinned, roles: ['superadmin'] },
     { href: '/admin/pm25-hourly', label: 'ค่าฝุ่นรายชั่วโมง', description: 'ตรวจสอบและแก้ไขข้อมูล', icon: Gauge, roles: ['superadmin'] },
@@ -12,10 +12,12 @@ const shortcuts = [
 ];
 
 export default async function AdminPage() {
-    const session = await requireRoles(['admin', 'adminenvocc', 'superadmin']);
+    const session = await requireRoles(['admin', 'adminenvocc', 'admin_department', 'superadmin']);
     const availableShortcuts = shortcuts.filter((item) => item.roles.includes(session.role || ''));
     const roleLabel = session.role === 'superadmin'
         ? 'ผู้ดูแลระบบสูงสุด'
+        : session.role === 'admin_department'
+            ? 'ผู้ดูแลระบบระดับกรม'
         : session.role === 'adminenvocc'
             ? 'ผู้ดูแล EnvOcc'
             : 'ผู้ดูแลระบบ';

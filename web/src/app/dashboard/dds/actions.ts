@@ -96,6 +96,24 @@ interface DuckDBRow {
     [key: string]: string | number | boolean | null | undefined | (string | number | boolean | null | undefined)[];
 }
 
+const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
+
+function icdCodePredicate(column: string, codes: string[]): string {
+    const normalizedColumn = normalizeIcdSql(column);
+    const normalizedCodes = Array.from(new Set(codes.map(code => code.replace(/\./g, '').toUpperCase())));
+
+    if (normalizedCodes.length === 0) return '1=0';
+
+    return normalizedCodes
+        .map(code => {
+            const escapedCode = code.replace(/'/g, "''");
+            // DDS stores the full ICD-10 code (for example J459/H109), while the
+            // dashboard disease definitions use category roots (J45/H10).
+            return `${normalizedColumn} LIKE '${escapedCode}%'`;
+        })
+        .join(' OR ');
+}
+
 let dbPromise: Promise<duckdbTypes.Database> | null = null;
 let loadedDataVersion: string | null = null;
 
@@ -306,8 +324,6 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         const districtsStr = filters.districts?.length ? filters.districts.map((d: string) => `'${d.trim()}'`).join(',') : null;
         const subdistrictsStr = filters.subdistricts?.length ? filters.subdistricts.map((s: string) => `'${s.trim()}'`).join(',') : null;
         const diseasesStr = filters.diseases?.length ? filters.diseases.map((d: string) => `'${d.trim()}'`).join(',') : null;
-        const icd10CodesStr = filters.icd10_codes?.length ? filters.icd10_codes.map((c: string) => `'${c.trim()}'`).join(',') : null;
-
         const ddsLocFilters = [
             regionsStr ? `AND county IN (${regionsStr})` : '',
             provincesStr ? `AND TRIM(province_name) IN (${provincesStr})` : '',
@@ -322,8 +338,6 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         ].join(' ');
 
         const ddsDiseaseFilter = diseasesStr ? `AND TRIM("Disease Type") IN (${diseasesStr})` : '';
-        const ddsIcd10Filter = icd10CodesStr ? `AND TRIM(icd10_code) IN (${icd10CodesStr})` : '';
-
         // --- Diagnosis Type Filter mapping ---
         let ddsDiagnosisFilter = 'AND 1=0'; // Default to nothing if no match found
         const diagType = filters.diagnosisType?.trim();
@@ -332,12 +346,10 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         const diagType2Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50", "Y97"];
 
         if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1') {
-            const codesStr = diagType1Codes.map(c => `'${c}'`).join(',');
-            ddsDiagnosisFilter = `AND TRIM(icd10_code) IN (${codesStr})`;
+            ddsDiagnosisFilter = `AND (${icdCodePredicate('icd10_code', diagType1Codes)})`;
         } else if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97') {
-            const codesStr = diagType2Codes.map(c => `'${c}'`).join(',');
             ddsDiagnosisFilter = `
-                AND TRIM(icd10_code) IN (${codesStr})
+                AND (${icdCodePredicate('icd10_code', diagType2Codes)})
                 AND person_id IN (
                     SELECT person_id
                     FROM dds_raw
@@ -356,8 +368,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
             if (filters.icd10_codes && filters.icd10_codes.length > 0) {
                 allowedCodes.push(...filters.icd10_codes.filter(c => c.trim() !== "Z58"));
             }
-            const codesStr = allowedCodes.map(c => `'${c}'`).join(',');
-            ddsDiagnosisFilter = `AND TRIM(icd10_code) IN (${codesStr})`;
+            ddsDiagnosisFilter = `AND (${icdCodePredicate('icd10_code', allowedCodes)})`;
         }
 
         // --- Build individual ICD10 filters for each disease group ---
@@ -368,7 +379,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 const selectedCodes = (filters.groupedIcd10?.[d.id] || [])
                     .filter(c => d.id !== 'health_status' || c.trim() !== "Z58");
                 if (selectedCodes.length > 0) {
-                    icdFilters[d.id] = `AND TRIM(icd) IN (${selectedCodes.map(c => `'${c.trim().replace(/'/g, "''")}'`).join(',')})`;
+                    icdFilters[d.id] = `AND (${icdCodePredicate('icd', selectedCodes)})`;
                 } else {
                     // "แสดงทุกรหัส" (Show all codes, no default filter)
                     // If health_status, still limit to its group codes if we want to distinguish from 'other'
@@ -385,7 +396,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97') return diagType2Codes.includes(c);
                     return true;
                 });
-                icdFilters[d.id] = allowed.length > 0 ? `AND TRIM(icd) IN (${allowed.map(c => `'${c}'`).join(',')})` : `AND 1=0`;
+                icdFilters[d.id] = allowed.length > 0 ? `AND (${icdCodePredicate('icd', allowed)})` : `AND 1=0`;
             }
         });
 

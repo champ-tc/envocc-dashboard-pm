@@ -9,6 +9,7 @@ const navItems = [
     { href: '/dashboard/pm25', label: 'Dashboard ฝุ่น PM2.5', icon: '/img/pm.png' },
     { href: '/dashboard/hdc', label: 'Dashboard ผู้ป่วย HDC', icon: '/img/hdc.png' },
     { href: '/dashboard/dds', label: 'Dashboard ผู้ป่วย DDS', icon: '/img/ddc.png' },
+    { href: '/login', label: 'เข้าสู่ระบบ', icon: '/img/login.png' },
 ];
 
 export default function DashboardNavMenu({ className = '' }: { className?: string }) {

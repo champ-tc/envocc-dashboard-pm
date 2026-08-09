@@ -14,6 +14,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Data Fetching**: Prefer Server Actions with DuckDB for analytical queries. Use Drizzle for user and metadata management.
 - **Role-Based Access**: 
   - `superadmin`: Full access to users and system configuration.
+  - `admin_department`: Department-level access to nationwide data and data-request approval, without system configuration access.
   - `admin`: General administrative access.
   - `admin_region` / `admin_province`: Access restricted to specific health regions or provinces.
   - `user`: Standard access to dashboards and profile.

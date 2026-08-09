@@ -359,6 +359,50 @@ def _station_label(record: Dict[str, Any]) -> str:
     return f"{station_id} ({station_name})"
 
 
+def _missing_subdistrict_from_db(conn: Any) -> List[Dict[str, str]]:
+    """Return missing subdistricts from the latest rows persisted in stations.
+
+    Keep this selection aligned with the station-management page: a station
+    location is identified by ``station_id_new`` and only its latest/best row
+    is considered. Rows without ``station_id_new`` fall back to ``station_id``.
+    """
+    rows = conn.execute(text("""
+        SELECT
+            station.station_id,
+            station.station_name,
+            station.province,
+            station.district
+        FROM stations AS station
+        WHERE station.ctid = (
+            SELECT station_latest.ctid
+            FROM stations AS station_latest
+            WHERE (
+                station_latest.station_id_new IS NOT DISTINCT FROM station.station_id_new
+                AND station.station_id_new IS NOT NULL
+            ) OR (
+                station.station_id_new IS NULL
+                AND station_latest.station_id = station.station_id
+            )
+            ORDER BY
+                (NULLIF(BTRIM(station_latest.district), '') IS NOT NULL) DESC,
+                station_latest.created_at DESC NULLS LAST,
+                station_latest.ctid DESC
+            LIMIT 1
+        )
+        AND NULLIF(BTRIM(station.subdistrict), '') IS NULL
+        ORDER BY station.province NULLS LAST, station.station_name, station.station_id
+    """)).mappings().all()
+
+    return [
+        {
+            "station": _station_label(dict(row)),
+            "province": _display_value(row.get("province")),
+            "district": _display_value(row.get("district")),
+        }
+        for row in rows
+    ]
+
+
 def sync_to_db(df_new: pd.DataFrame, eng: Any) -> Dict[str, Any]:
     """Upsert station metadata while keeping history only for location changes.
 
@@ -470,18 +514,9 @@ def sync_to_db(df_new: pd.DataFrame, eng: Any) -> Dict[str, Any]:
                 },
             })
 
-        missing_df = df_new[
-            df_new["subdistrict"].isna()
-            | (df_new["subdistrict"].astype(str).str.strip() == "")
-        ]
-        results["missing_subdistrict"] = [
-            {
-                "station": _station_label(row.to_dict()),
-                "province": _display_value(row.get("province")),
-                "district": _display_value(row.get("district")),
-            }
-            for _, row in missing_df.iterrows()
-        ]
+        # Notifications must reflect our persisted station master, not the raw
+        # Air4Thai response (which can temporarily omit otherwise-known data).
+        results["missing_subdistrict"] = _missing_subdistrict_from_db(conn)
 
     summary = f"Sync Summary: +{results['inserted']} new, ~{results['updated']} updated, {results['skipped']} skipped."
     logger.info(summary)

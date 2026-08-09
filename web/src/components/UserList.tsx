@@ -8,7 +8,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: 'superadmin' | 'adminenvocc' | 'admin' | 'user';
+    role: 'superadmin' | 'admin_department' | 'adminenvocc' | 'admin' | 'admin_region' | 'admin_province' | 'user';
     status: 'pending' | 'approved';
 }
 

@@ -32,8 +32,11 @@ type MenuGroup = {
 
 const roleLabels: Record<string, string> = {
     superadmin: 'ผู้ดูแลระบบสูงสุด',
+    admin_department: 'ผู้ดูแลระบบระดับกรม',
     adminenvocc: 'ผู้ดูแล EnvOcc',
     admin: 'ผู้ดูแลระบบ',
+    admin_region: 'ผู้ดูแลระบบระดับเขต',
+    admin_province: 'ผู้ดูแลระบบระดับจังหวัด',
     user: 'ผู้ใช้งาน',
 };
 
@@ -48,7 +51,7 @@ export default function Sidebar({
 }) {
     const pathname = usePathname();
     const safeRole = role || 'user';
-    const isAdmin = safeRole === 'admin' || safeRole === 'adminenvocc' || safeRole === 'superadmin';
+    const isAdmin = safeRole === 'admin' || safeRole === 'adminenvocc' || safeRole === 'admin_department' || safeRole === 'superadmin';
     const isSuperAdmin = safeRole === 'superadmin';
     const homePath = isAdmin ? '/admin' : '/user/main';
     const profilePath = isAdmin ? '/admin/profile' : '/user/profile';

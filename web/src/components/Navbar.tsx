@@ -21,10 +21,16 @@ export default function Navbar({
     const isUser = session?.role === 'user';
     const roleLabel = session?.role === 'superadmin'
         ? 'ผู้ดูแลระบบสูงสุด'
+        : session?.role === 'admin_department'
+            ? 'ผู้ดูแลระบบระดับกรม'
         : session?.role === 'adminenvocc'
             ? 'ผู้ดูแล EnvOcc'
-            : session?.role === 'admin'
-                ? 'ผู้ดูแลระบบ'
+        : session?.role === 'admin'
+            ? 'ผู้ดูแลระบบ'
+        : session?.role === 'admin_region'
+            ? 'ผู้ดูแลระบบระดับเขต'
+        : session?.role === 'admin_province'
+            ? 'ผู้ดูแลระบบระดับจังหวัด'
                 : 'ผู้ใช้งาน';
 
     return (

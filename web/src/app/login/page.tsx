@@ -44,7 +44,7 @@ export default function LoginPage() {
             }
 
             // Cookie ถูกตั้งโดย API แบบ HttpOnly แล้ว จากนั้นแยกหน้าจอตาม Role
-            const redirectPath = (data.role === 'admin' || data.role === 'adminenvocc' || data.role === 'superadmin')
+            const redirectPath = (data.role === 'admin' || data.role === 'adminenvocc' || data.role === 'admin_department' || data.role === 'superadmin')
                 ? '/admin'
                 : '/user';
 
