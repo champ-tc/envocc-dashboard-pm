@@ -77,7 +77,7 @@ def make_db_engine() -> Any:
         raise
 
 def ensure_stations_table(eng: Any) -> None:
-    """Ensures the stations table and all required columns/indexes exist."""
+    """Ensure the table exists, remove legacy duplicates, and enforce uniqueness."""
     create_sql = """
     CREATE TABLE IF NOT EXISTS stations (
         station_id TEXT, station_id_new TEXT, station_name TEXT, 
@@ -96,7 +96,45 @@ def ensure_stations_table(eng: Any) -> None:
             conn.execute(text(f"ALTER TABLE stations ADD COLUMN IF NOT EXISTS {col} {type_sql}"))
         
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_stations_id ON stations (station_id)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_stations_id_new ON stations (station_id_new)"))
+
+        # Older sync logic inserted a new row whenever metadata changed, even
+        # when station_id_new (station + coordinates) stayed the same. Keep the
+        # most complete/latest row for each physical location before enforcing
+        # uniqueness. Different coordinates remain separate history rows.
+        dedupe_result = conn.execute(text("""
+            WITH ranked AS (
+                SELECT
+                    ctid,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY station_id_new
+                        ORDER BY
+                            (
+                                (NULLIF(BTRIM(station_name), '') IS NOT NULL)::int
+                                + (NULLIF(BTRIM(province), '') IS NOT NULL)::int
+                                + (NULLIF(BTRIM(district), '') IS NOT NULL)::int
+                                + (NULLIF(BTRIM(subdistrict), '') IS NOT NULL)::int
+                                + (NULLIF(BTRIM(health_region), '') IS NOT NULL)::int
+                            ) DESC,
+                            created_at DESC NULLS LAST,
+                            ctid DESC
+                    ) AS duplicate_rank
+                FROM stations
+                WHERE NULLIF(BTRIM(station_id_new), '') IS NOT NULL
+            )
+            DELETE FROM stations AS duplicate
+            USING ranked
+            WHERE duplicate.ctid = ranked.ctid
+              AND ranked.duplicate_rank > 1
+        """))
+        if dedupe_result.rowcount and dedupe_result.rowcount > 0:
+            logger.info("Removed %s duplicate station location rows.", dedupe_result.rowcount)
+
+        conn.execute(text("DROP INDEX IF EXISTS idx_stations_id_new"))
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_stations_station_id_new
+            ON stations (station_id_new)
+            WHERE NULLIF(BTRIM(station_id_new), '') IS NOT NULL
+        """))
     logger.info("Database schema verification complete.")
 
 # ---------------------------------------------------------
@@ -118,7 +156,7 @@ def resolve_province(station_id: Any, raw_province: Optional[str]) -> Optional[s
 
 def normalize_district(d: Optional[str], pv: Optional[str]) -> Optional[str]:
     if not d: return d
-    d = re.sub(r"^(?:อำเภอ|เขต|อ\.?)\s*", "", str(d).strip())
+    d = re.sub(r"^(?:อำเภอ|เขต|อ\.)\s*", "", str(d).strip())
     d = re.sub(r"\s+", " ", d).strip(" ,")
     if pv and (d in {"เมือง", "เมืองฯ", "ตัวเมือง"} or d == pv):
         return f"เมือง{pv}"
@@ -129,7 +167,7 @@ def normalize_subdistrict(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
     normalized = re.sub(
-        r"^(?:ตำบล|แขวง|ต\.?)\s*",
+        r"^(?:ตำบล|แขวง|ต\.)\s*",
         "",
         str(value).strip(),
     )
@@ -144,17 +182,17 @@ def parse_area_text(area: str) -> Dict[str, Optional[str]]:
 
     text_value = re.sub(r"\s+", " ", str(area)).strip()
     subd = re.search(
-        r"(?:^|[\s,])(?:ตำบล|แขวง|ต\.?)\s*"
-        r"(.+?)(?=\s+(?:อำเภอ|จังหวัด|เขต|อ\.?|จ\.?)\s*|,|$)",
+        r"(?:^|[\s,])(?:ตำบล|แขวง|ต\.)\s*"
+        r"(.+?)(?=\s+(?:อำเภอ|จังหวัด|เขต|อ\.|จ\.)\s*|,|$)",
         text_value,
     )
     dist = re.search(
-        r"(?:^|[\s,])(?:อำเภอ|เขต|อ\.?)\s*"
-        r"(.+?)(?=\s+(?:จังหวัด|จ\.?)\s*|,|$)",
+        r"(?:^|[\s,])(?:อำเภอ|เขต|อ\.)\s*"
+        r"(.+?)(?=\s+(?:จังหวัด|จ\.)\s*|\s+(?:กรุงเทพมหานคร|กรุงเทพฯ|กทม\.?)\s*$|,|$)",
         text_value,
     )
     province_match = re.search(
-        r"(?:^|[\s,])(?:จังหวัด|จ\.?)\s*(.+?)(?=,|$)",
+        r"(?:^|[\s,])(?:จังหวัด|จ\.)\s*(.+?)(?=,|$)",
         text_value,
     )
     if province_match:
@@ -333,7 +371,15 @@ def fetch_air4thai(province_map: Dict[str, str]) -> pd.DataFrame:
             "health_region": province_map.get(pv)
         })
     
-    return pd.DataFrame(rows).reindex(columns=COLS).dropna(subset=["station_id"])
+    station_df = pd.DataFrame(rows).reindex(columns=COLS).dropna(subset=["station_id"])
+    duplicate_count = int(station_df["station_id_new"].duplicated(keep="last").sum())
+    if duplicate_count:
+        logger.warning(
+            "Air4Thai returned %s duplicate station locations; keeping the last record.",
+            duplicate_count,
+        )
+        station_df = station_df.drop_duplicates(subset=["station_id_new"], keep="last")
+    return station_df
 
 # ---------------------------------------------------------
 # CORE LOGIC (UPSERT)
