@@ -21,11 +21,15 @@ node_modules/
 airflow/logs/
 airflow/plugins/
 
-# Generated DDS exports (created and published by the Airflow pipeline)
+# Generated data files (provisioned directly on each server)
 airflow/dags/dds/dashboard_dds.csv
 airflow/dags/dds/icd10_code_counts_sorted.csv
 airflow/dags/dds/icd10_group_summary.csv
 web/public/duckdb/dashboard_dds.csv
+web/public/duckdb/dashboard_dds.parquet
+web/public/duckdb/hdc.parquet
+web/public/duckdb/mid_year.csv
+web/public/duckdb/pm25.csv
 
 # Docker / Database
 postgres-data/
