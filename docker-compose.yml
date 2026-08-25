@@ -87,7 +87,7 @@ services:
       - |
         set -eu
         mkdir -p /data
-        for file in pm25.csv mid_year.csv dashboard_dds.parquet dashboard_dds.csv; do
+        for file in pm25.csv hdc.parquet mid_year.csv dashboard_dds.parquet dashboard_dds.csv; do
           if [ -f "/app/public/duckdb/$${file}" ]; then
             cp -n "/app/public/duckdb/$${file}" "/data/$${file}"
           fi

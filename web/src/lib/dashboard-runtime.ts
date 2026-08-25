@@ -159,8 +159,15 @@ export function stableCacheKey(value: unknown): string {
 export function getDataVersion(paths: string[]): string {
     return paths
         .map((filePath) => {
-            const stat = fs.statSync(filePath);
-            return `${filePath}:${stat.size}:${stat.mtimeMs}`;
+            try {
+                const stat = fs.statSync(filePath);
+                return `${filePath}:${stat.size}:${stat.mtimeMs}`;
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                    return `${filePath}:missing`;
+                }
+                throw error;
+            }
         })
         .join('|');
 }

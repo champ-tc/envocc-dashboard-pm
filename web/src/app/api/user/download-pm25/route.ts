@@ -34,7 +34,8 @@ export async function GET(request: Request) {
         }
 
         const ddb = new duckdb.Database(':memory:');
-        const csvPath = path.join(process.cwd(), 'public', 'duckdb', 'pm25.csv');
+        const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
+        const csvPath = path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.csv');
         
         // Construct query
         const query = `

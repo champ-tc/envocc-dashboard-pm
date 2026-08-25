@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import type * as duckdbTypes from 'duckdb';
 import { getDataVersion } from '@/lib/dashboard-runtime';
 
@@ -65,11 +66,19 @@ async function buildSnapshot(version: string): Promise<EngineSnapshot> {
     const db: duckdbTypes.Database = new duckdb.Database(':memory:');
 
     try {
-        // Materialize test CSVs once. Dashboard requests query these shared analytical tables
-        // instead of detecting schemas and scanning source files on every page refresh.
+        if (!fs.existsSync(files.pm25)) {
+            throw new Error(`Required PM2.5 dashboard data file is missing: ${files.pm25}`);
+        }
+
+        // PM2.5 is the shared required dataset. HDC and population data are
+        // optional here so their pipeline cannot take the PM2.5 dashboard down.
         await run(db, `CREATE TABLE pm25_raw AS SELECT * FROM ${reader(files.pm25)}`);
-        await run(db, `CREATE TABLE hdc_raw AS SELECT * FROM ${reader(files.hdc)}`);
-        await run(db, `CREATE TABLE mid_year AS SELECT * FROM ${reader(files.midYear)}`);
+        if (fs.existsSync(files.hdc)) {
+            await run(db, `CREATE TABLE hdc_raw AS SELECT * FROM ${reader(files.hdc)}`);
+        }
+        if (fs.existsSync(files.midYear)) {
+            await run(db, `CREATE TABLE mid_year AS SELECT * FROM ${reader(files.midYear)}`);
+        }
 
         return { db, version, references: 0, retired: false };
     } catch (error) {
