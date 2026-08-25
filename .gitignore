@@ -1,6 +1,5 @@
 # Secrets & Environments
 **/.env*
-!.env.template
 airflow/config/variables.json
 
 # Next.js / Node.js
@@ -20,9 +19,11 @@ node_modules/
 **/.venv/
 airflow/logs/
 airflow/plugins/
+web/tsconfig.tsbuildinfo
 
 # Generated data files (provisioned directly on each server)
 airflow/dags/dds/dashboard_dds.csv
+airflow/dags/dds/dashboard_dds.parquet
 airflow/dags/dds/icd10_code_counts_sorted.csv
 airflow/dags/dds/icd10_group_summary.csv
 web/public/duckdb/dashboard_dds.csv

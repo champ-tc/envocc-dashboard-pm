@@ -7,6 +7,7 @@ import type { HDCFilters, HDCOptions, DashboardData, HierarchyItem, MonthlyTrend
 import { HDC_DISEASES } from '@/lib/constants';
 import DashboardNavbar from '../_components/DashboardNavbar';
 import DashboardBusyAlert from '../_components/DashboardBusyAlert';
+import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -155,9 +156,7 @@ interface FilterProps {
     setFilters: (update: (f: HDCFilters) => HDCFilters) => void;
     handleRegionChange: (val: string[]) => void;
     handleProvinceChange: (val: string[]) => void;
-    handleDistrictChange: (val: string[]) => void;
     baseProvinces: string[];
-    baseDistricts: string[];
     thaiMonthsShort: string[];
 }
 
@@ -167,26 +166,22 @@ function FilterSection({
     setFilters, 
     handleRegionChange,
     handleProvinceChange,
-    handleDistrictChange,
     baseProvinces,
-    baseDistricts,
     thaiMonthsShort 
 }: FilterProps) {
     return (
-        <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-40">
-            <CustomDatePicker 
+        <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-40">
+            <DashboardDatePicker
                 label="จากเดือน" 
                 options={options?.dates || []} 
                 value={filters.startDate} 
                 onChange={(v: string) => setFilters((f: HDCFilters) => ({ ...f, startDate: v }))} 
-                thaiMonths={thaiMonthsShort} 
             />
-            <CustomDatePicker 
+            <DashboardDatePicker
                 label="ถึงเดือน" 
                 options={options?.dates || []} 
                 value={filters.endDate} 
                 onChange={(v: string) => setFilters((f: HDCFilters) => ({ ...f, endDate: v }))} 
-                thaiMonths={thaiMonthsShort} 
             />
             <MultiSelect 
                 label="เขตสุขภาพ" 
@@ -199,12 +194,6 @@ function FilterSection({
                 options={baseProvinces} 
                 selected={filters.provinces} 
                 onChange={handleProvinceChange} 
-            />
-            <MultiSelect 
-                label="อำเภอ/เขต" 
-                options={baseDistricts} 
-                selected={filters.districts} 
-                onChange={handleDistrictChange} 
             />
             <MultiSelect 
                 label="กลุ่มโรค" 
@@ -251,13 +240,13 @@ function StatCards({ data, loading }: StatCardsProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/30 transition-all group flex flex-col justify-between">
                     <div className="text-xs font-bold text-blue-100/70 uppercase tracking-widest mb-1 flex justify-between items-center">
-                        <span>จำนวนผู้ป่วยทั้งหมด</span>
+                        <span>จำนวนผู้ป่วยการวินิจฉัยโรคทั้งหมด</span>
                         <svg className="w-5 h-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                     </div>
                     <div className="text-4xl font-black text-white tracking-tight tabular-nums drop-shadow-md">
                         {loading ? <div className="h-10 w-32 bg-white/20 animate-pulse rounded-lg"></div> : data?.totalPatients?.toLocaleString()}
                     </div>
-                    <div className="text-xs font-bold text-white/50 uppercase tracking-widest">ราย (สะสมจากฐานข้อมูลทั้งหมด)</div>
+                    <div className="text-xs font-bold text-white/50 uppercase tracking-widest">ราย</div>
                 </div>
 
                 <div className="bg-white/10 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/20 transition-all group flex flex-col justify-between ring-1 ring-white/10">
@@ -268,14 +257,14 @@ function StatCards({ data, loading }: StatCardsProps) {
                     <div className="text-4xl font-black text-white tracking-tight tabular-nums drop-shadow-md">
                         {loading ? <div className="h-10 w-32 bg-white/20 animate-pulse rounded-lg"></div> : data?.totalDiagnoses?.toLocaleString()}
                     </div>
-                    <div className="text-xs font-bold text-white/40 uppercase tracking-widest italic">ตามเงื่อนไขตัวกรองที่เลือก</div>
+                    <div className="text-xs font-bold text-white/40 uppercase tracking-widest italic">ตามเงื่อนไขตัวกรองการวินิจฉัยที่เลือก</div>
                 </div>
             </div>
 
             {/* Bottom Row: Disease Group Stats */}
             <div className="flex items-center gap-3 mb-1 mt-2">
                 <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
-                <span className="text-compact font-black text-white/40 uppercase tracking-stat-label">สถิติแยกตามกลุ่มโรค (Top 5)</span>
+                <span className="text-compact font-black text-white/40 uppercase tracking-stat-label">จำนวนการวินิจฉัยแยกตามกลุ่มโรค</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 {top5Sorted.map((stat, i) => (
@@ -310,20 +299,20 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
             <div className="flex items-center justify-between mb-8 shrink-0">
                 <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
-                    แนวโน้มจำนวนผู้ป่วยรายเดือน
+                    จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน
                 </h4>
             </div>
 
             <div className="flex-1 relative flex flex-col justify-end px-12 min-h-0 overflow-visible">
                 <div className="absolute left-12 top-0 bottom-0 w-px bg-white/10 z-20">
                     <div className="absolute top-chart-caption left-0 text-compact font-black text-white/30 uppercase tracking-wider whitespace-nowrap">
-                        จำนวนผู้ป่วย (ราย)
+                        จำนวนการวินิจฉัยแยกตามกลุ่มโรค
                     </div>
                 </div>
 
                 <div className="absolute right-12 top-0 bottom-0 w-px bg-white/10 z-20">
                     <div className="absolute top-chart-caption right-0 text-compact font-black text-rose-500/40 uppercase tracking-wider whitespace-nowrap text-right">
-                        เฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)
+                        ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)
                     </div>
                 </div>
 
@@ -444,7 +433,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                     {HDC_DISEASES.map(d => (
                         <div key={d.id} className="flex items-center gap-2 group cursor-default">
                             <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: d.hex }}></div>
-                            <span className="text-compact font-black text-white/60 uppercase tracking-widest group-hover:text-white transition-colors">{d.shortLabel}</span>
+                            <span className="text-compact font-black text-white/60 uppercase tracking-widest group-hover:text-white transition-colors">{d.label}</span>
                         </div>
                     ))}
                     <div className="flex items-center gap-2 group cursor-default">
@@ -480,8 +469,8 @@ const ddcColorScale = (val: number) => {
 };
 
 const ddcLegend = {
-    title: 'ระดับความเสี่ยง',
-    unit: 'จำนวนผู้ป่วย',
+    title: 'จำนวนผู้ป่วย',
+    unit: '',
     items: [
         { range: '0 - 10 ราย', color: '#10b981' },
         { range: '11 - 50 ราย', color: '#60a5fa' },
@@ -536,13 +525,10 @@ export default function DashboardHDC() {
         return provs.sort((a, b) => a.localeCompare(b, 'th'));
     }, [filters.regions, options.provinces, options.hierarchy]);
 
-    const baseDistricts = useMemo(() => {
-        if (!options.hierarchy) return [];
-        const dists = filters.provinces.length === 0 
-            ? options.districts 
-            : Array.from(new Set(options.hierarchy.filter(h => filters.provinces.includes(h.province)).map(h => h.district)));
-        return dists.filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
-    }, [filters.provinces, options.districts, options.hierarchy]);
+    const provinceMapFilters = useMemo(() => ({
+        provinces: filters.provinces,
+        districts: [] as string[]
+    }), [filters.provinces]);
 
     const handleRegionChange = useCallback((val: string[]) => {
         setFilters(prev => ({ ...prev, regions: val, provinces: [], districts: [], subdistricts: [] }));
@@ -550,10 +536,6 @@ export default function DashboardHDC() {
 
     const handleProvinceChange = useCallback((val: string[]) => {
         setFilters(prev => ({ ...prev, provinces: val, districts: [], subdistricts: [] }));
-    }, []);
-
-    const handleDistrictChange = useCallback((val: string[]) => {
-        setFilters(prev => ({ ...prev, districts: val, subdistricts: [] }));
     }, []);
 
     useEffect(() => {
@@ -626,11 +608,11 @@ export default function DashboardHDC() {
                         { src: '/img/ddc-logo.png', alt: 'DDC Logo' },
                         { src: '/img/logo_hdc.jpg', alt: 'HDC Logo' },
                     ]}
-                    title="การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยที่เกี่ยวข้อง"
+                    title="การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 ประเทศไทย"
                     subtitle={
                         user?.role === 'admin_province' ? `ผู้ดูแลระบบระดับจังหวัด: ${user.workplaceProvince}` :
                         user?.role === 'admin_region' ? `ผู้ดูแลระบบระดับเขต: ${user.ddcRegion}` :
-                        'ผู้ดูแลระบบส่วนกลาง'
+                        'ระบบคลังข้อมูลด้านการแพทย์และสุขภาพ (HDC)'
                     }
                     className="relative z-header"
                 />
@@ -643,9 +625,7 @@ export default function DashboardHDC() {
                         setFilters={setFilters} 
                         handleRegionChange={handleRegionChange}
                         handleProvinceChange={handleProvinceChange}
-                        handleDistrictChange={handleDistrictChange}
                         baseProvinces={baseProvinces}
-                        baseDistricts={baseDistricts}
                         thaiMonthsShort={THAI_MONTHS_SHORT} 
                     />
                 </div>
@@ -661,13 +641,13 @@ export default function DashboardHDC() {
                         <div className="flex items-center justify-between mb-8 shrink-0">
                             <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
                                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
-                                สถิติผู้ป่วยรายจังหวัด
+                                จำนวนผู้ป่วยรายจังหวัด
                             </h4>
                         </div>
                         <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 bg-slate-800/50">
                             <ThailandMap
                                 data={data?.provinceAverages || {}} 
-                                filters={filters} 
+                                filters={provinceMapFilters}
                                 getColor={ddcColorScale} 
                                 legendConfig={ddcLegend} 
                                 popupUnit="ราย"

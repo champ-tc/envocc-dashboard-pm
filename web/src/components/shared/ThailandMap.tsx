@@ -83,7 +83,7 @@ function Legend({ config }: { config: ThailandMapProps['legendConfig'] }) {
             <div className="bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-100 min-w-map-legend sm:min-w-map-legend-wide flex flex-col gap-1.5 scale-90 sm:scale-100 origin-bottom-left transition-transform">
                 <div className="flex flex-col items-center text-center mb-1">
                     <h4 className="text-2xs sm:text-2xs-plus font-extrabold text-slate-800 leading-tight uppercase tracking-tight">{config.title}</h4>
-                    <div className="text-2xs uppercase font-bold text-slate-400">({config.unit})</div>
+                    {config.unit && <div className="text-2xs uppercase font-bold text-slate-400">({config.unit})</div>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                     {config.items.map((item) => (

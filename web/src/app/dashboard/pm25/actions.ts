@@ -126,57 +126,39 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
         const streak75: Record<string, number> = {};
 
         Object.entries(provinceTrendData).forEach(([prov, trend]) => {
-            const trendMap = new Map(trend.map(p => [p.date.split('T')[0], p.value]));
-            
-            let endDateStr = filters.endDate;
-            if (!endDateStr) {
-                const dates = trend.map(p => p.date);
-                endDateStr = dates.sort()[dates.length - 1].split('T')[0];
-            }
-            
             let current37 = 0;
+            let latest37 = 0;
             let current75 = 0;
-            
-            let d37 = new Date(endDateStr);
-            while (true) {
-                const dateStr = d37.toISOString().split('T')[0];
-                const val = trendMap.get(dateStr);
-                if (val !== undefined && val > 37.5) {
-                    current37++;
-                    d37.setDate(d37.getDate() - 1);
-                } else {
-                    break;
-                }
-            }
 
             const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            current75 = 0;
             let latest75 = 0;
 
             for (let i = 0; i < sorted.length; i++) {
                 const p = sorted[i];
+                const isConsecutive = i > 0 && Math.round(
+                    (new Date(p.date).getTime() - new Date(sorted[i - 1].date).getTime()) / (1000 * 60 * 60 * 24)
+                ) === 1;
+
+                if (p.value > 37.5) {
+                    if (current37 > 0 && !isConsecutive) latest37 = current37;
+                    current37 = current37 > 0 && isConsecutive ? current37 + 1 : 1;
+                } else {
+                    if (current37 > 0) latest37 = current37;
+                    current37 = 0;
+                }
+
                 if (p.value > 75) {
-                    if (current75 === 0) {
-                        current75 = 1;
-                    } else {
-                        const lastD = new Date(sorted[i-1].date);
-                        const d = new Date(p.date);
-                        const diffDays = Math.round((d.getTime() - lastD.getTime()) / (1000 * 60 * 60 * 24));
-                        if (diffDays === 1) {
-                            current75++;
-                        } else {
-                            if (current75 >= 2) latest75 = current75;
-                            current75 = 1;
-                        }
-                    }
+                    if (current75 >= 2 && !isConsecutive) latest75 = current75;
+                    current75 = current75 > 0 && isConsecutive ? current75 + 1 : 1;
                 } else {
                     if (current75 >= 2) latest75 = current75;
                     current75 = 0;
                 }
             }
+            if (current37 > 0) latest37 = current37;
             if (current75 >= 2) latest75 = current75;
             
-            if (current37 > 0) streak37[prov] = current37;
+            if (latest37 > 0) streak37[prov] = latest37;
             if (latest75 >= 2) streak75[prov] = latest75;
         });
 

@@ -10,13 +10,15 @@
 - **Pandas**: Use vectorised operations where possible for efficiency.
 - **Selenium**: 
   - Always run in `--headless` mode.
-  - Use `webdriver-manager` for driver management.
+  - Use the Chromium and ChromiumDriver binaries installed by `airflow/Dockerfile`; do not download a driver at DAG runtime.
   - Implement robust wait conditions (`WebDriverWait`) instead of hard sleeps.
 - **Environment**: Scripts should read database credentials from environment variables (`DB_HOST`, `DB_USER`, etc.) provided by the Docker service.
 
-## Database Interfacing
-- **Target**: Most analytical data should be pushed to the `postgres-etl` service.
-- **Schema**: Before modifying the output schema of a script, verify if the `web` service's DuckDB or Drizzle queries need to be updated.
+## Data Outputs and Database Interfacing
+- **Files**: Publish dashboard CSV/Parquet outputs through `DUCKDB_DATA_DIR` (`/opt/airflow/data` in Docker). This is the shared `duckdb-data-volume` consumed by Web.
+- **Database**: Use `postgres-etl` for processed relational data; `postgres` is reserved for Airflow metadata and Celery results.
+- **Schema**: Before modifying an output schema, verify all affected DuckDB queries and Drizzle consumers in `web`.
+- **Atomic Writes**: Write large CSV/Parquet outputs to a temporary file and rename them only after the write succeeds.
 
 ## Maintenance
 - **Logs**: Check `/opt/airflow/logs` for execution details.

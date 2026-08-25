@@ -1,98 +1,90 @@
 # PM2.5 Patient Database & Dashboard
 
-โครงการนี้เป็นระบบ Dashboard สำหรับติดตามผลกระทบของ PM2.5 ต่อผู้ป่วยโรคระบบทางเดินหายใจและระบบไหลเวียนโลหิต โครงสร้างระบบประกอบด้วย Next.js (Web), Apache Airflow (ETL), PostgreSQL (Database) และ Nginx (Gateway) โดยทำงานประสานกันผ่าน Docker
+ระบบติดตามข้อมูล PM2.5 และผลกระทบต่อสุขภาพ ประกอบด้วย Next.js, Apache Airflow, PostgreSQL, DuckDB, Redis และ Nginx โดยรันร่วมกันผ่าน Docker Compose
 
-ระบบนี้ถูกออกแบบมาเพื่อรองรับข้อจำกัดด้านเครือข่ายของเซิร์ฟเวอร์องค์กร (No Inbound) โดยใช้แนวทางการนำส่งแอปพลิเคชันแบบ **Pull-based Deployment ผ่าน GitHub Container Registry (GHCR)**
+## โครงสร้างระบบ
 
----
+- **Web**: Next.js 16 และ React 19 สำหรับ Dashboard, API และระบบผู้ใช้
+- **Airflow**: ดึง ประมวลผล และเผยแพร่ข้อมูล PM2.5, HDC และ DDS
+- **PostgreSQL `postgres`**: Airflow metadata และ Celery result backend
+- **PostgreSQL `postgres-etl`**: ข้อมูลแอป ผู้ใช้ และข้อมูลเชิงสัมพันธ์ที่ผ่านการประมวลผล
+- **DuckDB**: Query ไฟล์ CSV/Parquet สำหรับ Dashboard โดยฐานข้อมูลทำงานใน memory
+- **Redis**: Broker ของ Airflow CeleryExecutor
+- **Nginx**: SSL reverse proxy; `/` ไป Web และ `/airflow` ไป Airflow
 
-## 🏗️ สถาปัตยกรรมระบบ (Architecture)
+## การจัดเก็บข้อมูล
 
-*   **Web (Next.js)**: Frontend และ API ฝั่งผู้ใช้
-*   **Airflow**: จัดการ Pipeline สำหรับดึงข้อมูลและประมวลผล (ETL)
-*   **Postgres & DuckDB**: ฐานข้อมูลสำหรับเก็บข้อมูลผู้ใช้ (OLTP) และข้อมูลเชิงวิเคราะห์ (OLAP)
-*   **Nginx**: Reverse Proxy กลาง ทำหน้าที่จัดการ SSL/HTTPS, Security Headers และแบ่ง Route
-*   **CI/CD (GitHub Actions)**: รับหน้าที่ Build Docker Images และเก็บไว้ที่ GHCR
+ข้อมูลถาวรอยู่ใน Docker named volumes:
 
----
+| Volume | ตำแหน่งใน container | หน้าที่ |
+| --- | --- | --- |
+| `postgres-db-volume` | `/var/lib/postgresql/data` | Airflow metadata |
+| `postgres-etl-volume` | `/var/lib/postgresql/data` | ฐานข้อมูลแอปและ ETL |
+| `duckdb-data-volume` | Airflow: `/opt/airflow/data`<br>Web: `/app/public/duckdb` | CSV/Parquet ที่ Airflow และ Web ใช้ร่วมกัน |
+| `dds-input-volume` | Airflow: `/opt/airflow/input/dds`<br>Web: `/app/uploads/dds` | ไฟล์นำเข้าของ DDS |
 
-## 💻 โหมดพัฒนา (Local Development)
+ไฟล์ใน `web/public/duckdb/` และ `airflow/dags/scripts/` เป็นข้อมูลตั้งต้นที่บรรจุใน image สำหรับสร้าง volume ครั้งแรก ข้อมูลใหม่ที่ Airflow สร้างขณะรันจะอยู่ใน `duckdb-data-volume`
 
-สำหรับการพัฒนาโปรแกรมบนเครื่องส่วนตัว (Hot-reload):
+> การสั่ง `docker compose down -v` จะลบ named volumes และข้อมูลถาวรทั้งหมด ควรสำรองข้อมูลก่อนใช้งานคำสั่งนี้
 
-1. สร้างไฟล์รหัสผ่านสำหรับรันในเครื่อง (ใช้ค่าตั้งต้นได้เลย)
-2. สั่งรันระบบด้วยไฟล์ Dev Compose:
+## การตั้งค่า
+
+สร้างไฟล์ `.env` ที่ root ของโปรเจกต์ ไฟล์นี้ใช้ร่วมกันทุก service และห้าม commit ลง Git
+
+ตัวแปรสำคัญประกอบด้วย:
+
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+- `ETL_POSTGRES_USER`, `ETL_POSTGRES_PASSWORD`, `ETL_POSTGRES_DB`
+- `AIRFLOW__CORE__FERNET_KEY`
+- `AIRFLOW__API__SECRET_KEY`, `AIRFLOW__API_AUTH__JWT_SECRET`
+- `_AIRFLOW_WWW_USER_USERNAME`, `_AIRFLOW_WWW_USER_PASSWORD`
+- ค่า secret ของ Web เช่น JWT ตามที่กำหนดใน `.env` ของ deployment
+
+ตรวจสอบรายการตัวแปรและค่า default ล่าสุดจาก `docker-compose.yml` ก่อน deploy
+
+## การรันจาก source
+
 ```bash
-docker compose -f docker-compose.dev.yml up -d --build
+docker compose up -d --build
 ```
-3. เข้าใช้งานผ่าน `http://localhost:3000` (Web) หรือ `http://localhost:8080` (Airflow)
 
----
-
-## 🚀 โหมดใช้งานจริง (Production CI/CD)
-
-ระบบ Production จะใช้การอัปเดตอัตโนมัติผ่าน GitHub Actions เมื่อมีการ Push โค้ดขึ้น Branch `main` ระบบจะทำการ Build Image ใหม่และส่งไปเก็บที่ GHCR ทันที
-
-### 1. การตั้งค่าเซิร์ฟเวอร์ครั้งแรก (Server Setup)
-เซิร์ฟเวอร์มีหน้าที่เพียงแค่ดาวน์โหลด (Pull) Image ที่ Build เสร็จแล้วมารัน ไม่ต้องมีการติดตั้ง Node.js หรือ Python ในเครื่อง:
-
-1. **เตรียมไฟล์ใบรับรอง SSL**
-   สร้างโฟลเดอร์ `nginx/ssl/` และนำไฟล์ SSL จากองค์กรมาวาง:
-   *   `nginx/ssl/star_ddc_moph_go_th.crt`
-   *   `nginx/ssl/star_ddc_moph_go_th.key`
-
-2. **ตั้งค่าตัวแปร (Environment Variables)**
-   คัดลอกไฟล์ `.env.template` เป็น `.env` และกรอกข้อมูลรหัสผ่านจริง:
-   ```bash
-   cp .env.template .env
-   nano .env
-   ```
-   ค่า Airflow ที่ต้องตั้งอย่างน้อยคือ `AIRFLOW__CORE__FERNET_KEY`, `AIRFLOW__API__SECRET_KEY`, `AIRFLOW__API_AUTH__JWT_SECRET` และ `_AIRFLOW_WWW_USER_PASSWORD`
-
-3. **เตรียมไฟล์ Docker Compose**
-   นำไฟล์ `docker-compose.yml` วางไว้ในโฟลเดอร์เดียวกันกับ `.env`
-
-### 2. การอัปเดตระบบและเปิดใช้งาน (Deploy & Update)
-เมื่อ GitHub Actions ทำงานเสร็จ (ไฟเขียว) ให้รันคำสั่งเหล่านี้บนเซิร์ฟเวอร์เพื่อนำโค้ดล่าสุดมาใช้งาน:
+ตรวจสอบสถานะและ log:
 
 ```bash
-# 1. Login เข้า GitHub Registry (ทำครั้งแรกครั้งเดียว โดยใช้ Personal Access Token)
-echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_USERNAME --password-stdin
+docker compose ps
+docker compose logs --tail=100 web airflow-webserver airflow-scheduler airflow-worker nginx
+```
 
-# 2. ดาวน์โหลด Image ตัวล่าสุดที่ Build ผ่าน GitHub Actions
+ช่องทางเข้าใช้งานในเครื่อง:
+
+- Web ผ่าน Nginx: `https://localhost/` หรือ port/domain ที่ตั้งไว้
+- Web โดยตรงภายใน Compose network: port `3000` (ไม่ได้ publish ออก host)
+- Airflow: `http://localhost:8080/airflow/`
+- PostgreSQL ETL: `localhost:15432` โดยค่าเริ่มต้น
+
+## Production ผ่าน GHCR
+
+Images หลัก:
+
+- `ghcr.io/champ-tc/envocc-dashboard-pm-web:latest`
+- `ghcr.io/champ-tc/envocc-dashboard-pm-airflow:latest`
+- `ghcr.io/champ-tc/envocc-dashboard-pm-nginx:latest`
+
+อัปเดตระบบ:
+
+```bash
 docker compose pull
-
-# 3. อัปเดตและรันระบบ (Docker จะ Restart เฉพาะ Service ที่มีการเปลี่ยนแปลง)
 docker compose up -d
 ```
 
-### 3. การรีสตาร์ทระบบ (Troubleshooting)
-หากพบปัญหา Nginx หา IP ของ Airflow หรือ Web ไม่เจอ (502 Bad Gateway) หลังจากการเปิดคอนเทนเนอร์ใหม่ ให้สั่ง Restart Nginx:
-```bash
-docker compose restart nginx
-```
+Compose จะรัน service สำหรับเตรียม schema, seed ผู้ใช้ และเตรียม shared volumes ก่อนเริ่ม Web และ Airflow
 
-หาก Airflow เข้าไม่ได้หลังแก้ `.env` หรือเปลี่ยนรหัสผ่าน admin ให้รัน init แล้วเปิด service ใหม่:
-```bash
-docker compose up airflow-init
-docker compose up -d airflow-webserver airflow-scheduler airflow-worker nginx
-```
+## Path สำคัญ
 
-ตรวจ log Airflow บน server:
-```bash
-docker compose logs --tail=100 airflow-init airflow-webserver airflow-scheduler airflow-worker
-```
+- `docker-compose.yml`: services, environment และ volumes
+- `web/`: Next.js Dashboard
+- `airflow/dags/`: DAG และ pipeline
+- `airflow/dags/scripts/`: processing scripts และ HDC seed files
+- `nginx/nginx.conf`: SSL และ reverse proxy routing
 
----
-
-## 🔒 การจัดการความปลอดภัย
-*   **ไฟล์ความลับ (`.env`)**: ห้ามนำขึ้น GitHub เด็ดขาด (ควบคุมโดย `.gitignore` แล้ว) ให้ใช้ `.env.template` เป็นคู่มือเท่านั้น
-*   **SSL & HTTPS**: Nginx ถูกตั้งค่าให้บังคับใช้ HTTPS ทันที และมี Security Headers ที่ได้มาตรฐาน
-*   **Next.js Security**: ทำงานด้วยโหมด `standalone` และใช้ User `nextjs` (Non-root) ในคอนเทนเนอร์
-
----
-
-## 🌐 การเข้าใช้งาน (Production Access)
-เมื่อนำขึ้นเซิร์ฟเวอร์เรียบร้อยแล้ว สามารถเข้าใช้งานระบบผ่านโดเมนจริง:
-*   **Web App**: [https://pm25-patients.ddc.moph.go.th](https://pm25-patients.ddc.moph.go.th)
-*   **Airflow UI**: [https://pm25-patients.ddc.moph.go.th/airflow/](https://pm25-patients.ddc.moph.go.th/airflow/)
+กฎสำหรับผู้ช่วยเขียนโค้ดอยู่ใน `AGENTS.md` ตาม root และโฟลเดอร์ของแต่ละ service ส่วนรายละเอียดเฉพาะ Dashboard อยู่ใน `web/src/app/dashboard/*/README.md`

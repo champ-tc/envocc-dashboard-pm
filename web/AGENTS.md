@@ -12,6 +12,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Server Components**: Use Server Components by default for better performance and SEO.
 - **Client Components**: Use `"use client"` only for interactive UI elements (e.g., Maps, Charts, Forms).
 - **Data Fetching**: Prefer Server Actions with DuckDB for analytical queries. Use Drizzle for user and metadata management.
+- **Runtime Data Path**: Resolve analytical files through `DUCKDB_DATA_DIR`. In Docker, `/app/public/duckdb` is the shared `duckdb-data-volume`; do not assume Airflow writes into the source tree.
+- **Seed Data**: Treat committed files in `public/duckdb/` as image seeds. Runtime pipeline outputs belong to the shared volume and must not be manually edited.
 - **Role-Based Access**: 
   - `superadmin`: Full access to users and system configuration.
   - `admin_department`: Department-level access to nationwide data and data-request approval, without system configuration access.

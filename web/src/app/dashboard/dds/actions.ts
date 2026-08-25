@@ -366,7 +366,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         } else if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
             const allowedCodes = ["Z581"];
             if (filters.icd10_codes && filters.icd10_codes.length > 0) {
-                allowedCodes.push(...filters.icd10_codes.filter(c => c.trim() !== "Z58"));
+                allowedCodes.push(...filters.icd10_codes);
             }
             ddsDiagnosisFilter = `AND (${icdCodePredicate('icd10_code', allowedCodes)})`;
         }
@@ -376,8 +376,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         DDS_DISEASES.forEach(d => {
             const groupCodes = d.codes || [];
             if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
-                const selectedCodes = (filters.groupedIcd10?.[d.id] || [])
-                    .filter(c => d.id !== 'health_status' || c.trim() !== "Z58");
+                const selectedCodes = filters.groupedIcd10?.[d.id] || [];
                 if (selectedCodes.length > 0) {
                     icdFilters[d.id] = `AND (${icdCodePredicate('icd', selectedCodes)})`;
                 } else {

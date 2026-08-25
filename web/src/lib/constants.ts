@@ -135,8 +135,9 @@ export const DDS_DISEASES = [
 ];
 
 export const HDC_DISEASES = [
-    { id: 'respiratory', dbValue: 'respiratory', dbValues: ['Acute asthma', 'Chronic obstructive pulmonary disease'], codes: ['J44', 'J45', 'J442'], label: 'โรคระบบทางเดินหายใจ', shortLabel: 'ระบบทางเดินหายใจ', color: 'rose', hex: '#f43f5e' },
-    { id: 'circulatory', dbValue: 'circulatory', dbValues: ['Acute ischemic heart diseases'], codes: ['I21', 'I22', 'I24'], label: 'โรคระบบไหลเวียนเลือด', shortLabel: 'ระบบไหลเวียนเลือด', color: 'orange', hex: '#f97316' },
-    { id: 'eye', dbValue: 'eye', dbValues: ['กลุ่มโรคตาอักเสบ'], codes: ['H10'], label: 'โรคตารวมส่วนประกอบของตา', shortLabel: 'โรคตา', color: 'emerald', hex: '#10b981' },
-    { id: 'skin', dbValue: 'skin', dbValues: ['กลุ่มโรคผิวหนังอักเสบ'], codes: ['L30.9', 'L50'], label: 'โรคผิวหนังและเนื้อเยื่อใต้ผิวหนัง', shortLabel: 'โรคผิวหนัง', color: 'blue', hex: '#3b82f6' },
+    { id: 'ischemic_heart', dbValue: 'Acute ischemic heart diseases', dbValues: ['Acute ischemic heart diseases'], codes: ['I21', 'I22', 'I24'], label: 'Acute ischemic heart diseases', shortLabel: 'Acute ischemic heart diseases', color: 'orange', hex: '#f97316' },
+    { id: 'acute_asthma', dbValue: 'Acute asthma', dbValues: ['Acute asthma'], codes: ['J45'], label: 'Acute asthma', shortLabel: 'Acute asthma', color: 'rose', hex: '#f43f5e' },
+    { id: 'copd', dbValue: 'Chronic obstructive pulmonary disease', dbValues: ['Chronic obstructive pulmonary disease'], codes: ['J44', 'J442'], label: 'Chronic obstructive pulmonary disease', shortLabel: 'Chronic obstructive pulmonary disease', color: 'purple', hex: '#a855f7' },
+    { id: 'eye', dbValue: 'กลุ่มโรคตาอักเสบ', dbValues: ['กลุ่มโรคตาอักเสบ'], codes: ['H10'], label: 'กลุ่มโรคตาอักเสบ', shortLabel: 'กลุ่มโรคตาอักเสบ', color: 'emerald', hex: '#10b981' },
+    { id: 'skin', dbValue: 'กลุ่มโรคผิวหนังอักเสบ', dbValues: ['กลุ่มโรคผิวหนังอักเสบ'], codes: ['L30.9', 'L50'], label: 'กลุ่มโรคผิวหนังอักเสบ', shortLabel: 'กลุ่มโรคผิวหนังอักเสบ', color: 'blue', hex: '#3b82f6' },
 ];

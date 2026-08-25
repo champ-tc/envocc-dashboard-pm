@@ -6,6 +6,7 @@ import { getDashboardData, getFilterOptions, getCurrentUser, DDSOptions, DDSFilt
 import { DDS_DISEASES } from '@/lib/constants';
 import DashboardNavbar from '../_components/DashboardNavbar';
 import DashboardBusyAlert from '../_components/DashboardBusyAlert';
+import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -244,6 +245,7 @@ const DISEASE_ICD_OPTIONS: Record<string, string[]> = {
 };
 
 const ENVOCC_WITH_Z581_TYPE = 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1';
+const CUSTOM_Z581_TYPE = 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ';
 
 const getDiagnosisCodes = (groupId: string, diagnosisType: string) => {
     const baseCodes = DISEASE_ICD_OPTIONS[groupId] || [];
@@ -377,7 +379,6 @@ export default function DDSDashboardPage() {
     const hasSubdistrictData = Object.keys(data?.subdistrictAverages || {}).length > 0;
     const isAreaBreakdownView = filters.provinces.length > 0 || filters.districts.length > 0;
     const isDetailedView = isAreaBreakdownView;
-    const mapLevel = isAreaBreakdownView ? (hasSubdistrictData ? 'ตำบล' : 'อำเภอ') : 'จังหวัด';
     const mapData = isAreaBreakdownView
         ? (hasSubdistrictData ? (data?.subdistrictAverages || {}) : (data?.districtAverages || {}))
         : (data?.provinceAverages || {});
@@ -388,8 +389,8 @@ export default function DDSDashboardPage() {
         ? { ...filters, districts: filters.districts.length > 0 ? filters.districts : baseDistricts }
         : filters;
     const ddcLegend = {
-        title: 'ระดับความเสี่ยง',
-        unit: isDetailedView ? 'ความหนาแน่นผู้ป่วย' : 'จำนวนผู้ป่วย',
+        title: 'จำนวนผู้ป่วย',
+        unit: '',
         items: [
             { range: isDetailedView ? 'น้อยมาก' : '0 - 10 ราย', color: '#10b981' },
             { range: isDetailedView ? 'น้อย' : '11 - 50 ราย', color: '#60a5fa' },
@@ -410,11 +411,11 @@ export default function DDSDashboardPage() {
                         { src: '/img/ddc-logo.png', alt: 'DDC Logo' },
                         { src: '/img/logo_doe.jpg', alt: 'DOE Logo' },
                     ]}
-                    title="การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้อง"
+                    title="การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 ประเทศไทย"
                     subtitle={
                         user?.role === 'admin_province' ? `จังหวัด: ${user.workplaceProvince}` :
                         user?.role === 'admin_region' ? `เขต: ${user.ddcRegion}` :
-                        'ผู้ดูแลระบบส่วนกลาง'
+                        'ระบบเฝ้าระวังทางระบาดวิทยา Digital Disease Surveillance (DDS)'
                     }
                     className="relative z-header"
                     titleClassName="drop-shadow-md"
@@ -424,21 +425,20 @@ export default function DDSDashboardPage() {
                 {/* Filters */}
                 <div className="relative z-toolbar">
                     <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/10">
-                        <CustomDatePicker label="จากเดือน" options={options.dates} value={filters.startDate} onChange={(v) => setFilters(f => ({ ...f, startDate: v }))} thaiMonths={THAI_MONTHS_SHORT} />
-                        <CustomDatePicker label="ถึงเดือน" options={options.dates} value={filters.endDate} onChange={(v) => setFilters(f => ({ ...f, endDate: v }))} thaiMonths={THAI_MONTHS_SHORT} />
+                        <DashboardDatePicker label="จากเดือน" options={options.dates} value={filters.startDate} onChange={(v) => setFilters(f => ({ ...f, startDate: v }))} />
+                        <DashboardDatePicker label="ถึงเดือน" options={options.dates} value={filters.endDate} onChange={(v) => setFilters(f => ({ ...f, endDate: v }))} />
                         <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val) => setFilters(f => ({ ...f, regions: val, provinces: [], districts: [], subdistricts: [] }))} />
                         <MultiSelect label="จังหวัด" options={baseProvinces} selected={filters.provinces} onChange={(val) => setFilters(f => ({ ...f, provinces: val, districts: [], subdistricts: [] }))} />
                         <MultiSelect label="อำเภอ/เขต" options={baseDistricts} selected={filters.districts} onChange={(val) => setFilters(f => ({ ...f, districts: val, subdistricts: [] }))} />
                         <MultiSelect label="ตำบล/แขวง" options={baseSubdistricts} selected={filters.subdistricts} onChange={(val) => setFilters(f => ({ ...f, subdistricts: val }))} />
                         <SingleSelect label="ประเภทวินิจฉัย" options={options.diagnosisTypes} selected={filters.diagnosisType} onChange={(val) => {
-                            let nextGrouped = groupedIcd10;
-                            if (val !== 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
-                                nextGrouped = DISEASE_CARDS.reduce((acc, card) => {
-                                    acc[card.id] = getDiagnosisCodes(card.id, val);
-                                    return acc;
-                                }, {} as Record<string, string[]>);
-                                setGroupedIcd10(nextGrouped);
-                            }
+                            const nextGrouped = DISEASE_CARDS.reduce((acc, card) => {
+                                acc[card.id] = val === CUSTOM_Z581_TYPE
+                                    ? [...(options.icd10_by_disease?.[card.dbValue] || [])]
+                                    : getDiagnosisCodes(card.id, val);
+                                return acc;
+                            }, {} as Record<string, string[]>);
+                            setGroupedIcd10(nextGrouped);
                             setFilters(f => ({ ...f, diagnosisType: val, icd10_codes: Object.values(nextGrouped).flat(), groupedIcd10: nextGrouped }));
                         }} />
                     </div>
@@ -462,13 +462,13 @@ export default function DDSDashboardPage() {
 
                         <div className="bg-white/10 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/10 min-h-32 flex flex-col justify-between group overflow-hidden relative ring-1 ring-white/5">
                             <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                            <div className="text-sm font-black text-white/60 uppercase tracking-widest mb-1">จำนวนการวินิจฉัยทั้งหมด (ครั้ง)</div>
+                            <div className="text-sm font-black text-white/60 uppercase tracking-widest mb-1">จำนวนการวินิจฉัยทั้งหมด</div>
                             <div className="text-4xl font-black text-blue-400 tracking-tighter tabular-nums my-2 flex items-end gap-3">
                                 {loading ? <div className="h-10 w-32 bg-white/10 animate-pulse rounded-xl"></div> : data?.totalVisits?.toLocaleString()}
                                 <div className="text-sm font-bold text-white/30 uppercase mb-1.5">ครั้ง</div>
                             </div>
                             <div className="text-compact font-bold text-white/40 uppercase mt-auto bg-white/5 p-2.5 rounded-2xl border border-white/5 line-clamp-2">
-                                รวมทุกรายการวินิจฉัยที่ตรงเงื่อนไข
+                                รวมทุกรายการวินิจฉัยที่ตรงตามตัวกรองประเภทการวินิจฉัย
                             </div>
                         </div>
                     </div>
@@ -480,11 +480,9 @@ export default function DDSDashboardPage() {
 
                             // Determine options based on diagnosisType
                             let cardOptions: string[] = [];
-                            if (filters.diagnosisType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
+                            if (filters.diagnosisType === CUSTOM_Z581_TYPE) {
                                 // Show all available codes from DB for this disease type
-                                cardOptions = card.id === 'health_status'
-                                    ? (options.icd10_by_disease?.[card.dbValue] || []).filter(c => c !== 'Z58')
-                                    : options.icd10_by_disease?.[card.dbValue] || [];
+                                cardOptions = options.icd10_by_disease?.[card.dbValue] || [];
                             } else {
                                 // Show only allowed codes for this disease group
                                 cardOptions = getDiagnosisCodes(card.id, filters.diagnosisType);
@@ -502,7 +500,7 @@ export default function DDSDashboardPage() {
                                             options={cardOptions}
                                             selected={groupedIcd10[card.id] || []}
                                             onChange={(val) => handleGroupedIcd10Change(card.id, val)}
-                                            placeholder={filters.diagnosisType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ' ? 'เลือกทั้งหมด' : 'แสดงทั้งหมด'}
+                                            placeholder={filters.diagnosisType === CUSTOM_Z581_TYPE ? 'เลือกทั้งหมด' : 'แสดงทั้งหมด'}
                                             searchPlaceholder="ค้นหารหัสโรค"
                                         />
                                     </div>
@@ -517,7 +515,7 @@ export default function DDSDashboardPage() {
                     {/* Monthly Trend Chart */}
                     <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-8 shrink-0">
-                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div>แนวโน้มจำนวนผู้ป่วยรายเดือน</h4>
+                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</h4>
                             {options.dates[0] && (
                                 <div className="badge badge-warning badge-outline px-4 py-3 text-xs font-bold">
                                     ข้อมูลล่าสุดในระบบ: {formatThaiMonthYear(options.dates[0])}
@@ -525,8 +523,10 @@ export default function DDSDashboardPage() {
                             )}
                         </div>
                         <div className="flex-1 relative flex flex-col justify-end px-14 min-h-0">
-                            <div className="absolute left-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-chart-caption left-0 text-compact font-black text-white/40 uppercase">จำนวนผู้ป่วย (ราย)</div></div>
-                            <div className="absolute right-14 top-0 bottom-0 w-px bg-white/20 z-20"><div className="absolute top-chart-caption right-0 text-compact font-black text-rose-500/60 uppercase text-right">เฉลี่ย PM2.5 (มคก./ลบ.ม.)</div></div>
+                            <div className="absolute left-14 top-0 bottom-0 w-px bg-white/20 z-20" />
+                            <div className="absolute right-14 top-0 bottom-0 w-px bg-white/20 z-20" />
+                            <div className="absolute left-14 top-0 z-20 -translate-y-full pb-2 text-compact font-black text-white/50 whitespace-nowrap">จำนวนผู้ป่วย (ราย)</div>
+                            <div className="absolute right-14 top-0 z-20 -translate-y-full pb-2 text-compact font-black text-rose-400/70 text-right whitespace-nowrap">ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</div>
                             {!loading && data?.monthlyTrend && data.monthlyTrend.length > 0 && (() => {
                                 const maxVal = Math.max(...data.monthlyTrend.map(x => x.total || 0), 1);
                                 const pm25Max = Math.max(...data.monthlyTrend.map(x => x.avg_pm25 || 0), 50);
@@ -589,7 +589,7 @@ export default function DDSDashboardPage() {
                     {/* Thailand Map Section */}
                     <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
-                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>สถิติผู้ป่วยราย{mapLevel}</h4>
+                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>จำนวนผู้ป่วยรายภูมิภาค</h4>
                             <div className="bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full text-xs font-extrabold border border-blue-500/20 uppercase tracking-widest">{mapAreaCount} พื้นที่</div>
                         </div>
                         <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 bg-slate-800/50">

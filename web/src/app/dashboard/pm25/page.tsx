@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions } from './actions';
 import DashboardNavbar from '../_components/DashboardNavbar';
 import DashboardBusyAlert from '../_components/DashboardBusyAlert';
+import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -82,7 +83,7 @@ const summarizeDateRanges = (dates: string[]) => {
         if (r.start.getTime() === r.end.getTime()) {
             return formatDateShort(r.start.toISOString());
         }
-        return `${formatDateShort(r.start.toISOString())}-${formatDateShort(r.end.toISOString())}`;
+        return `${formatDateShort(r.start.toISOString())} - ${formatDateShort(r.end.toISOString())}`;
     }).join(', ');
 };
 
@@ -174,76 +175,6 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     );
 }
 
-function DDatePicker({ label, options, value, onChange, thaiMonths }: any) {
-    const [isOpen, setIsOpen] = useState(false);
-    const safeOptions = options || [];
-
-    const formatDate = (dateStr: string) => {
-        if (!dateStr || !dateStr.includes('-')) return dateStr;
-        const [y, m, d] = dateStr.split('-');
-        return `${parseInt(d)} ${thaiMonths[parseInt(m) - 1]} ${(parseInt(y) + 543).toString().slice(-2)}`;
-    };
-
-    const grouped = useMemo(() => {
-        return safeOptions.reduce((acc: any, date: string) => {
-            const [y, m, d] = date.split('-');
-            if (!acc[y]) acc[y] = {};
-            if (!acc[y][m]) acc[y][m] = [];
-            acc[y][m].push(d);
-            return acc;
-        }, {});
-    }, [safeOptions]);
-
-    const years = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-
-    return (
-        <div className="relative col-span-1">
-            <label className="block text-xs uppercase font-bold text-white/70 mb-2 ml-2 tracking-wider">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-xs font-bold text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
-                <div className="truncate max-w-filter-label">
-                    {formatDate(value)}
-                </div>
-                <svg className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
-            </div>
-            {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute z-dropdown mt-3 w-80 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-96 overflow-y-auto p-5 flex flex-col gap-6 ring-1 ring-white/20 scrollbar-hide">
-                        {years.map(year => (
-                            <div key={year} className="flex flex-col gap-3">
-                                <div className="flex items-center gap-3 px-2">
-                                    <span className="text-sm font-extrabold text-blue-400 tabular-nums">พ.ศ. {parseInt(year) + 543}</span>
-                                    <div className="h-px flex-1 bg-white/10"></div>
-                                </div>
-                                {Object.keys(grouped[year]).sort((a, b) => b.localeCompare(a)).map(month => (
-                                    <div key={month} className="flex flex-col gap-2">
-                                        <span className="text-compact font-bold text-white/30 uppercase px-2">{thaiMonths[parseInt(month) - 1]}</span>
-                                        <div className="grid grid-cols-7 gap-1">
-                                            {grouped[year][month].sort((a: string, b: string) => a.localeCompare(b)).map((day: string) => {
-                                                const dateStr = `${year}-${month}-${day}`;
-                                                const isActive = value === dateStr;
-                                                return (
-                                                    <div key={day} onClick={() => { onChange(dateStr); setIsOpen(false); }}
-                                                        className={`flex items-center justify-center h-8 rounded-lg cursor-pointer transition-all border text-compact font-bold
-                                                        ${isActive ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/40' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:border-white/20 hover:text-white'}`}>
-                                                        {parseInt(day)}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-}
-
 const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading }: any) {
     const [hiddenLabels, setHiddenLabels] = useState<Set<string>>(new Set());
     const [hoveredPoint, setHoveredPoint] = useState<{
@@ -323,7 +254,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                 <div className="flex-1 relative border-r border-white/5 pr-4 flex min-w-0">
                     <div className="w-5 shrink-0 flex items-center justify-center">
                         <span className="text-2xs-plus font-bold text-white/50 whitespace-nowrap writing-mode-vertical rotate-180">
-                            ค่าเฉลี่ยฝุ่น (มคก./ลบ.ม.)
+                            ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)
                         </span>
                     </div>
                     {loading ? <div className="w-full h-full bg-white/5 animate-pulse rounded-2xl"></div> : (
@@ -452,7 +383,6 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                     })}
                 </div>
             </div>
-            {!loading && <div className="absolute top-8 right-8 text-2xs-plus font-black text-white/20 uppercase tracking-widest text-right">Scale: {Math.round(maxValue)}<br />(มคก./ลบ.ม.)</div>}
         </div>
     );
 });
@@ -600,16 +530,14 @@ function useDashboard() {
     }, [options.hierarchy]);
 
     const exceedData37 = useMemo(() => {
-        if (!data?.provinceTrend) return { count: 0, tooltip: undefined };
+        if (!data?.provinceMaxes) return { count: 0, tooltip: undefined };
         
         const exceedingProvinces: { prov: string }[] = [];
 
-        Object.entries(data.provinceTrend).forEach(([prov, trend]) => {
-            if (!trend || trend.length === 0) return;
-            const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const lastPoint = sorted[sorted.length - 1]; // เช็คจากวันที่ปัจจุบัน (วันล่าสุดของข้อมูลที่กรอง)
-            
-            if (lastPoint && lastPoint.value > 37.5) {
+        // นับจังหวัดเมื่อมีอย่างน้อย 1 สถานีเกิน 37.5 ในอย่างน้อย 1 วัน
+        // ของช่วงวันที่และพื้นที่ที่เลือก (provinceMaxes มาจาก MAX(pm25) รายจังหวัด)
+        Object.entries(data.provinceMaxes).forEach(([prov, maxPM25]) => {
+            if (maxPM25 > 37.5) {
                 exceedingProvinces.push({ prov });
             }
         });
@@ -640,7 +568,7 @@ function useDashboard() {
             });
 
         return { count: exceedingProvinces.length, tooltip };
-    }, [data?.provinceTrend, provinceToRegion]);
+    }, [data?.provinceMaxes, provinceToRegion]);
 
     const exceedData75 = useMemo(() => {
         if (!data?.provinceMaxes) return { count: 0, tooltip: undefined };
@@ -706,8 +634,8 @@ export default function DashboardPM25() {
                             imageClassName: 'rounded-xl object-contain p-1',
                         },
                     ]}
-                    title={<>ระบบรายงานเฝ้าระวัง <span className="text-blue-400">สถานการณ์ฝุ่น PM2.5 ประเทศไทย</span></>}
-                    subtitle="กรมควบคุมโรค | กองโรคจากการประกอบอาชีพและสิ่งแวดล้อม"
+                    title={<>การเฝ้าระวังสถานการณ์ฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน <span className="text-blue-400">(PM2.5) ประเทศไทย</span></>}
+                    subtitle="กรมควบคุมโรค | กลุ่มเฝ้าระวังและตอบโต้ภาวะฉุกเฉิน กองโรคจากการประกอบอาชีพและสิ่งแวดล้อม"
                     className="relative z-header mb-2"
                     titleClassName="uppercase drop-shadow-md"
                     navClassName=""
@@ -716,8 +644,8 @@ export default function DashboardPM25() {
 
                 {/* Filters Section - Exactly like HDC */}
                 <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-overlay">
-                    <DDatePicker label="จากวันที่" options={options.dates} value={filters.startDate} onChange={(v: string) => setFilters({ ...filters, startDate: v })} thaiMonths={thaiMonthsShort} />
-                    <DDatePicker label="ถึงวันที่" options={options.dates} value={filters.endDate} onChange={(v: string) => setFilters({ ...filters, endDate: v })} thaiMonths={thaiMonthsShort} />
+                    <DashboardDatePicker mode="day" label="จากวันที่" options={options.dates} value={filters.startDate} onChange={(v) => setFilters({ ...filters, startDate: v })} />
+                    <DashboardDatePicker mode="day" label="ถึงวันที่" options={options.dates} value={filters.endDate} onChange={(v) => setFilters({ ...filters, endDate: v })} />
                     <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val: string[]) => setFilters({ ...filters, regions: val, provinces: [] })} />
                     <MultiSelect label="จังหวัด" options={baseProvinces} selected={filters.provinces} onChange={(val: string[]) => setFilters({ ...filters, provinces: val, districts: [] })} />
                     <MultiSelect label="อำเภอ/เขต" options={baseDistricts} selected={filters.districts} onChange={(val: string[]) => setFilters({ ...filters, districts: val })} />
@@ -765,9 +693,9 @@ export default function DashboardPM25() {
                     <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar scrollbar-hide">
                             <div className="h-ranking-chart shrink-0"><TopExceedRanking data={data?.top10Exceed || []} loading={loading} /></div>
-                            <div className="h-chart-standard shrink-0"><MultiLineChart title="เฉลี่ยรายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></div>
-                            <div className="h-chart-standard shrink-0"><MultiLineChart title="สถิติรายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></div>
-                            <div className="h-chart-standard shrink-0"><MultiLineChart title="สถิติรายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></div>
+                            <div className="h-chart-standard shrink-0"><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></div>
+                            <div className="h-chart-standard shrink-0"><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></div>
+                            <div className="h-chart-standard shrink-0"><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></div>
                         </div>
                     </div>
 
@@ -803,38 +731,42 @@ export default function DashboardPM25() {
                                 interactive={false}
                                 renderPopup={(province, rawValue, popupUnit) => {
                                     const value = typeof rawValue === 'object' ? rawValue.value : (rawValue || 0);
-                                    const title = activeMap === 'avg' ? 'ค่าฝุ่น PM2.5 สูงสุด' : (activeMap === 'streak37' ? 'วันต่อเนื่อง (>37.5)' : 'วันต่อเนื่อง (>75)');
+                                    const title = activeMap === 'avg'
+                                        ? 'ค่าฝุ่น PM2.5 สูงสุด'
+                                        : `จำนวนวันที่ PM2.5 > ${activeMap === 'streak37' ? '37.5' : '75'} มคก./ลบ.ม. ต่อเนื่อง`;
                                     
                                     let extraDateText = '';
                                     if (activeMap === 'streak37' && value > 0) {
                                         const trend = data?.provinceTrend?.[province] || data?.provinceTrend?.[province.replace('จังหวัด', '').trim()];
                                         if (trend && trend.length > 0) {
-                                            const trendMap = new Map(trend.map(p => [p.date.split('T')[0], p.value]));
-                                            let endDateStr = filters.endDate;
-                                            if (!endDateStr) {
-                                                const dates = trend.map(p => p.date);
-                                                endDateStr = dates.sort()[dates.length - 1].split('T')[0];
-                                            }
+                                            const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                                            let currentStreak: Date[] = [];
+                                            let latestStreak: Date[] = [];
 
-                                            let currentDate = new Date(endDateStr);
-                                            let streakDates: string[] = [];
-
-                                            while (true) {
-                                                const dateStr = currentDate.toISOString().split('T')[0];
-                                                const val = trendMap.get(dateStr);
-                                                if (val !== undefined && val > 37.5) {
-                                                    streakDates.unshift(dateStr);
-                                                    currentDate.setDate(currentDate.getDate() - 1);
+                                            sorted.forEach((point) => {
+                                                if (point.value > 37.5) {
+                                                    const date = new Date(point.date);
+                                                    const previousDate = currentStreak[currentStreak.length - 1];
+                                                    const diffDays = previousDate
+                                                        ? Math.round((date.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24))
+                                                        : 1;
+                                                    if (diffDays !== 1) {
+                                                        if (currentStreak.length > 0) latestStreak = currentStreak;
+                                                        currentStreak = [];
+                                                    }
+                                                    currentStreak.push(date);
                                                 } else {
-                                                    break;
+                                                    if (currentStreak.length > 0) latestStreak = currentStreak;
+                                                    currentStreak = [];
                                                 }
-                                            }
+                                            });
+                                            if (currentStreak.length > 0) latestStreak = currentStreak;
 
-                                            if (streakDates.length > 0) {
-                                                const dateStr = summarizeDateRanges(streakDates.map(d => new Date(d).toISOString()));
+                                            if (latestStreak.length > 0) {
+                                                const dateStr = summarizeDateRanges(latestStreak.map(d => d.toISOString()));
                                                 extraDateText = `
                                                     <div class="flex flex-col gap-1 bg-orange-500/10 p-4 rounded-2xl border border-orange-500/20 mt-3">
-                                                        <span class="text-compact font-bold text-orange-400/80 uppercase tracking-widest">วันที่เกินติดต่อกันล่าสุด</span>
+                                                        <span class="text-compact font-bold text-orange-400/80 uppercase tracking-widest">วันที่ PM2.5 &gt; 37.5 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
                                                         <span class="text-xs font-medium text-orange-200 leading-relaxed">${dateStr}</span>
                                                     </div>
                                                 `;
@@ -875,7 +807,7 @@ export default function DashboardPM25() {
                                                 const dateStr = summarizeDateRanges(latestValidStreak.map(d => d.toISOString()));
                                                 extraDateText = `
                                                     <div class="flex flex-col gap-1 bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mt-3">
-                                                        <span class="text-compact font-bold text-rose-400/80 uppercase tracking-widest">วันที่เกินติดต่อกันล่าสุด</span>
+                                                        <span class="text-compact font-bold text-rose-400/80 uppercase tracking-widest">วันที่ PM2.5 &gt; 75 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
                                                         <span class="text-xs font-medium text-rose-200 leading-relaxed">${dateStr}</span>
                                                     </div>
                                                 `;
