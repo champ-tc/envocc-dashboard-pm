@@ -69,9 +69,6 @@ def export_dashboard_csv() -> None:
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, PM25_DASHBOARD_FILE)
 
-    # Keep this as a plain string. Some Airflow/pandas runtime combinations
-    # unwrap the SQLAlchemy connection to a DBAPI connection, where pandas
-    # rejects SQLAlchemy TextClause objects with "Query must be a string".
     export_sql = """
         SELECT
           d.air4_date AS date,
@@ -102,7 +99,14 @@ def export_dashboard_csv() -> None:
             FROM pm25_daily
             WHERE pm25_avg IS NOT NULL
         """)).mappings().one()
-        dashboard_data = pd.read_sql_query(export_sql, cx)
+        # Execute through SQLAlchemy directly. The pandas version bundled in
+        # this Airflow image does not recognise its SQLAlchemy Connection and
+        # incorrectly tries to call cx.cursor().
+        export_result = cx.execute(text(export_sql))
+        dashboard_data = pd.DataFrame.from_records(
+            export_result.fetchall(),
+            columns=export_result.keys(),
+        )
 
     if dashboard_data.empty:
         raise RuntimeError("PM2.5 dashboard export returned no rows; keeping the existing file")
