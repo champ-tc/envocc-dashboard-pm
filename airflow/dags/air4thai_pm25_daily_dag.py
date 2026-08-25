@@ -41,7 +41,7 @@ def run_pm25_daily_script():
 with DAG(
     dag_id="air4thai_pm25_daily",
     default_args=default_args,
-    description="Compute daily aggregates from pm25_hourly and upsert into pm25_daily",
+    description="Compute daily PM2.5 aggregates and export the dashboard CSV",
     schedule="40 23 * * *",
     start_date=datetime(2024, 12, 1),
     catchup=False,

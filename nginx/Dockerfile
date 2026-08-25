@@ -1,7 +1,10 @@
 FROM nginx:stable-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN apk add --no-cache openssl
 
-EXPOSE 80
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY validate-tls.sh /docker-entrypoint.d/05-validate-tls.sh
+
+EXPOSE 80 443
 
 CMD ["nginx", "-g", "daemon off;"]

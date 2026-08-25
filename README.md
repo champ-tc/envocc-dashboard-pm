@@ -77,6 +77,17 @@ docker compose pull
 docker compose up -d
 ```
 
+หลังเปลี่ยน certificate ให้ใช้ไฟล์ full chain (leaf ตามด้วย intermediate CA) ที่
+`nginx/ssl/star_ddc_moph_go_th_ca.crt` แล้ว recreate container ด้วยคำสั่งนี้
+
+```bash
+docker compose up -d --force-recreate nginx
+```
+
+ห้ามใช้ไฟล์ leaf-only กับ `ssl_certificate` ตัวตรวจตอนเริ่ม Nginx จะไม่ยอมให้
+container ทำงานเมื่อ chain มีน้อยกว่า 2 ใบ, certificate/key ไม่ตรงกัน หรือ
+certificate จะหมดอายุภายใน 30 วัน
+
 Compose จะรัน service สำหรับเตรียม schema, seed ผู้ใช้ และเตรียม shared volumes ก่อนเริ่ม Web และ Airflow
 
 ## Path สำคัญ

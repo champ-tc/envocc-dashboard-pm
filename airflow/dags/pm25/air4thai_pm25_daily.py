@@ -1,4 +1,5 @@
 import os
+import tempfile
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
@@ -12,6 +13,7 @@ ENGINE = create_engine(
 )
 
 POLS = ["pm25", "pm10", "o3", "co", "no2", "so2"]
+PM25_DASHBOARD_FILE = "pm25.csv"
 
 
 def ensure_pm25_daily_table() -> None:
@@ -59,6 +61,89 @@ def ensure_pm25_daily_table() -> None:
             ON pm25_daily (air4_date)
         """))
     print("[OK] pm25_daily table/indexes are ready")
+
+
+def export_dashboard_csv() -> None:
+    """Export station-day PM2.5 data for the DuckDB-backed dashboard."""
+    output_dir = os.getenv("DUCKDB_DATA_DIR", "/opt/airflow/data")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, PM25_DASHBOARD_FILE)
+
+    export_sql = text("""
+        SELECT
+          d.air4_date AS date,
+          COALESCE(NULLIF(BTRIM(s.station_id), ''), d.station_id_new) AS station_id_new,
+          BTRIM(s.province) AS province,
+          BTRIM(s.district) AS district,
+          BTRIM(s.subdistrict) AS subdistrict,
+          CAST(d.pm25_avg AS DOUBLE PRECISION) AS pm25,
+          BTRIM(s.health_region) AS "Regional Health",
+          CASE WHEN d.pm25_avg > 37.5 THEN 1 ELSE 0 END AS "PM2.5>37.5",
+          d.station_id_new AS station_id_new3
+        FROM pm25_daily AS d
+        INNER JOIN stations AS s
+          ON BTRIM(s.station_id_new) = BTRIM(d.station_id_new)
+        WHERE d.pm25_avg IS NOT NULL
+          AND NULLIF(BTRIM(s.province), '') IS NOT NULL
+          AND NULLIF(BTRIM(s.district), '') IS NOT NULL
+          AND NULLIF(BTRIM(s.health_region), '') IS NOT NULL
+        ORDER BY d.air4_date, d.station_id_new
+    """)
+
+    with ENGINE.connect() as cx:
+        source_stats = cx.execute(text("""
+            SELECT
+              COUNT(*) AS row_count,
+              MIN(air4_date) AS min_date,
+              MAX(air4_date) AS max_date
+            FROM pm25_daily
+            WHERE pm25_avg IS NOT NULL
+        """)).mappings().one()
+        dashboard_data = pd.read_sql_query(export_sql, cx)
+
+    if dashboard_data.empty:
+        raise RuntimeError("PM2.5 dashboard export returned no rows; keeping the existing file")
+
+    min_date = dashboard_data["date"].min()
+    max_date = dashboard_data["date"].max()
+    if pd.to_datetime(min_date).date() != source_stats["min_date"]:
+        raise RuntimeError(
+            "PM2.5 dashboard export does not include the earliest daily data: "
+            f"source starts {source_stats['min_date']}, export starts {min_date}. "
+            "Check historical station metadata before replacing the dashboard file."
+        )
+
+    excluded_rows = int(source_stats["row_count"]) - len(dashboard_data)
+    if excluded_rows > 0:
+        print(
+            f"[warn] Excluded {excluded_rows} PM2.5 daily rows without complete "
+            "station province/district/health-region metadata"
+        )
+    temp_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="",
+            prefix=f".{PM25_DASHBOARD_FILE}.",
+            suffix=".tmp",
+            dir=output_dir,
+            delete=False,
+        ) as temp_file:
+            temp_path = temp_file.name
+            dashboard_data.to_csv(temp_file, index=False, date_format="%Y-%m-%d")
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+
+        os.chmod(temp_path, 0o664)
+        os.replace(temp_path, output_path)
+        print(
+            f"[success] Exported {len(dashboard_data)} PM2.5 dashboard rows "
+            f"from {min_date} to {max_date} into {output_path}"
+        )
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
 
 
 def compute_daily_summary() -> None:
@@ -149,6 +234,10 @@ def compute_daily_summary() -> None:
     except Exception as e:
         print(f"[error] Failed to update daily table: {e}")
         raise
+
+    # Release the full-refresh frames before loading the dashboard export.
+    del rows, daily_result, daily_agg, hourly
+    export_dashboard_csv()
 
 if __name__ == "__main__":
     compute_daily_summary()
