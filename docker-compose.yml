@@ -87,7 +87,7 @@ services:
       - |
         set -eu
         mkdir -p /data
-        for file in pm25.csv hdc.parquet mid_year.csv dashboard_dds.parquet dashboard_dds.csv; do
+        for file in pm25.parquet pm25.csv hdc.parquet mid_year.csv dashboard_dds.parquet dashboard_dds.csv; do
           if [ -f "/app/public/duckdb/$${file}" ]; then
             cp -n "/app/public/duckdb/$${file}" "/data/$${file}"
           fi
@@ -133,7 +133,7 @@ services:
       DASHBOARD_QUERY_QUEUE_TIMEOUT_MS: ${DASHBOARD_QUERY_QUEUE_TIMEOUT_MS:-8000}
       DASHBOARD_CACHE_TTL_MS: ${DASHBOARD_CACHE_TTL_MS:-180000}
       DASHBOARD_CACHE_MAX_ENTRIES: ${DASHBOARD_CACHE_MAX_ENTRIES:-200}
-      PM25_DATA_FILE: ${PM25_DATA_FILE:-pm25.csv}
+      PM25_DATA_FILE: ${PM25_DATA_FILE:-pm25.parquet}
       HDC_DATA_FILE: ${HDC_DATA_FILE:-hdc.parquet}
       DDS_DATA_FILE: ${DDS_DATA_FILE:-dashboard_dds.parquet}
       DDS_DOWNLOAD_FILE: ${DDS_DOWNLOAD_FILE:-dashboard_dds.csv}

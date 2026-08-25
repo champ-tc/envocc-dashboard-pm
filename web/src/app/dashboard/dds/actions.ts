@@ -122,7 +122,7 @@ function getDDSDataFiles() {
 
     return {
         dds: path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.parquet'),
-        pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.csv'),
+        pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.parquet'),
         midYear: path.join(dataDir, process.env.MID_YEAR_DATA_FILE || 'mid_year.csv'),
     };
 }
@@ -173,6 +173,10 @@ const getDB = (): Promise<duckdbTypes.Database> => {
             const ddsReader = ddsPath.toLowerCase().endsWith('.parquet')
                 ? `read_parquet('${escapedDdsPath}')`
                 : `read_csv_auto('${escapedDdsPath}', ignore_errors=true)`;
+            const escapedPm25Path = pm25Path.replace(/'/g, "''");
+            const pm25Reader = pm25Path.toLowerCase().endsWith('.parquet')
+                ? `read_parquet('${escapedPm25Path}')`
+                : `read_csv_auto('${escapedPm25Path}', ignore_errors=true)`;
 
             db.exec(`
                 CREATE TABLE province_map(en VARCHAR, th VARCHAR);
@@ -182,7 +186,7 @@ const getDB = (): Promise<duckdbTypes.Database> => {
                 INSERT INTO region_map VALUES ${regionMapping};
 
                 CREATE TABLE dds_raw_en AS SELECT * FROM ${ddsReader};
-                CREATE TABLE pm25_raw_en AS SELECT * FROM read_csv_auto('${pm25Path}', ignore_errors=true);
+                CREATE TABLE pm25_raw_en AS SELECT * FROM ${pm25Reader};
                 
                 -- Create Thai-version views
                 CREATE TABLE dds_raw AS 

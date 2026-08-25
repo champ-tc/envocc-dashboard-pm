@@ -13,7 +13,8 @@ ENGINE = create_engine(
 )
 
 POLS = ["pm25", "pm10", "o3", "co", "no2", "so2"]
-PM25_DASHBOARD_FILE = "pm25.csv"
+PM25_DASHBOARD_CSV = "pm25.csv"
+PM25_DASHBOARD_PARQUET = "pm25.parquet"
 
 
 def ensure_pm25_daily_table() -> None:
@@ -63,11 +64,12 @@ def ensure_pm25_daily_table() -> None:
     print("[OK] pm25_daily table/indexes are ready")
 
 
-def export_dashboard_csv() -> None:
-    """Export station-day PM2.5 data for the DuckDB-backed dashboard."""
+def export_dashboard_files() -> None:
+    """Export station-day PM2.5 data as Parquet and CSV."""
     output_dir = os.getenv("DUCKDB_DATA_DIR", "/opt/airflow/data")
     os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, PM25_DASHBOARD_FILE)
+    csv_output_path = os.path.join(output_dir, PM25_DASHBOARD_CSV)
+    parquet_output_path = os.path.join(output_dir, PM25_DASHBOARD_PARQUET)
 
     export_sql = """
         SELECT
@@ -126,31 +128,51 @@ def export_dashboard_csv() -> None:
             f"[warn] Excluded {excluded_rows} PM2.5 daily rows without complete "
             "station province/district/health-region metadata"
         )
-    temp_path = ""
+    csv_temp_path = ""
+    parquet_temp_path = ""
     try:
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
             newline="",
-            prefix=f".{PM25_DASHBOARD_FILE}.",
+            prefix=f".{PM25_DASHBOARD_CSV}.",
             suffix=".tmp",
             dir=output_dir,
             delete=False,
         ) as temp_file:
-            temp_path = temp_file.name
+            csv_temp_path = temp_file.name
             dashboard_data.to_csv(temp_file, index=False, date_format="%Y-%m-%d")
             temp_file.flush()
             os.fsync(temp_file.fileno())
 
-        os.chmod(temp_path, 0o664)
-        os.replace(temp_path, output_path)
+        parquet_fd, parquet_temp_path = tempfile.mkstemp(
+            prefix=f".{PM25_DASHBOARD_PARQUET}.",
+            suffix=".tmp",
+            dir=output_dir,
+        )
+        os.close(parquet_fd)
+        dashboard_data.to_parquet(
+            parquet_temp_path,
+            index=False,
+            engine="pyarrow",
+            compression="snappy",
+        )
+
+        os.chmod(csv_temp_path, 0o664)
+        os.chmod(parquet_temp_path, 0o664)
+        # Publish Parquet first because dashboards use it as their primary source.
+        os.replace(parquet_temp_path, parquet_output_path)
+        parquet_temp_path = ""
+        os.replace(csv_temp_path, csv_output_path)
+        csv_temp_path = ""
         print(
             f"[success] Exported {len(dashboard_data)} PM2.5 dashboard rows "
-            f"from {min_date} to {max_date} into {output_path}"
+            f"from {min_date} to {max_date} into {parquet_output_path} and {csv_output_path}"
         )
     finally:
-        if temp_path and os.path.exists(temp_path):
-            os.unlink(temp_path)
+        for temp_path in (csv_temp_path, parquet_temp_path):
+            if temp_path and os.path.exists(temp_path):
+                os.unlink(temp_path)
 
 
 def compute_daily_summary() -> None:
@@ -244,7 +266,7 @@ def compute_daily_summary() -> None:
 
     # Release the full-refresh frames before loading the dashboard export.
     del rows, daily_result, daily_agg, hourly
-    export_dashboard_csv()
+    export_dashboard_files()
 
 if __name__ == "__main__":
     compute_daily_summary()

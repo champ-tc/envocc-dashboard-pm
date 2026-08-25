@@ -35,12 +35,16 @@ export async function GET(request: Request) {
 
         const ddb = new duckdb.Database(':memory:');
         const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
-        const csvPath = path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.csv');
+        const dataPath = path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.parquet');
+        const escapedDataPath = dataPath.replace(/'/g, "''");
+        const dataReader = dataPath.toLowerCase().endsWith('.parquet')
+            ? `read_parquet('${escapedDataPath}')`
+            : `read_csv_auto('${escapedDataPath}', ignore_errors=true)`;
         
         // Construct query
         const query = `
             SELECT *
-            FROM read_csv_auto('${csvPath}', ignore_errors=true)
+            FROM ${dataReader}
             WHERE date BETWEEN CAST('${startDate}' AS DATE) AND CAST('${endDate}' AS DATE)
             ORDER BY date DESC, "Regional Health", province
         `;

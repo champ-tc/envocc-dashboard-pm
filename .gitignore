@@ -31,6 +31,7 @@ web/public/duckdb/dashboard_dds.parquet
 web/public/duckdb/hdc.parquet
 web/public/duckdb/mid_year.csv
 web/public/duckdb/pm25.csv
+web/public/duckdb/pm25.parquet
 
 # Docker / Database
 postgres-data/

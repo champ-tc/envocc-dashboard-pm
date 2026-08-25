@@ -25,7 +25,7 @@ let buildingVersion: string | null = null;
 export function getDashboardDataFiles(): DashboardDataFiles {
     const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
     return {
-        pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.csv'),
+        pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.parquet'),
         hdc: path.join(dataDir, process.env.HDC_DATA_FILE || 'hdc.parquet'),
         midYear: path.join(dataDir, process.env.MID_YEAR_DATA_FILE || 'mid_year.csv'),
     };

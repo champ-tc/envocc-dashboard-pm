@@ -98,4 +98,9 @@ Compose จะรัน service สำหรับเตรียม schema, see
 - `airflow/dags/scripts/`: processing scripts และ HDC seed files
 - `nginx/nginx.conf`: SSL และ reverse proxy routing
 
+ไฟล์ PM2.5 runtime อยู่ใน `duckdb-data-volume` โดย Airflow เขียนทั้ง
+`/opt/airflow/data/pm25.parquet` และ `/opt/airflow/data/pm25.csv` ส่วน Web
+เห็นไฟล์เดียวกันที่ `/app/public/duckdb/` และใช้ `pm25.parquet` สำหรับ query
+แดชบอร์ดเป็นหลัก
+
 กฎสำหรับผู้ช่วยเขียนโค้ดอยู่ใน `AGENTS.md` ตาม root และโฟลเดอร์ของแต่ละ service ส่วนรายละเอียดเฉพาะ Dashboard อยู่ใน `web/src/app/dashboard/*/README.md`
