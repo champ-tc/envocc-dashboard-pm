@@ -69,7 +69,10 @@ def export_dashboard_csv() -> None:
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, PM25_DASHBOARD_FILE)
 
-    export_sql = text("""
+    # Keep this as a plain string. Some Airflow/pandas runtime combinations
+    # unwrap the SQLAlchemy connection to a DBAPI connection, where pandas
+    # rejects SQLAlchemy TextClause objects with "Query must be a string".
+    export_sql = """
         SELECT
           d.air4_date AS date,
           COALESCE(NULLIF(BTRIM(s.station_id), ''), d.station_id_new) AS station_id_new,
@@ -88,7 +91,7 @@ def export_dashboard_csv() -> None:
           AND NULLIF(BTRIM(s.district), '') IS NOT NULL
           AND NULLIF(BTRIM(s.health_region), '') IS NOT NULL
         ORDER BY d.air4_date, d.station_id_new
-    """)
+    """
 
     with ENGINE.connect() as cx:
         source_stats = cx.execute(text("""
