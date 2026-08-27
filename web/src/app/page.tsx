@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import PM25Mark, { PM25Text } from '@/components/PM25Mark';
 import GuestNavbar from '@/components/GuestNavbar';
+import SecurityModal from '@/components/SecurityModal';
 
 // --- Constants & Data ---
 const DEFINITIONS = [
@@ -94,6 +95,7 @@ export default function HomePage() {
 
             <div className="absolute inset-0 bg-white/20 z-0" />
             <GuestNavbar />
+            <SecurityModal />
 
             {/* Background Decorative Elements */}
             <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0">
