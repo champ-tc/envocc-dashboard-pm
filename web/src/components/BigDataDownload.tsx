@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CloudLoader from '@/components/CloudLoader';
 import toast from 'react-hot-toast';
 
 export default function BigDataDownload() {
@@ -51,9 +52,7 @@ export default function BigDataDownload() {
 
     if (isLoading) {
         return (
-            <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
-                <span className="loading loading-spinner loading-lg text-indigo-500"></span>
-            </div>
+            <CloudLoader fullscreen={false} label="กำลังโหลดสถานะการดาวน์โหลด..." className="min-h-64 rounded-2xl border border-slate-200" />
         );
     }
 

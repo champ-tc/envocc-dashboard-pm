@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PM25Mark, { PM25Text } from '@/components/PM25Mark';
 import GuestNavbar from '@/components/GuestNavbar';
 
 // --- Constants & Data ---
@@ -56,10 +57,10 @@ function DefinitionBlock({ def }: { def: typeof DEFINITIONS[0] }) {
                     <span className={`badge badge-sm h-7 w-7 p-0 font-bold border-none text-white ${def.isAlert ? 'bg-red-500' : 'bg-linear-to-br from-blue-600 to-sky-500'}`}>
                         {def.id}
                     </span>
-                    {def.title}
+                    <PM25Text>{def.title}</PM25Text>
                 </h4>
                 <div className="pl-10">
-                    <p className="text-slate-600 text-body-compact leading-relaxed mb-4">{def.desc}</p>
+                    <p className="text-slate-600 text-body-compact leading-relaxed mb-4"><PM25Text>{def.desc}</PM25Text></p>
                     {def.items && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                             {def.items.map((item, idx) => (
@@ -86,10 +87,10 @@ function DefinitionBlock({ def }: { def: typeof DEFINITIONS[0] }) {
 }
 
 // --- Main Page ---
-export default async function HomePage() {
+export default function HomePage() {
     return (
         <div className="min-h-screen flex flex-col items-center text-slate-900 relative overflow-hidden font-sans selection:bg-blue-100"
-            style={{ backgroundImage: "url('/img/background.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+            style={{ backgroundImage: "url('/img/background-optimized.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
 
             <div className="absolute inset-0 bg-white/20 z-0" />
             <GuestNavbar />
@@ -103,8 +104,10 @@ export default async function HomePage() {
                 {/* Hero Section */}
                 <header className="space-y-4">
                     <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg leading-tight tracking-tight uppercase">
-                        PM2.5 Patient Database <br className="hidden sm:block" />
-                        <span className="text-xl sm:text-2xl md:text-3xl block mt-2 font-bold opacity-90 capitalize">ระบบฐานข้อมูลผู้ป่วยจากฝุ่นละอองขนาดเล็ก</span>
+                        <PM25Mark /> Patient Database <br className="hidden sm:block" />
+                        <span className="text-xl sm:text-2xl md:text-3xl block mt-2 font-bold opacity-90 capitalize">
+                            ระบบฐานข้อมูลผู้ป่วยจากฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน (<PM25Mark />)
+                        </span>
                     </h1>
 
                     <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">

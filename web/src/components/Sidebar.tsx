@@ -117,7 +117,7 @@ export default function Sidebar({
                     <Link href={homePath} className="group flex min-w-0 items-center gap-3" onClick={onClose}>
                         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 p-1.5 ring-1 ring-blue-100 transition-transform group-hover:scale-105">
                             <Image
-                                src="/img/ddc-logo.png"
+                                src="/img/ddc-logo-optimized.png"
                                 alt="กรมควบคุมโรค"
                                 width={34}
                                 height={34}

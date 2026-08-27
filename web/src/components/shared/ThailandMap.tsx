@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import { PROVINCE_MAPPING } from '@/lib/constants';
+import { PM25Text } from '@/components/PM25Mark';
+import { loadTambonBoundaries, needsTambonBoundaries } from '@/lib/dashboard-map-data';
 
 // Helper to fix broken Thai characters (Mojibake)
 const fixThaiMojibake = (str: string) => {
@@ -82,7 +84,7 @@ function Legend({ config }: { config: ThailandMapProps['legendConfig'] }) {
         <div className="absolute bottom-6 left-6 z-map-legend flex flex-col gap-3 pointer-events-none sm:pointer-events-auto">
             <div className="bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-100 min-w-map-legend sm:min-w-map-legend-wide flex flex-col gap-1.5 scale-90 sm:scale-100 origin-bottom-left transition-transform">
                 <div className="flex flex-col items-center text-center mb-1">
-                    <h4 className="text-2xs sm:text-2xs-plus font-extrabold text-slate-800 leading-tight uppercase tracking-tight">{config.title}</h4>
+                    <h4 className="text-2xs sm:text-2xs-plus font-extrabold text-slate-800 leading-tight uppercase tracking-tight"><PM25Text>{config.title}</PM25Text></h4>
                     {config.unit && <div className="text-2xs uppercase font-bold text-slate-400">({config.unit})</div>}
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -180,19 +182,28 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             .catch(err => console.error('Error loading provinces:', err));
     }, []);
 
+    const needsTambons = needsTambonBoundaries(filters, stations.length);
+
     useEffect(() => {
+        if (!needsTambons || allTambonData) {
+            setLoadingTambon(false);
+            return;
+        }
+        let active = true;
         setLoadingTambon(true);
-        fetch('/data/tambon_boundaries.geojson')
-            .then(res => res.json())
+        loadTambonBoundaries()
             .then(data => {
+                if (!active) return;
                 setAllTambonData(data);
                 setLoadingTambon(false);
             })
             .catch(err => {
+                if (!active) return;
                 console.error('Error loading tambons:', err);
                 setLoadingTambon(false);
             });
-    }, []);
+        return () => { active = false; };
+    }, [needsTambons, allTambonData]);
 
     const displayGeoData = useMemo(() => {
         if (!geoData) return null;
@@ -213,7 +224,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
     }, [geoData, filters.provinces, filters.districts]);
 
     const displayTambonData = useMemo(() => {
-        if (!allTambonData) return null;
+        if (!needsTambons || !allTambonData) return null;
         const selectedProvinces = (filters.provinces || []).map((p: string) => cleanThaiName(p));
         const selectedDistricts = (filters.districts || []).map((d: string) => cleanThaiName(d));
 
@@ -246,7 +257,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         });
 
         return { ...allTambonData, features: filteredFeatures };
-    }, [allTambonData, filters.provinces, filters.districts, stationMap]);
+    }, [needsTambons, allTambonData, filters.provinces, filters.districts, stationMap]);
 
     const style = (feature: any) => {
         const provinceEn = feature.properties.name;
@@ -407,7 +418,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     <div class="h-divider bg-slate-700 my-1"></div>
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full" style="background-color: ${pm25ColorScale(station.pm25)}"></div>
-                        <span class="text-xs font-extrabold text-blue-300">PM2.5: ${station.pm25.toFixed(1)} มคก./ลบ.ม.</span>
+                        <span class="text-xs font-extrabold text-blue-300">PM<span class="pm25-subscript">2.5</span>: ${station.pm25.toFixed(1)} มคก./ลบ.ม.</span>
                     </div>
                 </div>
             `;

@@ -204,7 +204,7 @@ export default function RegisterPage() {
 
             {/* Background */}
             <div className="absolute inset-0 z-0 bg-cover bg-center bg-fixed opacity-40 pointer-events-none"
-                style={{ backgroundImage: "url('/img/background.jpg')" }} />
+                style={{ backgroundImage: "url('/img/background-optimized.jpg')" }} />
             <div className="absolute inset-0 bg-white/40 backdrop-blur-soft z-0 pointer-events-none" />
 
             {/* Back Button */}

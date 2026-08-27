@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { ChevronLeft, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
+import { PM25Text } from '@/components/PM25Mark';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -62,7 +63,7 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center relative bg-slate-50 font-sans">
-            <div className="absolute inset-0 bg-cover bg-center opacity-40 pointer-events-none" style={{ backgroundImage: "url('/img/background.jpg')" }} />
+            <div className="absolute inset-0 bg-cover bg-center opacity-40 pointer-events-none" style={{ backgroundImage: "url('/img/background-optimized.jpg')" }} />
             <div className="absolute inset-0 bg-white/40 backdrop-blur-soft pointer-events-none" />
 
             <Link href="/" className="absolute top-6 left-6 z-50 btn btn-ghost bg-white/80 backdrop-blur-sm rounded-full shadow-sm gap-2">
@@ -79,7 +80,7 @@ export default function LoginPage() {
                                 <Lock size={40} />
                             </div>
                             <h1 className="text-3xl font-black text-slate-800">เข้าสู่ระบบ</h1>
-                            <p className="text-slate-500 font-medium mt-2">PM2.5 Patient Database</p>
+                            <p className="text-slate-500 font-medium mt-2"><PM25Text>PM2.5 Patient Database</PM25Text></p>
                         </div>
 
                         <div className="space-y-4">

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Download } from 'lucide-react';
 import EditablePagination from '@/components/EditablePagination';
 import CalendarDatePicker from '@/components/shared/CalendarDatePicker';
+import { PM25Text } from '@/components/PM25Mark';
 
 type HourlyRow = {
     stationIdNew: string;
@@ -295,7 +296,7 @@ export default function Pm25HourlyManagementPage() {
                             <tr className="border-b border-slate-100 bg-slate-50 text-compact-plus font-bold uppercase tracking-widest text-slate-400">
                                 <th className="px-5 py-4">วัน-เวลา</th>
                                 <th className="px-5 py-4">สถานี</th>
-                                {tablePollutantFields.map((field) => <th key={field.key} className="px-4 py-4">{field.label}</th>)}
+                                {tablePollutantFields.map((field) => <th key={field.key} className="px-4 py-4"><PM25Text>{field.label}</PM25Text></th>)}
                                 <th className="px-5 py-4 text-center">จัดการ</th>
                             </tr>
                         </thead>
@@ -362,7 +363,7 @@ export default function Pm25HourlyManagementPage() {
                                 </label>
                                 {pollutantFields.map((field) => (
                                     <label key={field.key} className="block">
-                                        <span className="mb-1.5 block text-xs font-bold text-slate-500">{field.label}</span>
+                                        <span className="mb-1.5 block text-xs font-bold text-slate-500"><PM25Text>{field.label}</PM25Text></span>
                                         <input type="number" step="any" value={form[field.key]} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
                                     </label>
                                 ))}

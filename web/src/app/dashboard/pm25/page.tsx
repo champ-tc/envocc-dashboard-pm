@@ -4,7 +4,12 @@ import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions } from './actions';
 import DashboardNavbar from '../_components/DashboardNavbar';
 import DashboardBusyAlert from '../_components/DashboardBusyAlert';
+import DashboardLoading from '../_components/DashboardLoading';
 import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
+import { PM25Text } from '@/components/PM25Mark';
+import CloudLoader from '@/components/CloudLoader';
+import DeferredChart from '../_components/DeferredChart';
+import { nearestChartPoint, prepareChartSeries } from '@/lib/dashboard-chart';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -90,14 +95,7 @@ const summarizeDateRanges = (dates: string[]) => {
 // --- Dynamic Components ---
 const ThailandMap = dynamic(() => import('@/components/shared/ThailandMap'), {
     ssr: false,
-    loading: () => (
-        <div className="w-full h-full bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center animate-pulse border border-white/30">
-            <div className="flex flex-col items-center gap-4">
-                <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-                <span className="text-white/80 font-extrabold uppercase tracking-widest text-xs">Loading Health Map...</span>
-            </div>
-        </div>
-    )
+    loading: () => <CloudLoader fullscreen={false} label="กำลังโหลดแผนที่สุขภาพ..." className="rounded-xl border border-white/30" />
 });
 
 // --- Constants ---
@@ -233,17 +231,18 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
         [maxValue]
     );
 
-    const getXPosition = (date: string) => {
-        if (axisDates.length <= 1) return 50;
-        const dateIndex = axisDates.indexOf(date);
-        return (Math.max(dateIndex, 0) / (axisDates.length - 1)) * 100;
-    };
+    const chartSeries = useMemo(
+        () => prepareChartSeries(dataGroup, labels, axisDates, maxValue),
+        [dataGroup, labels, axisDates, maxValue]
+    );
+
+    useEffect(() => { setHoveredPoint(null); }, [dataGroup, hiddenLabels]);
 
     return (
-        <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
+        <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
             <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase mb-8 shrink-0">
                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
-                {title}
+                <PM25Text>{title}</PM25Text>
                 {!loading && labels.length > 0 && (
                     <span className="text-sm font-black text-blue-400 bg-blue-500/10 px-3 py-1 rounded-xl border border-blue-500/20 shadow-inner">
                         {labels.length}
@@ -253,58 +252,71 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
             <div className="flex-1 flex gap-4 min-h-0 relative">
                 <div className="flex-1 relative border-r border-white/5 pr-4 flex min-w-0">
                     <div className="w-5 shrink-0 flex items-center justify-center">
-                        <span className="text-2xs-plus font-bold text-white/50 whitespace-nowrap writing-mode-vertical rotate-180">
-                            ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)
+                        <span className="text-2xs-plus font-bold text-white/80 whitespace-nowrap writing-mode-vertical rotate-180">
+                            <PM25Text>ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</PM25Text>
                         </span>
                     </div>
                     {loading ? <div className="w-full h-full bg-white/5 animate-pulse rounded-2xl"></div> : (
                         <div className="flex-1 min-w-0 h-full flex flex-col">
                             <div className="flex-1 min-h-0 flex">
-                                <div className="w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-2xs font-bold text-white/40 tabular-nums">
+                                <div className="w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-2xs font-bold text-white/80 tabular-nums">
                                     {yAxisTicks.map((tick, index) => (
                                         <span key={index}>{Math.round(tick)}</span>
                                     ))}
                                 </div>
                                 <div className="flex-1 min-w-0 relative border-l border-b border-white/30">
-                                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-10">
+                                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
                                         {[...Array(5)].map((_, i) => <div key={i} className="w-full h-px bg-white"></div>)}
                                     </div>
                                     <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-hidden relative z-10">
-                                        {labels.map((label, idx) => {
+                                        {chartSeries.map(({ label, points, path }, idx) => {
                                             if (hiddenLabels.has(label)) return null;
-                                            const points = [...(dataGroup[label] || [])].sort((a, b) => a.date.localeCompare(b.date));
                                             if (points.length === 0) return null;
                                             const color = colors[idx % colors.length];
                                             if (points.length === 1) {
-                                                const y = 100 - (points[0].value / maxValue) * 100;
-                                                return <circle key={label} cx={getXPosition(points[0].date)} cy={y} r="2" fill={color} />;
+                                                return <circle key={label} cx={points[0].x} cy={points[0].y} r="2" fill={color} />;
                                             }
-                                            const polyPoints = points.map((d) => `${getXPosition(d.date)},${100 - (d.value / maxValue) * 100}`).join(' ');
-                                            return <polyline key={label} points={polyPoints} fill="none" stroke={color} strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" opacity="0.8" />;
+                                            return <polyline key={label} points={path} fill="none" stroke={color} strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" opacity="1" />;
                                         })}
                                     </svg>
                                     <div className="absolute inset-0 z-20">
-                                        {labels.flatMap((label, idx) => {
-                                            if (hiddenLabels.has(label)) return [];
-                                            const color = colors[idx % colors.length];
-                                            return (dataGroup[label] || []).map((point: TrendPoint) => {
-                                                const x = getXPosition(point.date);
-                                                const y = 100 - (point.value / maxValue) * 100;
-                                                return (
-                                                    <button
-                                                        key={`${label}-${point.date}`}
-                                                        type="button"
-                                                        aria-label={`${label} วันที่ ${formatDateShort(point.date)} ค่าฝุ่น ${point.value} มคก./ลบ.ม.`}
-                                                        className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-transparent focus:outline-none"
-                                                        style={{ left: `${x}%`, top: `${y}%` }}
-                                                        onMouseEnter={() => setHoveredPoint({ label, date: point.date, value: point.value, x, y, color })}
-                                                        onMouseLeave={() => setHoveredPoint(null)}
-                                                        onFocus={() => setHoveredPoint({ label, date: point.date, value: point.value, x, y, color })}
-                                                        onBlur={() => setHoveredPoint(null)}
-                                                    />
-                                                );
-                                            });
-                                        })}
+                                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                                            {chartSeries.map(({ label, points, path }, idx) => {
+                                                if (hiddenLabels.has(label) || !points.length) return null;
+                                                const color = colors[idx % colors.length];
+                                                const showPoint = (point: typeof points[number]) => {
+                                                    setHoveredPoint(previous => previous?.label === label && previous.date === point.date
+                                                        ? previous : { ...point, label, color });
+                                                };
+                                                const interaction = {
+                                                    tabIndex: 0,
+                                                    role: 'img',
+                                                    'aria-label': `${label} ใช้ลูกศรซ้ายขวาเพื่อดูค่ารายวัน`,
+                                                    onPointerMove: (event: React.PointerEvent<SVGElement>) => {
+                                                        const bounds = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+                                                        if (!bounds?.width) return;
+                                                        const point = nearestChartPoint(points, (event.clientX - bounds.left) / bounds.width * 100);
+                                                        if (point) showPoint(point);
+                                                    },
+                                                    onPointerLeave: () => setHoveredPoint(null),
+                                                    onFocus: () => showPoint(points[0]),
+                                                    onBlur: () => setHoveredPoint(null),
+                                                    onKeyDown: (event: React.KeyboardEvent<SVGElement>) => {
+                                                        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) return;
+                                                        event.preventDefault();
+                                                        if (event.key === 'Escape') { setHoveredPoint(null); return; }
+                                                        const current = hoveredPoint?.label === label
+                                                            ? Math.max(0, points.findIndex(point => point.date === hoveredPoint.date)) : 0;
+                                                        const index = event.key === 'Home' ? 0 : event.key === 'End' ? points.length - 1
+                                                            : Math.max(0, Math.min(points.length - 1, current + (event.key === 'ArrowRight' ? 1 : -1)));
+                                                        showPoint(points[index]);
+                                                    },
+                                                };
+                                                return points.length === 1
+                                                    ? <circle key={label} cx={points[0].x} cy={points[0].y} r="2" fill="transparent" stroke="transparent" strokeWidth="20" vectorEffect="non-scaling-stroke" {...interaction} />
+                                                    : <polyline key={label} points={path} fill="none" stroke="transparent" strokeWidth="20" vectorEffect="non-scaling-stroke" pointerEvents="stroke" {...interaction} />;
+                                            })}
+                                        </svg>
                                         {hoveredPoint && (
                                             <>
                                                 <span
@@ -313,6 +325,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                                 />
                                                 <div
                                                     className="absolute z-40 min-w-48 rounded-xl border border-white/15 bg-slate-950/95 p-3 text-compact-plus text-white shadow-2xl backdrop-blur-xl pointer-events-none"
+                                                    role="status"
                                                     style={{
                                                         left: `${hoveredPoint.x}%`,
                                                         top: `${hoveredPoint.y}%`,
@@ -328,7 +341,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                                         <span className="text-right font-bold text-white">{formatDateShort(hoveredPoint.date)}</span>
                                                         <span>พื้นที่</span>
                                                         <span className="text-right font-bold text-white">{hoveredPoint.label}</span>
-                                                        <span>ค่าฝุ่น PM2.5</span>
+                                                        <span><PM25Text>ค่าฝุ่น PM2.5</PM25Text></span>
                                                         <span className="text-right font-bold text-blue-300">{hoveredPoint.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} มคก./ลบ.ม.</span>
                                                     </div>
                                                 </div>
@@ -338,7 +351,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                 </div>
                             </div>
                             <div
-                                className="ml-9 mt-1 grid text-2xs font-bold text-white/40 tabular-nums"
+                                className="ml-9 mt-1 grid text-2xs font-bold text-white/80 tabular-nums"
                                 style={{ gridTemplateColumns: `repeat(${Math.max(xAxisLabels.length, 1)}, minmax(0, 1fr))` }}
                             >
                                 {xAxisLabels.map((date, index) => (
@@ -358,7 +371,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                     </span>
                                 ))}
                             </div>
-                            <div className="ml-9 text-center text-2xs-plus font-bold text-white/50">วันที่</div>
+                            <div className="ml-9 text-center text-2xs-plus font-bold text-white/80">วันที่</div>
                         </div>
                     )}
                 </div>
@@ -377,7 +390,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                 }}
                                 className={`flex items-center gap-2 min-w-0 cursor-pointer transition-all ${isHidden ? 'opacity-40 grayscale' : 'hover:opacity-80'}`}>
                                 <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isHidden ? '#475569' : colors[idx % colors.length] }}></div>
-                                <span className={`text-compact font-bold truncate transition-colors ${isHidden ? 'text-white/30' : 'text-white/60'}`} title={label}>{label}</span>
+                                <span className={`text-compact font-bold truncate transition-colors ${isHidden ? 'text-white/30' : 'text-white/80'}`} title={label}>{label}</span>
                             </div>
                         );
                     })}
@@ -392,7 +405,7 @@ function TopExceedRanking({ data, loading }: { data?: { province: string; exceed
     const maxDays = Math.max(...rows.map(row => Number(row.exceed_days) || 0), 1);
 
     return (
-        <div className="bg-slate-900/60 backdrop-blur-3xl p-4 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
+        <div className="bg-slate-700 p-4 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
                 <h4 className="font-extrabold text-sm text-white flex items-center gap-3 tracking-tight uppercase leading-tight">
                     <div className="w-2 h-6 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
@@ -411,7 +424,7 @@ function TopExceedRanking({ data, loading }: { data?: { province: string; exceed
                         ))}
                     </div>
                 ) : rows.length === 0 ? (
-                    <div className="h-full min-h-40 flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-bold text-white/40">
+                    <div className="h-full min-h-40 flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-bold text-white/80">
                         ไม่พบจังหวัดที่เกินค่ามาตรฐานในช่วงวันที่เลือก
                     </div>
                 ) : (
@@ -433,7 +446,7 @@ function TopExceedRanking({ data, loading }: { data?: { province: string; exceed
                                         </div>
                                         <div className="text-right shrink-0 flex items-baseline gap-1">
                                             <div className="text-sm font-black text-white tabular-nums leading-none">{days.toLocaleString()}</div>
-                                            <div className="text-compact font-bold text-white/35">วัน</div>
+                                            <div className="text-compact font-bold text-white/80">วัน</div>
                                         </div>
                                     </div>
                                 </div>
@@ -456,29 +469,39 @@ function useDashboard() {
     const latestRequestId = useRef(0);
 
     const now = new Date();
-    const limitFullDate = now.toISOString().split('T')[0];
+    const limitFullDate = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+    ].join('-');
 
     useEffect(() => {
         getFilterOptions().then((opts: any) => {
             setBusyMessage(null);
-            if (!opts) return;
+            if (!opts) {
+                setBusyMessage(DASHBOARD_ERROR_MESSAGE);
+                setLoading(false);
+                return;
+            }
             const allDates = opts.dates || [];
             const sortedDates = [...allDates].sort((a, b) => b.localeCompare(a));
-            const filteredOptsDates = sortedDates.filter((d: string) => d <= limitFullDate);
+            const filteredOptsDates = sortedDates.filter((date: string) => date <= limitFullDate);
             setOptions({ ...opts, dates: filteredOptsDates });
 
             if (filteredOptsDates.length) {
-                const latestDateStr = filteredOptsDates[0];
-                
-                const d = new Date(latestDateStr);
-                d.setDate(d.getDate() - 6);
-                let startDate = d.toISOString().split('T')[0];
-                
-                if (!filteredOptsDates.includes(startDate)) {
-                    startDate = filteredOptsDates[filteredOptsDates.length - 1];
-                }
+                const latestDate = filteredOptsDates[0];
+                const [latestYear, latestMonthNumber] = latestDate.split('-').map(Number);
+                const fiscalYearStart = latestMonthNumber >= 10 ? latestYear : latestYear - 1;
+                const fiscalStartDate = `${fiscalYearStart}-10-01`;
+                const datesInFiscalYear = filteredOptsDates.filter(
+                    (date: string) => date >= fiscalStartDate && date <= latestDate,
+                );
+                const startDate = datesInFiscalYear.at(-1) || latestDate;
 
-                setFilters(f => ({ ...f, startDate: startDate, endDate: latestDateStr }));
+                setFilters(f => ({ ...f, startDate, endDate: latestDate }));
+            } else {
+                setBusyMessage('ไม่พบช่วงวันที่ที่มีข้อมูลสำหรับแสดงผล');
+                setLoading(false);
             }
         }).catch(() => {
             setBusyMessage(DASHBOARD_ERROR_MESSAGE);
@@ -489,8 +512,9 @@ function useDashboard() {
     useEffect(() => {
         if (!filters.startDate || !filters.endDate) return;
         const requestId = ++latestRequestId.current;
+        setLoading(true);
+        setBusyMessage(null);
         const timeout = window.setTimeout(async () => {
-            setLoading(true);
             const apiFilters = {
                 ...filters,
                 regions: filters.regions?.length ? filters.regions : undefined,
@@ -510,7 +534,10 @@ function useDashboard() {
             }
         }, 350);
 
-        return () => window.clearTimeout(timeout);
+        return () => {
+            window.clearTimeout(timeout);
+            latestRequestId.current++;
+        };
     }, [filters]);
 
     const baseProvinces = useMemo(() => (filters.regions.length === 0 ? options.provinces : Array.from(new Set(options.hierarchy?.filter(h => filters.regions.includes(h.region)).map(h => h.province)))).sort((a: string, b: string) => a.localeCompare(b, 'th')), [filters.regions, options.provinces, options.hierarchy]);
@@ -619,14 +646,15 @@ export default function DashboardPM25() {
 
     return (
         <div className="min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden font-sans"
-            style={{ backgroundImage: "url('/img/background.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+            style={{ backgroundImage: "url('/img/background-optimized.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
             <div className="absolute inset-0 bg-slate-900/40 z-0"></div>
+            {loading && <DashboardLoading />}
 
-            <main className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 h-screen flex flex-col gap-4">
+            <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 h-screen flex flex-col gap-4">
                 <DashboardNavbar
                     logos={[
                         {
-                            src: '/img/ddc-logo.png',
+                            src: '/img/ddc-logo-optimized.png',
                             alt: 'DDC Logo',
                             fill: true,
                             sizes: '60px',
@@ -634,7 +662,7 @@ export default function DashboardPM25() {
                             imageClassName: 'rounded-xl object-contain p-1',
                         },
                     ]}
-                    title={<>การเฝ้าระวังสถานการณ์ฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน <span className="text-blue-400">(PM2.5) ประเทศไทย</span></>}
+                    title={<>การเฝ้าระวังสถานการณ์ฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน <span className="text-blue-400"><PM25Text>(PM2.5) ประเทศไทย</PM25Text></span></>}
                     subtitle="กรมควบคุมโรค | กลุ่มเฝ้าระวังและตอบโต้ภาวะฉุกเฉิน กองโรคจากการประกอบอาชีพและสิ่งแวดล้อม"
                     className="relative z-header mb-2"
                     titleClassName="uppercase drop-shadow-md"
@@ -661,7 +689,7 @@ export default function DashboardPM25() {
                         <div key={i} className={`relative ${stat.isPrimary
                             ? "bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-5 rounded-3xl shadow-2xl border border-white/30 transition-all group min-h-32 flex flex-col justify-between"
                             : `bg-white/10 backdrop-blur-xl p-5 rounded-3xl shadow-xl border border-white/20 transition-all group ring-1 ring-white/5 min-h-32 flex flex-col justify-between ${stat.tooltip ? 'cursor-default hover:bg-white/20' : ''}`}`}>
-                            <div className={`text-xs font-bold tracking-tight mb-2 leading-snug ${stat.isPrimary ? 'text-blue-100/90' : 'text-white/70'}`}>{stat.label}</div>
+                            <div className={`text-xs font-bold tracking-tight mb-2 leading-snug ${stat.isPrimary ? 'text-blue-100/90' : 'text-white/70'}`}><PM25Text>{stat.label}</PM25Text></div>
                             <div className="text-3xl font-extrabold text-white tracking-tight tabular-nums flex items-end gap-2 drop-shadow-md">
                                 {loading ? <div className={`h-9 w-24 animate-pulse rounded-lg ${stat.isPrimary ? 'bg-white/20' : 'bg-white/10'}`}></div> : stat.value?.toLocaleString()}
                                 {!stat.isPrimary && <div className="w-1.5 h-6 rounded-full mb-1" style={{ backgroundColor: stat.color }}></div>}
@@ -690,35 +718,35 @@ export default function DashboardPM25() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-content">
-                    <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar scrollbar-hide">
                             <div className="h-ranking-chart shrink-0"><TopExceedRanking data={data?.top10Exceed || []} loading={loading} /></div>
-                            <div className="h-chart-standard shrink-0"><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></div>
-                            <div className="h-chart-standard shrink-0"><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></div>
-                            <div className="h-chart-standard shrink-0"><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></div>
+                            <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></DeferredChart>
+                            <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></DeferredChart>
+                            <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></DeferredChart>
                         </div>
                     </div>
 
-                    <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex flex-col gap-4 mb-6 shrink-0">
                             <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
                                 <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
                                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40 shrink-0"></div>
-                                    แผนที่รายงานระดับค่าฝุ่น PM2.5
+                                    <PM25Text>แผนที่รายงานระดับค่าฝุ่น PM2.5</PM25Text>
                                 </h4>
                                 {filters.startDate && filters.endDate && (
                                     <div className="text-compact-plus font-bold text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
                                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                        ข้อมูล: {filters.startDate === filters.endDate 
-                                            ? formatDateShort(filters.startDate) 
+                                        ข้อมูล: {filters.startDate === filters.endDate
+                                            ? formatDateShort(filters.startDate)
                                             : `${formatDateShort(filters.startDate)} - ${formatDateShort(filters.endDate)}`}
                                     </div>
                                 )}
                             </div>
                             <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
-                                <button onClick={() => setActiveMap('avg')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'avg' ? 'bg-blue-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>ค่าฝุ่น PM2.5</button>
-                                <button onClick={() => setActiveMap('streak37')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak37' ? 'bg-orange-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>ค่าฝุ่น PM2.5 &gt; 37.5 มคก./ลบ.ม.</button>
-                                <button onClick={() => setActiveMap('streak75')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak75' ? 'bg-rose-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>ค่าฝุ่น PM2.5 &gt; 75 มคก./ลบ.ม.</button>
+                                <button onClick={() => setActiveMap('avg')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'avg' ? 'bg-blue-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}><PM25Text>ค่าฝุ่น PM2.5</PM25Text></button>
+                                <button onClick={() => setActiveMap('streak37')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak37' ? 'bg-orange-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}><PM25Text>ค่าฝุ่น PM2.5 &gt; 37.5 มคก./ลบ.ม.</PM25Text></button>
+                                <button onClick={() => setActiveMap('streak75')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak75' ? 'bg-rose-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}><PM25Text>ค่าฝุ่น PM2.5 &gt; 75 มคก./ลบ.ม.</PM25Text></button>
                             </div>
                         </div>
                         <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-inner bg-slate-800/50">
@@ -732,8 +760,8 @@ export default function DashboardPM25() {
                                 renderPopup={(province, rawValue, popupUnit) => {
                                     const value = typeof rawValue === 'object' ? rawValue.value : (rawValue || 0);
                                     const title = activeMap === 'avg'
-                                        ? 'ค่าฝุ่น PM2.5 สูงสุด'
-                                        : `จำนวนวันที่ PM2.5 > ${activeMap === 'streak37' ? '37.5' : '75'} มคก./ลบ.ม. ต่อเนื่อง`;
+                                        ? 'ค่าฝุ่น PM<span class="pm25-subscript">2.5</span> สูงสุด'
+                                        : `จำนวนวันที่ PM<span class="pm25-subscript">2.5</span> > ${activeMap === 'streak37' ? '37.5' : '75'} มคก./ลบ.ม. ต่อเนื่อง`;
                                     
                                     let extraDateText = '';
                                     if (activeMap === 'streak37' && value > 0) {
@@ -766,7 +794,7 @@ export default function DashboardPM25() {
                                                 const dateStr = summarizeDateRanges(latestStreak.map(d => d.toISOString()));
                                                 extraDateText = `
                                                     <div class="flex flex-col gap-1 bg-orange-500/10 p-4 rounded-2xl border border-orange-500/20 mt-3">
-                                                        <span class="text-compact font-bold text-orange-400/80 uppercase tracking-widest">วันที่ PM2.5 &gt; 37.5 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
+                                                        <span class="text-compact font-bold text-orange-400/80 uppercase tracking-widest">วันที่ PM<span class="pm25-subscript">2.5</span> &gt; 37.5 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
                                                         <span class="text-xs font-medium text-orange-200 leading-relaxed">${dateStr}</span>
                                                     </div>
                                                 `;
@@ -807,7 +835,7 @@ export default function DashboardPM25() {
                                                 const dateStr = summarizeDateRanges(latestValidStreak.map(d => d.toISOString()));
                                                 extraDateText = `
                                                     <div class="flex flex-col gap-1 bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mt-3">
-                                                        <span class="text-compact font-bold text-rose-400/80 uppercase tracking-widest">วันที่ PM2.5 &gt; 75 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
+                                                        <span class="text-compact font-bold text-rose-400/80 uppercase tracking-widest">วันที่ PM<span class="pm25-subscript">2.5</span> &gt; 75 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
                                                         <span class="text-xs font-medium text-rose-200 leading-relaxed">${dateStr}</span>
                                                     </div>
                                                 `;

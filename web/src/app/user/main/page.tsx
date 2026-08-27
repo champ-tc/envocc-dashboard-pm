@@ -3,6 +3,7 @@ import { Activity, ArrowUpRight, Database, Download, Sparkles, UserRound } from 
 
 import BigDataDownload from '@/components/BigDataDownload';
 import PM25Download from '@/components/PM25Download';
+import { PM25Text } from '@/components/PM25Mark';
 import { requireRoles } from '@/lib/auth';
 
 export default async function UserMainPage() {
@@ -108,7 +109,7 @@ function QuickLink({
             </span>
             <span className="mt-7 flex items-end justify-between gap-3">
                 <span>
-                <span className="block font-bold text-slate-900">{title}</span>
+                <span className="block font-bold text-slate-900"><PM25Text>{title}</PM25Text></span>
                 <span className="mt-1 block text-sm leading-6 text-slate-500">{description}</span>
                 </span>
                 <ArrowUpRight className="mb-1 size-5 shrink-0 text-slate-300 transition group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-blue-600" />

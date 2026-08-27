@@ -6,7 +6,10 @@ import { getDashboardData, getFilterOptions, getCurrentUser, DDSOptions, DDSFilt
 import { DDS_DISEASES } from '@/lib/constants';
 import DashboardNavbar from '../_components/DashboardNavbar';
 import DashboardBusyAlert from '../_components/DashboardBusyAlert';
+import DashboardLoading from '../_components/DashboardLoading';
 import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
+import { PM25Text } from '@/components/PM25Mark';
+import CloudLoader from '@/components/CloudLoader';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -15,14 +18,7 @@ const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อ�
 // โหลด ThailandMap แบบ Dynamic เพื่อเลี่ยงปัญหา SSR
 const ThailandMap = dynamic(() => import('@/components/shared/ThailandMap'), {
     ssr: false,
-    loading: () => (
-        <div className="w-full h-full bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center animate-pulse border border-white/30">
-            <div className="flex flex-col items-center gap-4">
-                <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-                <span className="text-white/80 font-extrabold uppercase tracking-widest text-xs">Loading Health Map...</span>
-            </div>
-        </div>
-    )
+    loading: () => <CloudLoader fullscreen={false} label="กำลังโหลดแผนที่สุขภาพ..." className="rounded-xl border border-white/30" />
 });
 
 // Custom SingleSelect
@@ -290,7 +286,11 @@ export default function DDSDashboardPage() {
 
         getFilterOptions().then(opts => {
             setBusyMessage(null);
-            if (!opts || !opts.dates || opts.dates.length === 0) return;
+            if (!opts || !opts.dates || opts.dates.length === 0) {
+                setBusyMessage('ไม่พบช่วงวันที่ที่มีข้อมูลสำหรับแสดงผล');
+                setLoading(false);
+                return;
+            }
             const sortedDates = [...opts.dates].sort((a, b) => b.localeCompare(a));
             setOptions({ ...opts, dates: sortedDates });
 
@@ -322,8 +322,9 @@ export default function DDSDashboardPage() {
     useEffect(() => {
         if (!filters.startDate || !filters.endDate) return;
         const requestId = ++latestRequestId.current;
+        setLoading(true);
+        setBusyMessage(null);
         const timeout = window.setTimeout(async () => {
-            setLoading(true);
             const apiFilters = {
                 ...filters,
                 regions: filters.regions.length ? filters.regions : undefined,
@@ -348,7 +349,10 @@ export default function DDSDashboardPage() {
             }
         }, 350);
 
-        return () => window.clearTimeout(timeout);
+        return () => {
+            window.clearTimeout(timeout);
+            latestRequestId.current++;
+        };
     }, [filters]);
 
     // Filtering Helpers
@@ -402,16 +406,17 @@ export default function DDSDashboardPage() {
 
     return (
         <div className="min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden font-sans"
-            style={{ backgroundImage: "url('/img/background.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+            style={{ backgroundImage: "url('/img/background-optimized.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
             <div className="absolute inset-0 bg-slate-900/40 z-0"></div>
+            {loading && <DashboardLoading />}
 
-            <main className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
+            <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
                 <DashboardNavbar
                     logos={[
-                        { src: '/img/ddc-logo.png', alt: 'DDC Logo' },
+                        { src: '/img/ddc-logo-optimized.png', alt: 'DDC Logo' },
                         { src: '/img/logo_doe.jpg', alt: 'DOE Logo' },
                     ]}
-                    title="การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 ประเทศไทย"
+                    title={<PM25Text>การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 ประเทศไทย</PM25Text>}
                     subtitle={
                         user?.role === 'admin_province' ? `จังหวัด: ${user.workplaceProvince}` :
                         user?.role === 'admin_region' ? `เขต: ${user.ddcRegion}` :
@@ -513,9 +518,9 @@ export default function DDSDashboardPage() {
                 {/* Visualizations */}
                 <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     {/* Monthly Trend Chart */}
-                    <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
+                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-8 shrink-0">
-                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</h4>
+                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div><PM25Text>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text></h4>
                             {options.dates[0] && (
                                 <div className="badge badge-warning badge-outline px-4 py-3 text-xs font-bold">
                                     ข้อมูลล่าสุดในระบบ: {formatThaiMonthYear(options.dates[0])}
@@ -525,14 +530,14 @@ export default function DDSDashboardPage() {
                         <div className="flex-1 relative flex flex-col justify-end px-14 min-h-0">
                             <div className="absolute left-14 top-0 bottom-0 w-px bg-white/20 z-20" />
                             <div className="absolute right-14 top-0 bottom-0 w-px bg-white/20 z-20" />
-                            <div className="absolute left-14 top-0 z-20 -translate-y-full pb-2 text-compact font-black text-white/50 whitespace-nowrap">จำนวนผู้ป่วย (ราย)</div>
-                            <div className="absolute right-14 top-0 z-20 -translate-y-full pb-2 text-compact font-black text-rose-400/70 text-right whitespace-nowrap">ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</div>
+                            <div className="absolute left-14 top-0 z-20 -translate-y-full pb-2 text-compact font-black text-white/80 whitespace-nowrap">จำนวนผู้ป่วย (ราย)</div>
+                            <div className="absolute right-14 top-0 z-20 -translate-y-full pb-2 text-compact font-black text-rose-400/70 text-right whitespace-nowrap"><PM25Text>ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</PM25Text></div>
                             {!loading && data?.monthlyTrend && data.monthlyTrend.length > 0 && (() => {
                                 const maxVal = Math.max(...data.monthlyTrend.map(x => x.total || 0), 1);
                                 const pm25Max = Math.max(...data.monthlyTrend.map(x => x.avg_pm25 || 0), 50);
                                 return (
                                     <>
-                                        <div className="absolute left-7 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-2xs-plus font-bold text-white/40 tabular-nums">
+                                        <div className="absolute left-7 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-2xs-plus font-bold text-white/80 tabular-nums">
                                             {[...Array(5)].map((_, i) => <span key={i}>{Math.round(maxVal * (1 - i / 4)).toLocaleString()}</span>)}
                                         </div>
                                         <div className="absolute right-7 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-2xs-plus font-bold text-rose-500/60 tabular-nums">
@@ -556,7 +561,7 @@ export default function DDSDashboardPage() {
                                                                 <div className={`absolute top-chart-tooltip ${i < data.monthlyTrend.length / 2 ? 'left-0' : 'right-0'} bg-slate-900/98 backdrop-blur-3xl text-white p-4 rounded-3xl opacity-0 group-hover:opacity-100 transition-all duration-300 z-map-overlay pointer-events-none shadow-2xl min-w-tooltip-sm border border-white/20`}>
                                                                     <div className="font-black mb-2 border-b border-white/10 pb-2 flex justify-between items-center">
                                                                         <div className="flex flex-col"><span className="text-compact text-blue-400 uppercase">สถิติเดือน</span><span className="text-sm">{monthLabel}</span></div>
-                                                                        <div className="text-right"><div className="text-2xs-plus text-rose-400 uppercase">PM2.5</div><span className="text-xl text-rose-500 font-black">{m.avg_pm25 || 0}</span></div>
+                                                                        <div className="text-right"><div className="text-2xs-plus text-rose-400 uppercase"><PM25Text>PM2.5</PM25Text></div><span className="text-xl text-rose-500 font-black">{m.avg_pm25 || 0}</span></div>
                                                                     </div>
                                                                     {DDS_DISEASES.map(d => (m[d.id] as number) > 0 && (
                                                                         <div key={d.id} className="flex justify-between items-center bg-white/5 p-1.5 rounded-xl mb-1">
@@ -564,7 +569,7 @@ export default function DDSDashboardPage() {
                                                                             <b className="text-compact text-white">{(m[d.id] as number || 0).toLocaleString()} ราย</b>
                                                                         </div>
                                                                     ))}
-                                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span className="text-compact text-white/40 uppercase">ผู้ป่วยรวม</span><span className="text-xl text-blue-400 font-black">{(m.total || 0).toLocaleString()}</span></div>
+                                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span className="text-compact text-white/80 uppercase">ผู้ป่วยรวม</span><span className="text-xl text-blue-400 font-black">{(m.total || 0).toLocaleString()}</span></div>
                                                                 </div>
                                                                 <div className="w-full flex flex-col justify-end h-full max-w-6 transition-all duration-500 group-hover:scale-x-110">
                                                                     {DDS_DISEASES.map(d => <div key={d.id} style={{ height: `${((Number(m[d.id] || 0)) / maxVal) * 100}%`, backgroundColor: d.hex }} className="w-full opacity-60 group-hover:opacity-100 shadow-sm first:rounded-t last:rounded-b"></div>)}
@@ -582,12 +587,12 @@ export default function DDSDashboardPage() {
                         </div>
                         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-10 shrink-0">
                             {DDS_DISEASES.map(d => <div key={d.id} className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.hex }}></div><span className="text-compact font-extrabold text-white/70">{DISEASE_CARD_LABELS[d.id] || d.label}</span></div>)}
-                            <div className="flex items-center gap-2"><div className="w-6 h-0.5 bg-rose-500 rounded-full"></div><span className="text-compact font-extrabold text-rose-400 uppercase">ค่าเฉลี่ย PM2.5</span></div>
+                            <div className="flex items-center gap-2"><div className="w-6 h-0.5 bg-rose-500 rounded-full"></div><span className="text-compact font-extrabold text-rose-400 uppercase"><PM25Text>ค่าเฉลี่ย PM2.5</PM25Text></span></div>
                         </div>
                     </div>
 
                     {/* Thailand Map Section */}
-                    <div className="bg-slate-900/60 backdrop-blur-3xl p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
                             <h4 className="font-extrabold text-lg text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>จำนวนผู้ป่วยรายภูมิภาค</h4>
                             <div className="bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full text-xs font-extrabold border border-blue-500/20 uppercase tracking-widest">{mapAreaCount} พื้นที่</div>
@@ -608,7 +613,7 @@ export default function DDSDashboardPage() {
                                             <div class="space-y-3">
                                                 <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl"><span>จำนวนผู้ป่วย</span><span class="text-lg font-black">${Math.round(valObj.value).toLocaleString()} ${popupUnit}</span></div>
                                                 <div class="flex items-center justify-between bg-blue-500/10 p-4 rounded-2xl"><span>อัตราป่วย</span><span class="text-lg font-black text-blue-400">${valObj.rate.toFixed(2)} ต่อแสน</span></div>
-                                                ${area.includes('-') && valObj.pm25 ? `<div class="flex items-center justify-between bg-rose-500/10 p-4 rounded-2xl"><span>PM2.5</span><span class="text-lg font-black text-rose-400">${valObj.pm25.toFixed(1)} มคก./ลบ.ม.</span></div>` : ''}
+                                                ${area.includes('-') && valObj.pm25 ? `<div class="flex items-center justify-between bg-rose-500/10 p-4 rounded-2xl"><span>PM<span class="pm25-subscript">2.5</span></span><span class="text-lg font-black text-rose-400">${valObj.pm25.toFixed(1)} มคก./ลบ.ม.</span></div>` : ''}
                                             </div>
                                         </div>
                                     `;

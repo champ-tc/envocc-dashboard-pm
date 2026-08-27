@@ -84,7 +84,7 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
 
         const sqlBase = `FROM pm25_raw WHERE 1=1 ${dateFilter} ${locFilters}`;
 
-        const [resStats, resRegion, resProvTrend, resDistTrend, resTop10, resProvAvg, resRaw] = await Promise.all([
+        const [resStats, resRegion, resProvTrend, resDistTrend, resTop10, resProvAvg] = await Promise.all([
             runQuery(db, `SELECT AVG(pm25) as avg_pm25, MAX(pm25) as max_pm25, COUNT(*) as total_measurements, COUNT(CASE WHEN pm25 > 37.5 THEN 1 END) as exceed_count, MAX(date) as report_date ${sqlBase}`),
             runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date, TRIM("Regional Health") as label, AVG(pm25) as value ${sqlBase} GROUP BY date, label ORDER BY label, date ASC`),
             runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date, TRIM(province) as label, AVG(pm25) as value ${sqlBase} GROUP BY date, label ORDER BY label, date ASC`),
@@ -105,8 +105,7 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
                 ORDER BY exceed_days DESC, province ASC
                 LIMIT 10
             `),
-            runQuery(db, `SELECT TRIM(province) as province, MAX(pm25) as value ${sqlBase} GROUP BY province`),
-            runQuery(db, `SELECT TRIM(province) as province, strftime(date, '%Y-%m-%d') as date, pm25 FROM pm25_raw WHERE 1=1 ${dateFilter} ${locFilters} ORDER BY province, date ASC`)
+            runQuery(db, `SELECT TRIM(province) as province, MAX(pm25) as value ${sqlBase} GROUP BY province`)
         ]);
 
         const groupByLabel = (data: any[]) => {

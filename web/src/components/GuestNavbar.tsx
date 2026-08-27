@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
+import PM25Mark from '@/components/PM25Mark';
 
 import { useState, useEffect } from 'react';
 
@@ -57,7 +58,7 @@ export default function GuestNavbar() {
                         <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
                             <div className="w-brand-mobile h-brand-mobile sm:w-brand-desktop sm:h-brand-desktop relative flex items-center justify-center">
                                 <Image
-                                    src="/img/ddc-logo.png"
+                                    src="/img/ddc-logo-optimized.png"
                                     alt="DDC Logo"
                                     fill
                                     sizes="(max-width: 640px) 60px, 84px"
@@ -67,10 +68,10 @@ export default function GuestNavbar() {
                             </div>
                             <div className="flex items-center gap-1.5 sm:gap-2">
                                 <div className="px-2 sm:px-3 h-7 sm:h-10 rounded-lg sm:rounded-xl bg-linear-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white font-bold text-sm sm:text-xl shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
-                                    PM2.5
+                                    <PM25Mark />
                                 </div>
                                 <span className={`font-extrabold text-base sm:text-2xl tracking-tight transition-colors whitespace-nowrap ${textColor}`}>
-                                    Patient Situation
+                                    Patient Database
                                 </span>
                             </div>
                         </Link>
@@ -82,7 +83,7 @@ export default function GuestNavbar() {
                             href="/dashboard/pm25"
                             className={`font-medium transition-colors ${linkColor}`}
                         >
-                            Dashboard ฝุ่น PM2.5
+                            Dashboard ฝุ่น <PM25Mark />
                         </Link>
 
                         {/* Dropdown Dashboard ป่วยฝุ่น */}
@@ -173,7 +174,7 @@ export default function GuestNavbar() {
                             className="block px-3 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            Dashboard ฝุ่น PM2.5
+                            Dashboard ฝุ่น <PM25Mark />
                         </Link>
                         
                         <div className="py-2">

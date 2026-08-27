@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import DatePicker from './shared/DatePicker';
 import { getFilterOptions } from '@/app/dashboard/pm25/actions';
 import { THAI_MONTHS_SHORT } from '@/lib/constants';
+import { PM25Text } from '@/components/PM25Mark';
+import CloudLoader from '@/components/CloudLoader';
 
 export default function PM25Download() {
     const [isLoading, setIsLoading] = useState(true);
@@ -51,9 +53,7 @@ export default function PM25Download() {
 
     if (isLoading) {
         return (
-            <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
-                <span className="loading loading-spinner loading-lg text-emerald-500"></span>
-            </div>
+            <CloudLoader fullscreen={false} label="กำลังโหลดตัวเลือกข้อมูล PM2.5..." className="min-h-64 rounded-2xl border border-slate-200" />
         );
     }
 
@@ -69,7 +69,7 @@ export default function PM25Download() {
                         </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900">ข้อมูล PM2.5</h3>
+                        <h3 className="font-bold text-slate-900"><PM25Text>ข้อมูล PM2.5</PM25Text></h3>
                         <p className="mt-1 text-sm leading-6 text-slate-500">ส่งออกข้อมูลค่าฝุ่นรายวันตามช่วงเวลา</p>
                     </div>
                 </div>
@@ -104,7 +104,7 @@ export default function PM25Download() {
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        ดาวน์โหลดข้อมูล PM 2.5 (CSV)
+                        <PM25Text>ดาวน์โหลดข้อมูล PM2.5 (CSV)</PM25Text>
                     </button>
                 </div>
             </div>

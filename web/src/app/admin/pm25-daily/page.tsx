@@ -6,6 +6,7 @@ import { Download } from 'lucide-react';
 
 import EditablePagination from '@/components/EditablePagination';
 import CalendarDatePicker from '@/components/shared/CalendarDatePicker';
+import { PM25Text } from '@/components/PM25Mark';
 
 type Pollutant = 'pm25' | 'pm10' | 'o3' | 'co' | 'no2' | 'so2';
 type Statistic = 'Max' | 'Min' | 'Avg';
@@ -244,9 +245,9 @@ export default function Pm25DailyManagementPage() {
                             <tr className="border-b border-slate-100 bg-slate-50 text-compact-plus font-bold uppercase tracking-widest text-slate-400">
                                 <th className="px-5 py-4">วันที่</th>
                                 <th className="px-5 py-4">สถานี</th>
-                                <th className="px-4 py-4">PM2.5 Max</th>
-                                <th className="px-4 py-4">PM2.5 Min</th>
-                                <th className="px-4 py-4">PM2.5 Avg</th>
+                                <th className="px-4 py-4"><PM25Text>PM2.5 Max</PM25Text></th>
+                                <th className="px-4 py-4"><PM25Text>PM2.5 Min</PM25Text></th>
+                                <th className="px-4 py-4"><PM25Text>PM2.5 Avg</PM25Text></th>
                                 <th className="px-5 py-4 text-center">จัดการ</th>
                             </tr>
                         </thead>
@@ -312,7 +313,7 @@ export default function Pm25DailyManagementPage() {
                             <div className="space-y-4">
                                 {pollutants.map((pollutant) => (
                                     <div key={pollutant.key} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                                        <h3 className="mb-3 text-sm font-black text-slate-700">{pollutant.label}</h3>
+                                        <h3 className="mb-3 text-sm font-black text-slate-700"><PM25Text>{pollutant.label}</PM25Text></h3>
                                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                             {statistics.map((statistic) => {
                                                 const key = valueKey(pollutant.key, statistic);
