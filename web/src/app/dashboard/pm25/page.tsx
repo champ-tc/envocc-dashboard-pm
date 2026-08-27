@@ -64,7 +64,7 @@ const summarizeDateRanges = (dates: string[]) => {
         .map(d => new Date(d))
         .filter(d => !isNaN(d.getTime()))
         .sort((a, b) => a.getTime() - b.getTime());
-    
+
     if (sorted.length === 0) return dates.join(', ');
 
     const ranges: { start: Date, end: Date }[] = [];
@@ -558,7 +558,7 @@ function useDashboard() {
 
     const exceedData37 = useMemo(() => {
         if (!data?.provinceMaxes) return { count: 0, tooltip: undefined };
-        
+
         const exceedingProvinces: { prov: string }[] = [];
 
         // นับจังหวัดเมื่อมีอย่างน้อย 1 สถานีเกิน 37.5 ในอย่างน้อย 1 วัน
@@ -599,7 +599,7 @@ function useDashboard() {
 
     const exceedData75 = useMemo(() => {
         if (!data?.provinceMaxes) return { count: 0, tooltip: undefined };
-        
+
         const exceedingProvinces: { prov: string }[] = [];
 
         Object.entries(data.provinceMaxes).forEach(([prov, maxPM25]) => {
@@ -642,15 +642,156 @@ function useDashboard() {
 // --- Main Page Component ---
 export default function DashboardPM25() {
     const { data, options, loading, busyMessage, filters, setFilters, baseProvinces, baseDistricts, provinceMaxes, exceedData37, exceedData75 } = useDashboard();
-    const [activeMap, setActiveMap] = useState<'avg' | 'streak37' | 'streak75'>('avg');
+    const renderMap = (activeMap: 'avg' | 'streak37' | 'streak75') => (
+    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+        <div className="flex flex-col gap-4 mb-6 shrink-0">
+            <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
+                <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
+                    <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40 shrink-0"></div>
+                    <PM25Text>{activeMap === 'avg' ? 'แผนที่ค่าฝุ่น PM2.5' : activeMap === 'streak37' ? 'ค่าฝุ่น PM2.5 มากกว่า 37.5 มคก./ลบ.ม.' : 'ค่าฝุ่น PM2.5 มากกว่า 75 มคก./ลบ.ม.'}</PM25Text>
+                </h4>
+                {filters.startDate && filters.endDate && (
+                    <div className="text-compact-plus font-bold text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        ข้อมูล: {filters.startDate === filters.endDate
+                            ? formatDateShort(filters.startDate)
+                            : `${formatDateShort(filters.startDate)} - ${formatDateShort(filters.endDate)}`}
+                    </div>
+                )}
+            </div>
+
+        </div>
+        <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-inner bg-slate-800/50">
+            <ThailandMap
+                data={activeMap === 'avg' ? provinceMaxes : (activeMap === 'streak37' ? (data?.provinceStreak37 || {}) : (data?.provinceStreak75 || {}))}
+                filters={filters}
+                getColor={(v: number) => getColor(v, activeMap === 'avg' ? LEGENDS.pm25.items : (activeMap === 'streak37' ? LEGENDS.streak37.items : LEGENDS.streak75.items))}
+                legendConfig={activeMap === 'avg' ? LEGENDS.pm25 : (activeMap === 'streak37' ? LEGENDS.streak37 : LEGENDS.streak75)}
+                popupUnit={activeMap === 'avg' ? "มคก./ลบ.ม." : "วัน"}
+                interactive={false}
+                renderPopup={(province, rawValue, popupUnit) => {
+                    const value = typeof rawValue === 'object' ? rawValue.value : (rawValue || 0);
+                    const title = activeMap === 'avg'
+                        ? 'ค่าฝุ่น PM<span class="pm25-subscript">2.5</span> สูงสุด'
+                        : `จำนวนวันที่ PM<span class="pm25-subscript">2.5</span> > ${activeMap === 'streak37' ? '37.5' : '75'} มคก./ลบ.ม. ต่อเนื่อง`;
+
+                    let extraDateText = '';
+                    if (activeMap === 'streak37' && value > 0) {
+                        const trend = data?.provinceTrend?.[province] || data?.provinceTrend?.[province.replace('จังหวัด', '').trim()];
+                        if (trend && trend.length > 0) {
+                            const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                            let currentStreak: Date[] = [];
+                            let latestStreak: Date[] = [];
+
+                            sorted.forEach((point) => {
+                                if (point.value > 37.5) {
+                                    const date = new Date(point.date);
+                                    const previousDate = currentStreak[currentStreak.length - 1];
+                                    const diffDays = previousDate
+                                        ? Math.round((date.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24))
+                                        : 1;
+                                    if (diffDays !== 1) {
+                                        if (currentStreak.length > 0) latestStreak = currentStreak;
+                                        currentStreak = [];
+                                    }
+                                    currentStreak.push(date);
+                                } else {
+                                    if (currentStreak.length > 0) latestStreak = currentStreak;
+                                    currentStreak = [];
+                                }
+                            });
+                            if (currentStreak.length > 0) latestStreak = currentStreak;
+
+                            if (latestStreak.length > 0) {
+                                const dateStr = summarizeDateRanges(latestStreak.map(d => d.toISOString()));
+                                extraDateText = `
+                                    <div class="flex flex-col gap-1 bg-orange-500/10 p-4 rounded-2xl border border-orange-500/20 mt-3">
+                                        <span class="text-compact font-bold text-orange-400/80 uppercase tracking-widest">วันที่ PM<span class="pm25-subscript">2.5</span> &gt; 37.5 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
+                                        <span class="text-xs font-medium text-orange-200 leading-relaxed">${dateStr}</span>
+                                    </div>
+                                `;
+                            }
+                        }
+                    } else if (activeMap === 'streak75' && value >= 2) {
+                        const trend = data?.provinceTrend?.[province] || data?.provinceTrend?.[province.replace('จังหวัด', '').trim()];
+                        if (trend && trend.length > 0) {
+                            const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                            let currentStreak: Date[] = [];
+                            let latestValidStreak: Date[] = [];
+
+                            for (let i = 0; i < sorted.length; i++) {
+                                const p = sorted[i];
+                                if (p.value > 75) {
+                                    const d = new Date(p.date);
+                                    if (currentStreak.length === 0) {
+                                        currentStreak.push(d);
+                                    } else {
+                                        const lastD = currentStreak[currentStreak.length - 1];
+                                        const diffDays = Math.round((d.getTime() - lastD.getTime()) / (1000 * 60 * 60 * 24));
+                                        if (diffDays === 1) {
+                                            currentStreak.push(d);
+                                        } else {
+                                            if (currentStreak.length >= 2) latestValidStreak = currentStreak;
+                                            currentStreak = [d];
+                                        }
+                                    }
+                                } else {
+                                    if (currentStreak.length >= 2) latestValidStreak = currentStreak;
+                                    currentStreak = [];
+                                }
+                            }
+                            if (currentStreak.length >= 2) latestValidStreak = currentStreak;
+
+                            if (latestValidStreak.length >= 2) {
+                                const dateStr = summarizeDateRanges(latestValidStreak.map(d => d.toISOString()));
+                                extraDateText = `
+                                    <div class="flex flex-col gap-1 bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mt-3">
+                                        <span class="text-compact font-bold text-rose-400/80 uppercase tracking-widest">วันที่ PM<span class="pm25-subscript">2.5</span> &gt; 75 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
+                                        <span class="text-xs font-medium text-rose-200 leading-relaxed">${dateStr}</span>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }
+
+                    return `
+                        <div class="font-sans p-6 min-w-60 max-w-xs bg-slate-900 text-white rounded-3xl border border-white/10 shadow-2xl">
+                            <div class="text-sm font-black text-blue-400 uppercase tracking-widest mb-4 border-b border-white/10 pb-2">${province}</div>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
+                                    <span class="text-xs font-bold text-white/50 uppercase tracking-widest">${title}</span>
+                                    <span class="text-lg font-black text-white tabular-nums shrink-0 ml-4">${value.toLocaleString()} <small class="text-xs opacity-40 font-bold">${popupUnit}</small></span>
+                                </div>
+                            </div>
+                            ${extraDateText}
+                        </div>
+                    `;
+                }}
+            />
+        </div>
+    </div>
+    );
 
     return (
-        <div className="min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden font-sans"
-            style={{ backgroundImage: "url('/img/background-optimized.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
-            <div className="absolute inset-0 bg-slate-900/40 z-0"></div>
+        <div className="min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden font-sans">
+            <div
+                aria-hidden="true"
+                className="pointer-events-none fixed inset-0 z-0"
+                style={{
+                    backgroundImage: "url('/img/background-optimized.jpg')",
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                }}
+            />
+            <div
+                aria-hidden="true"
+                className="pointer-events-none fixed inset-0 z-0 bg-slate-900/40"
+            />
             {loading && <DashboardLoading />}
 
-            <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 h-screen flex flex-col gap-4">
+            <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
                 <DashboardNavbar
                     logos={[
                         {
@@ -695,7 +836,7 @@ export default function DashboardPM25() {
                                 {!stat.isPrimary && <div className="w-1.5 h-6 rounded-full mb-1" style={{ backgroundColor: stat.color }}></div>}
                             </div>
                             <div className={`text-compact font-bold uppercase mt-1 ${stat.isPrimary ? 'text-white/50' : 'text-white/30'}`}>{stat.unit}</div>
-                            
+
                             {stat.tooltip && Array.isArray(stat.tooltip) && stat.tooltip.length > 0 && (
                                 <div className={`absolute top-full mt-3 w-tooltip-sm sm:w-tooltip-md lg:w-tooltip-lg max-h-dashboard-tooltip overflow-y-auto custom-scrollbar p-5 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl z-overlay opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none ${i >= 2 ? 'right-0' : 'left-0'}`}>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
@@ -717,147 +858,21 @@ export default function DashboardPM25() {
                     ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-content">
-                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
-                        <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar scrollbar-hide">
-                            <div className="h-ranking-chart shrink-0"><TopExceedRanking data={data?.top10Exceed || []} loading={loading} /></div>
-                            <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></DeferredChart>
-                            <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></DeferredChart>
-                            <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></DeferredChart>
+                <div className="flex flex-col gap-4 relative z-content">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="h-[560px] lg:h-[640px] min-w-0">
+                            <TopExceedRanking data={data?.top10Exceed || []} loading={loading} />
                         </div>
+                        <div className="h-[560px] lg:h-[640px] min-w-0">{renderMap('avg')}</div>
                     </div>
-
-                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
-                        <div className="flex flex-col gap-4 mb-6 shrink-0">
-                            <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
-                                <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
-                                    <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40 shrink-0"></div>
-                                    <PM25Text>แผนที่รายงานระดับค่าฝุ่น PM2.5</PM25Text>
-                                </h4>
-                                {filters.startDate && filters.endDate && (
-                                    <div className="text-compact-plus font-bold text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                        ข้อมูล: {filters.startDate === filters.endDate
-                                            ? formatDateShort(filters.startDate)
-                                            : `${formatDateShort(filters.startDate)} - ${formatDateShort(filters.endDate)}`}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
-                                <button onClick={() => setActiveMap('avg')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'avg' ? 'bg-blue-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}><PM25Text>ค่าฝุ่น PM2.5</PM25Text></button>
-                                <button onClick={() => setActiveMap('streak37')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak37' ? 'bg-orange-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}><PM25Text>ค่าฝุ่น PM2.5 &gt; 37.5 มคก./ลบ.ม.</PM25Text></button>
-                                <button onClick={() => setActiveMap('streak75')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeMap === 'streak75' ? 'bg-rose-500 text-white shadow-md' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}><PM25Text>ค่าฝุ่น PM2.5 &gt; 75 มคก./ลบ.ม.</PM25Text></button>
-                            </div>
-                        </div>
-                        <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-inner bg-slate-800/50">
-                            <ThailandMap
-                                data={activeMap === 'avg' ? provinceMaxes : (activeMap === 'streak37' ? (data?.provinceStreak37 || {}) : (data?.provinceStreak75 || {}))}
-                                filters={filters}
-                                getColor={(v: number) => getColor(v, activeMap === 'avg' ? LEGENDS.pm25.items : (activeMap === 'streak37' ? LEGENDS.streak37.items : LEGENDS.streak75.items))}
-                                legendConfig={activeMap === 'avg' ? LEGENDS.pm25 : (activeMap === 'streak37' ? LEGENDS.streak37 : LEGENDS.streak75)}
-                                popupUnit={activeMap === 'avg' ? "มคก./ลบ.ม." : "วัน"}
-                                interactive={false}
-                                renderPopup={(province, rawValue, popupUnit) => {
-                                    const value = typeof rawValue === 'object' ? rawValue.value : (rawValue || 0);
-                                    const title = activeMap === 'avg'
-                                        ? 'ค่าฝุ่น PM<span class="pm25-subscript">2.5</span> สูงสุด'
-                                        : `จำนวนวันที่ PM<span class="pm25-subscript">2.5</span> > ${activeMap === 'streak37' ? '37.5' : '75'} มคก./ลบ.ม. ต่อเนื่อง`;
-                                    
-                                    let extraDateText = '';
-                                    if (activeMap === 'streak37' && value > 0) {
-                                        const trend = data?.provinceTrend?.[province] || data?.provinceTrend?.[province.replace('จังหวัด', '').trim()];
-                                        if (trend && trend.length > 0) {
-                                            const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                                            let currentStreak: Date[] = [];
-                                            let latestStreak: Date[] = [];
-
-                                            sorted.forEach((point) => {
-                                                if (point.value > 37.5) {
-                                                    const date = new Date(point.date);
-                                                    const previousDate = currentStreak[currentStreak.length - 1];
-                                                    const diffDays = previousDate
-                                                        ? Math.round((date.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24))
-                                                        : 1;
-                                                    if (diffDays !== 1) {
-                                                        if (currentStreak.length > 0) latestStreak = currentStreak;
-                                                        currentStreak = [];
-                                                    }
-                                                    currentStreak.push(date);
-                                                } else {
-                                                    if (currentStreak.length > 0) latestStreak = currentStreak;
-                                                    currentStreak = [];
-                                                }
-                                            });
-                                            if (currentStreak.length > 0) latestStreak = currentStreak;
-
-                                            if (latestStreak.length > 0) {
-                                                const dateStr = summarizeDateRanges(latestStreak.map(d => d.toISOString()));
-                                                extraDateText = `
-                                                    <div class="flex flex-col gap-1 bg-orange-500/10 p-4 rounded-2xl border border-orange-500/20 mt-3">
-                                                        <span class="text-compact font-bold text-orange-400/80 uppercase tracking-widest">วันที่ PM<span class="pm25-subscript">2.5</span> &gt; 37.5 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
-                                                        <span class="text-xs font-medium text-orange-200 leading-relaxed">${dateStr}</span>
-                                                    </div>
-                                                `;
-                                            }
-                                        }
-                                    } else if (activeMap === 'streak75' && value >= 2) {
-                                        const trend = data?.provinceTrend?.[province] || data?.provinceTrend?.[province.replace('จังหวัด', '').trim()];
-                                        if (trend && trend.length > 0) {
-                                            const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                                            
-                                            let currentStreak: Date[] = [];
-                                            let latestValidStreak: Date[] = [];
-
-                                            for (let i = 0; i < sorted.length; i++) {
-                                                const p = sorted[i];
-                                                if (p.value > 75) {
-                                                    const d = new Date(p.date);
-                                                    if (currentStreak.length === 0) {
-                                                        currentStreak.push(d);
-                                                    } else {
-                                                        const lastD = currentStreak[currentStreak.length - 1];
-                                                        const diffDays = Math.round((d.getTime() - lastD.getTime()) / (1000 * 60 * 60 * 24));
-                                                        if (diffDays === 1) {
-                                                            currentStreak.push(d);
-                                                        } else {
-                                                            if (currentStreak.length >= 2) latestValidStreak = currentStreak;
-                                                            currentStreak = [d];
-                                                        }
-                                                    }
-                                                } else {
-                                                    if (currentStreak.length >= 2) latestValidStreak = currentStreak;
-                                                    currentStreak = [];
-                                                }
-                                            }
-                                            if (currentStreak.length >= 2) latestValidStreak = currentStreak;
-
-                                            if (latestValidStreak.length >= 2) {
-                                                const dateStr = summarizeDateRanges(latestValidStreak.map(d => d.toISOString()));
-                                                extraDateText = `
-                                                    <div class="flex flex-col gap-1 bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mt-3">
-                                                        <span class="text-compact font-bold text-rose-400/80 uppercase tracking-widest">วันที่ PM<span class="pm25-subscript">2.5</span> &gt; 75 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
-                                                        <span class="text-xs font-medium text-rose-200 leading-relaxed">${dateStr}</span>
-                                                    </div>
-                                                `;
-                                            }
-                                        }
-                                    }
-
-                                    return `
-                                        <div class="font-sans p-6 min-w-60 max-w-xs bg-slate-900 text-white rounded-3xl border border-white/10 shadow-2xl">
-                                            <div class="text-sm font-black text-blue-400 uppercase tracking-widest mb-4 border-b border-white/10 pb-2">${province}</div>
-                                            <div class="space-y-3">
-                                                <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
-                                                    <span class="text-xs font-bold text-white/50 uppercase tracking-widest">${title}</span>
-                                                    <span class="text-lg font-black text-white tabular-nums shrink-0 ml-4">${value.toLocaleString()} <small class="text-xs opacity-40 font-bold">${popupUnit}</small></span>
-                                                </div>
-                                            </div>
-                                            ${extraDateText}
-                                        </div>
-                                    `;
-                                }}
-                            />
-                        </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="h-[560px] lg:h-[640px] min-w-0">{renderMap('streak37')}</div>
+                        <div className="h-[560px] lg:h-[640px] min-w-0">{renderMap('streak75')}</div>
+                    </div>
+                    <div className="flex flex-col gap-4 [&>div]:h-[29.375rem]">
+                        <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายเขตสุขภาพ" dataGroup={data?.regionTrend || {}} loading={loading} /></DeferredChart>
+                        <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายจังหวัด" dataGroup={data?.provinceTrend || {}} loading={loading} /></DeferredChart>
+                        <DeferredChart><MultiLineChart title="ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 รายอำเภอ/เขต" dataGroup={data?.districtTrend || {}} loading={loading} /></DeferredChart>
                     </div>
                 </div>
             </main>
