@@ -202,13 +202,16 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
 
 // --- Main Page Component ---
 
+// Shared sequential palette: low counts are light, high counts are dark.
+const DDS_MAP_COLORS = ['#fee2e2', '#fca5a5', '#ef4444', '#b91c1c', '#7f1d1d'];
+
 const ddcColorScale = (val: number) => {
     if (val === 0) return 'rgba(255, 255, 255, 0.1)';
-    if (val <= 10) return '#10b981';
-    if (val <= 50) return '#60a5fa';
-    if (val <= 100) return '#facc15';
-    if (val <= 200) return '#f97316';
-    return '#ef4444';
+    if (val <= 10) return DDS_MAP_COLORS[0];
+    if (val <= 50) return DDS_MAP_COLORS[1];
+    if (val <= 100) return DDS_MAP_COLORS[2];
+    if (val <= 200) return DDS_MAP_COLORS[3];
+    return DDS_MAP_COLORS[4];
 };
 
 const THAI_MONTHS_FULL = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
@@ -396,11 +399,11 @@ export default function DDSDashboardPage() {
         title: 'จำนวนผู้ป่วย',
         unit: '',
         items: [
-            { range: isDetailedView ? 'น้อยมาก' : '0 - 10 ราย', color: '#10b981' },
-            { range: isDetailedView ? 'น้อย' : '11 - 50 ราย', color: '#60a5fa' },
-            { range: isDetailedView ? 'ปานกลาง' : '51 - 100 ราย', color: '#facc15' },
-            { range: isDetailedView ? 'สูง' : '101 - 200 ราย', color: '#f97316' },
-            { range: isDetailedView ? 'สูงมาก' : '201 ราย ขึ้นไป', color: '#ef4444' }
+            { range: isDetailedView ? 'น้อยมาก' : '0 - 10 ราย', color: DDS_MAP_COLORS[0] },
+            { range: isDetailedView ? 'น้อย' : '11 - 50 ราย', color: DDS_MAP_COLORS[1] },
+            { range: isDetailedView ? 'ปานกลาง' : '51 - 100 ราย', color: DDS_MAP_COLORS[2] },
+            { range: isDetailedView ? 'สูง' : '101 - 200 ราย', color: DDS_MAP_COLORS[3] },
+            { range: isDetailedView ? 'สูงมาก' : '201 ราย ขึ้นไป', color: DDS_MAP_COLORS[4] }
         ]
     };
 
