@@ -63,7 +63,7 @@ export async function getFilterOptions() {
 export async function getDashboardData(filters: { startDate?: string, endDate?: string, regions?: string[], provinces?: string[], districts?: string[] } = {}) {
     try {
         const version = getDashboardDataVersion();
-        const cacheKey = `pm25:data:area-v1:${version}:${stableCacheKey(filters)}`;
+        const cacheKey = `pm25:data:avg-2dp-v4:${version}:${stableCacheKey(filters)}`;
         return await cachedDashboardQuery(cacheKey, () =>
             withDashboardDatabase(async (db) => {
         const mappedRegions = filters.regions?.map(r => r === 'กรุงเทพมหานคร' ? 'เขตสุขภาพที่ 13' : r);
@@ -90,7 +90,11 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
             runQuery(db, `SELECT AVG(pm25) as avg_pm25, MAX(pm25) as max_pm25, COUNT(*) as total_measurements, COUNT(CASE WHEN pm25 > 37.5 THEN 1 END) as exceed_count, MAX(date) as report_date ${sqlBase}`),
             runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date, TRIM("Regional Health") as label, AVG(pm25) as value ${sqlBase} GROUP BY date, label ORDER BY label, date ASC`),
             runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date, TRIM(province) as label, AVG(pm25) as value ${sqlBase} GROUP BY date, label ORDER BY label, date ASC`),
-            runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date, TRIM(district) as label, AVG(pm25) as value ${sqlBase} GROUP BY date, label ORDER BY label, date ASC`),
+            // District names can repeat across provinces; preserve both parts of the identity.
+            runQuery(db, `SELECT strftime(date, '%Y-%m-%d') as date,
+                CONCAT(TRIM(district), ' (', TRIM(province), ')') as label,
+                AVG(pm25) as value ${sqlBase}
+                GROUP BY date, TRIM(province), TRIM(district) ORDER BY label, date ASC`),
             runQuery(db, `
                 WITH province_daily AS (
                     SELECT
@@ -182,8 +186,8 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
         }));
 
         return {
-            avgPM25: Number(resStats[0]?.avg_pm25 || 0).toFixed(1),
-            maxPM25: Number(resStats[0]?.max_pm25 || 0).toFixed(1),
+            avgPM25: Number(resStats[0]?.avg_pm25 ?? 0).toFixed(2),
+            maxPM25: String(resStats[0]?.max_pm25 ?? 0),
             totalMeasurements: Number(resStats[0]?.total_measurements || 0),
             exceedCount: Number(resStats[0]?.exceed_count || 0),
             reportDate: resStats[0]?.report_date ? new Date(resStats[0].report_date).toISOString().split('T')[0] : null,

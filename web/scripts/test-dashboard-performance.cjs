@@ -93,8 +93,8 @@ async function main() {
         });
         const result = await actions.getDashboardData({ startDate: '2026-01-01', endDate: '2026-01-03' });
         assert.equal(queries, 6, 'unused seventh query removed');
-        assert.equal(result.avgPM25, '55.0');
-        assert.equal(result.maxPM25, '90.0');
+        assert.equal(result.avgPM25, '55.00');
+        assert.equal(result.maxPM25, '90');
         assert.equal(result.totalMeasurements, 4);
         assert.equal(result.exceedCount, 3);
         assert.equal(result.provinceMaxes.A, 90);
@@ -104,7 +104,7 @@ async function main() {
         assert.equal(result.provinceTrend.A.length, 3);
         const filtered = await actions.getDashboardData({ provinces: ['B'] });
         assert.equal(filtered.totalMeasurements, 1);
-        assert.equal(filtered.avgPM25, '10.0');
+        assert.equal(filtered.avgPM25, '10.00');
         assert.equal(filtered.mapAreas.level, 'district');
         assert.equal(filtered.mapAreas.values['["B","D2"]'].max, 10);
         const tambons = await actions.getDashboardData({ provinces: ['A'], districts: ['D1'] });
@@ -114,6 +114,20 @@ async function main() {
         const empty = await actions.getDashboardData({ provinces: ['missing'] });
         assert.equal(empty.totalMeasurements, 0);
         assert.equal(Object.keys(empty.mapAreas.values).length, 0);
+        await run('ALTER TABLE pm25_raw ALTER COLUMN pm25 TYPE DOUBLE');
+        await run(`INSERT INTO pm25_raw VALUES
+            (DATE '2026-04-18', 'น่าน', 'เฉลิมพระเกียรติ', '6', 279.05, 'T1'),
+            (DATE '2026-04-18', 'สระบุรี', 'เฉลิมพระเกียรติ', '4', 44.41, 'T2'),
+            (DATE '2026-04-18', 'สระบุรี', 'เฉลิมพระเกียรติ', '4', 55.59, 'T3')`);
+        const sameName = await actions.getDashboardData({ startDate: '2026-04-18', endDate: '2026-04-18' });
+        assert.equal(Object.keys(sameName.districtTrend).length, 2);
+        assert.equal(sameName.districtTrend['เฉลิมพระเกียรติ (น่าน)'][0].value, 279.05);
+        assert.equal(sameName.districtTrend['เฉลิมพระเกียรติ (สระบุรี)'][0].value, 50, 'keep averaging stations within one province/district');
+        assert.equal(sameName.maxPM25, '279.05', 'card preserves station maximum without rounding');
+        assert.equal(sameName.avgPM25, '126.35', 'average card displays exactly two decimal places');
+        const nanOnly = await actions.getDashboardData({ provinces: ['น่าน'], districts: ['เฉลิมพระเกียรติ'] });
+        assert.equal(Object.keys(nanOnly.districtTrend).length, 1);
+        assert.equal(nanOnly.districtTrend['เฉลิมพระเกียรติ (น่าน)'][0].value, 279.05);
         console.log('PASS DuckDB: six queries; summary, trends, maxima, streaks, filters, empty results');
     } finally {
         await new Promise(resolve => db.close(resolve));
