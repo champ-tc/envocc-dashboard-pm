@@ -10,6 +10,7 @@ import { PM25Text } from '@/components/PM25Mark';
 import CloudLoader from '@/components/CloudLoader';
 import DeferredChart from '../_components/DeferredChart';
 import { nearestChartPoint, prepareChartSeries } from '@/lib/dashboard-chart';
+import { areaKey, type MapAreas } from './map-area-data';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -27,6 +28,7 @@ interface TrendPoint {
 }
 
 interface DashboardData {
+    mapAreas: MapAreas;
     avgPM25: string;
     maxPM25: string;
     totalMeasurements: number;
@@ -642,7 +644,14 @@ function useDashboard() {
 // --- Main Page Component ---
 export default function DashboardPM25() {
     const { data, options, loading, busyMessage, filters, setFilters, baseProvinces, baseDistricts, provinceMaxes, exceedData37, exceedData75 } = useDashboard();
-    const renderMap = (activeMap: 'avg' | 'streak37' | 'streak75') => (
+    const renderMap = (activeMap: 'avg' | 'streak37' | 'streak75') => {
+    const level = filters.districts.length ? 'subdistrict' : filters.provinces.length ? 'district' : 'province';
+    const summaries = data?.mapAreas?.level === level ? data.mapAreas.values : {};
+    const mapValues = Object.fromEntries(Object.entries(summaries).map(([key, summary]) => {
+        const period = activeMap === 'avg' ? null : activeMap === 'streak37' ? summary.streak37 : summary.streak75;
+        return [key, { value: period ? period.days : summary.max, name: summary.name, period }];
+    }));
+    return (
     <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
         <div className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
@@ -663,115 +672,40 @@ export default function DashboardPM25() {
         </div>
         <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-inner bg-slate-800/50">
             <ThailandMap
-                data={activeMap === 'avg' ? provinceMaxes : (activeMap === 'streak37' ? (data?.provinceStreak37 || {}) : (data?.provinceStreak75 || {}))}
+                data={mapValues}
+                resolveAreaData={(area, areaLevel) => areaLevel === level ? mapValues[areaKey(area, level)] : undefined}
                 filters={filters}
+                visibleProvinces={filters.provinces.length ? filters.provinces : filters.regions.length ? baseProvinces : undefined}
                 getColor={(v: number) => getColor(v, activeMap === 'avg' ? LEGENDS.pm25.items : (activeMap === 'streak37' ? LEGENDS.streak37.items : LEGENDS.streak75.items))}
                 legendConfig={activeMap === 'avg' ? LEGENDS.pm25 : (activeMap === 'streak37' ? LEGENDS.streak37 : LEGENDS.streak75)}
                 popupUnit={activeMap === 'avg' ? "มคก./ลบ.ม." : "วัน"}
                 interactive={false}
-                renderPopup={(province, rawValue, popupUnit) => {
-                    const value = typeof rawValue === 'object' ? rawValue.value : (rawValue || 0);
-                    const title = activeMap === 'avg'
-                        ? 'ค่าฝุ่น PM<span class="pm25-subscript">2.5</span> สูงสุด'
-                        : `จำนวนวันที่ PM<span class="pm25-subscript">2.5</span> > ${activeMap === 'streak37' ? '37.5' : '75'} มคก./ลบ.ม. ต่อเนื่อง`;
-
-                    let extraDateText = '';
-                    if (activeMap === 'streak37' && value > 0) {
-                        const trend = data?.provinceTrend?.[province] || data?.provinceTrend?.[province.replace('จังหวัด', '').trim()];
-                        if (trend && trend.length > 0) {
-                            const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                            let currentStreak: Date[] = [];
-                            let latestStreak: Date[] = [];
-
-                            sorted.forEach((point) => {
-                                if (point.value > 37.5) {
-                                    const date = new Date(point.date);
-                                    const previousDate = currentStreak[currentStreak.length - 1];
-                                    const diffDays = previousDate
-                                        ? Math.round((date.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24))
-                                        : 1;
-                                    if (diffDays !== 1) {
-                                        if (currentStreak.length > 0) latestStreak = currentStreak;
-                                        currentStreak = [];
-                                    }
-                                    currentStreak.push(date);
-                                } else {
-                                    if (currentStreak.length > 0) latestStreak = currentStreak;
-                                    currentStreak = [];
-                                }
-                            });
-                            if (currentStreak.length > 0) latestStreak = currentStreak;
-
-                            if (latestStreak.length > 0) {
-                                const dateStr = summarizeDateRanges(latestStreak.map(d => d.toISOString()));
-                                extraDateText = `
-                                    <div class="flex flex-col gap-1 bg-orange-500/10 p-4 rounded-2xl border border-orange-500/20 mt-3">
-                                        <span class="text-compact font-bold text-orange-400/80 uppercase tracking-widest">วันที่ PM<span class="pm25-subscript">2.5</span> &gt; 37.5 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
-                                        <span class="text-xs font-medium text-orange-200 leading-relaxed">${dateStr}</span>
-                                    </div>
-                                `;
-                            }
-                        }
-                    } else if (activeMap === 'streak75' && value >= 2) {
-                        const trend = data?.provinceTrend?.[province] || data?.provinceTrend?.[province.replace('จังหวัด', '').trim()];
-                        if (trend && trend.length > 0) {
-                            const sorted = [...trend].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-                            let currentStreak: Date[] = [];
-                            let latestValidStreak: Date[] = [];
-
-                            for (let i = 0; i < sorted.length; i++) {
-                                const p = sorted[i];
-                                if (p.value > 75) {
-                                    const d = new Date(p.date);
-                                    if (currentStreak.length === 0) {
-                                        currentStreak.push(d);
-                                    } else {
-                                        const lastD = currentStreak[currentStreak.length - 1];
-                                        const diffDays = Math.round((d.getTime() - lastD.getTime()) / (1000 * 60 * 60 * 24));
-                                        if (diffDays === 1) {
-                                            currentStreak.push(d);
-                                        } else {
-                                            if (currentStreak.length >= 2) latestValidStreak = currentStreak;
-                                            currentStreak = [d];
-                                        }
-                                    }
-                                } else {
-                                    if (currentStreak.length >= 2) latestValidStreak = currentStreak;
-                                    currentStreak = [];
-                                }
-                            }
-                            if (currentStreak.length >= 2) latestValidStreak = currentStreak;
-
-                            if (latestValidStreak.length >= 2) {
-                                const dateStr = summarizeDateRanges(latestValidStreak.map(d => d.toISOString()));
-                                extraDateText = `
-                                    <div class="flex flex-col gap-1 bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mt-3">
-                                        <span class="text-compact font-bold text-rose-400/80 uppercase tracking-widest">วันที่ PM<span class="pm25-subscript">2.5</span> &gt; 75 มคก./ลบ.ม. ติดต่อกันล่าสุด</span>
-                                        <span class="text-xs font-medium text-rose-200 leading-relaxed">${dateStr}</span>
-                                    </div>
-                                `;
-                            }
-                        }
-                    }
-
-                    return `
-                        <div class="font-sans p-6 min-w-60 max-w-xs bg-slate-900 text-white rounded-3xl border border-white/10 shadow-2xl">
-                            <div class="text-sm font-black text-blue-400 uppercase tracking-widest mb-4 border-b border-white/10 pb-2">${province}</div>
-                            <div class="space-y-3">
-                                <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
-                                    <span class="text-xs font-bold text-white/50 uppercase tracking-widest">${title}</span>
-                                    <span class="text-lg font-black text-white tabular-nums shrink-0 ml-4">${value.toLocaleString()} <small class="text-xs opacity-40 font-bold">${popupUnit}</small></span>
-                                </div>
-                            </div>
-                            ${extraDateText}
-                        </div>
-                    `;
+                focusSelectedSubdistricts
+                requireDistrictForTambons={filters.provinces.length === 0}
+                renderPopup={(_areaName, rawValue, popupUnit) => {
+                    if (!rawValue || typeof rawValue !== 'object') return '';
+                    const escape = (text: string) => text.replace(/[&<>"']/g, character => ({
+                        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+                    }[character]!));
+                    const threshold = activeMap === 'streak37' ? '37.5' : '75';
+                    const title = activeMap === 'avg' ? 'ค่าฝุ่น PM2.5 สูงสุด'
+                        : `จำนวนวันที่ PM2.5 > ${threshold} มคก./ลบ.ม. ต่อเนื่อง`;
+                    const period = rawValue.period;
+                    const dates = period?.start && period?.end
+                        ? `<div class="mt-3 text-xs text-white/80">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br />${formatDateShort(period.start)} - ${formatDateShort(period.end)}</div>`
+                        : '';
+                    return `<div class="font-sans p-4 min-w-60 max-w-xs bg-slate-900 text-white rounded-2xl border border-white/10">
+                        <div class="text-sm font-bold text-blue-400 mb-3">${escape(rawValue.name)}</div>
+                        <div class="text-xs text-white/70">${escape(title)}</div>
+                        <div class="text-lg font-bold mt-2">${rawValue.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${popupUnit}</div>
+                        ${dates}
+                    </div>`;
                 }}
             />
         </div>
     </div>
     );
+    };
 
     return (
         <div className="min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden font-sans">
@@ -815,7 +749,7 @@ export default function DashboardPM25() {
                 <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-overlay">
                     <DashboardDatePicker mode="day" label="จากวันที่" options={options.dates} value={filters.startDate} onChange={(v) => setFilters({ ...filters, startDate: v })} />
                     <DashboardDatePicker mode="day" label="ถึงวันที่" options={options.dates} value={filters.endDate} onChange={(v) => setFilters({ ...filters, endDate: v })} />
-                    <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val: string[]) => setFilters({ ...filters, regions: val, provinces: [] })} />
+                    <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val: string[]) => setFilters({ ...filters, regions: val, provinces: [], districts: [] })} />
                     <MultiSelect label="จังหวัด" options={baseProvinces} selected={filters.provinces} onChange={(val: string[]) => setFilters({ ...filters, provinces: val, districts: [] })} />
                     <MultiSelect label="อำเภอ/เขต" options={baseDistricts} selected={filters.districts} onChange={(val: string[]) => setFilters({ ...filters, districts: val })} />
                 </div>

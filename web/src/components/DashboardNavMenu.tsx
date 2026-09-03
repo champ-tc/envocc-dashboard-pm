@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 
 const navItems = [
     { href: '/', label: 'หน้าแรก', icon: '/img/home.png' },
@@ -13,57 +14,72 @@ const navItems = [
 ];
 
 export default function DashboardNavMenu({ className = '' }: { className?: string }) {
-    const [isOpen, setIsOpen] = useState(false);
+    const menu = useRef<HTMLDetailsElement>(null);
+    const pathname = usePathname();
+
+    useEffect(() => {
+        const closeOutside = (event: PointerEvent) => {
+            if (menu.current?.open && event.target instanceof Node && !menu.current.contains(event.target)) {
+                menu.current.open = false;
+            }
+        };
+        document.addEventListener('pointerdown', closeOutside);
+        return () => document.removeEventListener('pointerdown', closeOutside);
+    }, []);
 
     return (
-        <div
-            className={`relative ${className}`}
-            onMouseEnter={() => setIsOpen(true)}
-            onMouseLeave={() => setIsOpen(false)}
-            onFocus={() => setIsOpen(true)}
+        <details
+            ref={menu}
+            className={`dropdown dropdown-end z-dashboard-nav shrink-0 self-end md:self-auto ${className}`}
+            onKeyDown={(event) => {
+                if (event.key === 'Escape' && event.currentTarget.open) {
+                    event.preventDefault();
+                    event.currentTarget.open = false;
+                    event.currentTarget.querySelector('summary')?.focus();
+                }
+            }}
             onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) {
-                    setIsOpen(false);
+                    event.currentTarget.open = false;
                 }
             }}
         >
-            <button
-                type="button"
+            <summary
                 aria-label="เปิดเมนูนำทาง dashboard"
-                className="bg-white/10 hover:bg-white/20 focus:bg-white/20 transition-all p-3.5 rounded-2xl border border-white/10 shadow-lg outline-none ring-1 ring-white/10"
+                className="btn btn-square h-12 w-12 cursor-pointer rounded-2xl border-white/15 bg-white/10 text-white shadow-sm hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
             >
                 <Image
                     src="/img/home.png"
                     alt=""
                     width={20}
                     height={20}
-                    className={`size-5 object-contain brightness-0 invert transition-transform ${isOpen ? 'scale-110' : ''}`}
+                    className="size-5 object-contain brightness-0 invert"
                     aria-hidden="true"
                 />
-            </button>
+            </summary>
 
-            <div className={`absolute right-full top-1/2 z-dashboard-nav flex -translate-y-1/2 items-center gap-2 pr-3 transition-all duration-200 ${isOpen ? 'pointer-events-auto translate-x-0 scale-100 opacity-100' : 'pointer-events-none translate-x-3 scale-95 opacity-0'}`}>
-                {navItems.map(({ href, label, icon }, index) => (
+            <ul aria-label="เลือกหน้า" className="dropdown-content menu mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-base-300 bg-base-100 p-2 text-base-content shadow-lg motion-reduce:transition-none">
+                {navItems.map(({ href, label, icon }) => (
+                    <li key={href}>
                     <Link
-                        key={href}
                         href={href}
-                        aria-label={label}
-                        title={label}
-                        onClick={() => setIsOpen(false)}
-                        className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-slate-950/90 text-white/80 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl transition-all hover:-translate-y-1 hover:bg-white/15 hover:text-white focus:-translate-y-1 focus:bg-white/15 focus:text-white focus:outline-none"
-                        style={{ transitionDelay: `${index * 25}ms` }}
+                        aria-current={pathname === href ? 'page' : undefined}
+                        onClick={() => { if (menu.current) menu.current.open = false; }}
+                        className={`min-h-11 cursor-pointer gap-3 rounded-xl hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-neutral ${pathname === href ? 'bg-base-200 font-semibold' : ''}`}
                     >
                         <Image
                             src={icon}
                             alt=""
                             width={20}
                             height={20}
-                            className="size-5 object-contain brightness-0 invert"
+                            className="size-5 shrink-0 object-contain"
                             aria-hidden="true"
                         />
+                        <span>{label}</span>
                     </Link>
+                    </li>
                 ))}
-            </div>
-        </div>
+            </ul>
+        </details>
     );
 }

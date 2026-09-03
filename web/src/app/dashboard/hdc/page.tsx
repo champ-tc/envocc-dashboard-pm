@@ -656,6 +656,10 @@ export default function DashboardHDC() {
                             <ThailandMap
                                 data={data?.provinceAverages || {}} 
                                 filters={provinceMapFilters}
+                                visibleProvinces={filters.provinces.length ? filters.provinces : filters.regions.length ? baseProvinces : undefined}
+                                resolveAreaData={(area, level) => level === 'province' ? data?.provinceAverages[area.province] : undefined}
+                                requireDistrictForTambons
+                                interactive={false}
                                 getColor={ddcColorScale} 
                                 legendConfig={ddcLegend} 
                                 popupUnit="ราย"

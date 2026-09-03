@@ -5,7 +5,9 @@ let tambonRequest: Promise<FeatureCollection> | undefined;
 export function needsTambonBoundaries(
     filters: { provinces?: string[]; districts?: string[] },
     stationCount: number,
+    requireDistrictSelection = false,
 ) {
+    if (requireDistrictSelection && !filters.districts?.length) return false;
     // DDS station overlays also require tambons at national level.
     return Boolean(filters.provinces?.length || filters.districts?.length || stationCount);
 }

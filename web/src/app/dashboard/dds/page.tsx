@@ -383,18 +383,16 @@ export default function DDSDashboardPage() {
         });
     }, []);
 
-    const hasSubdistrictData = Object.keys(data?.subdistrictAverages || {}).length > 0;
+    const showSubdistricts = filters.districts.length > 0;
     const isAreaBreakdownView = filters.provinces.length > 0 || filters.districts.length > 0;
     const isDetailedView = isAreaBreakdownView;
     const mapData = isAreaBreakdownView
-        ? (hasSubdistrictData ? (data?.subdistrictAverages || {}) : (data?.districtAverages || {}))
+        ? (showSubdistricts ? (data?.subdistrictAverages || {}) : (data?.districtAverages || {}))
         : (data?.provinceAverages || {});
     const mapAreaCount = isAreaBreakdownView
         ? Object.keys(mapData).length
         : Object.keys(data?.provinceAverages || {}).length;
-    const mapFilters = isAreaBreakdownView && !hasSubdistrictData
-        ? { ...filters, districts: filters.districts.length > 0 ? filters.districts : baseDistricts }
-        : filters;
+    const mapFilters = filters;
     const ddcLegend = {
         title: 'จำนวนผู้ป่วย',
         unit: '',
@@ -605,6 +603,8 @@ export default function DDSDashboardPage() {
                                 data={mapData}
                                 stations={data?.stations || []}
                                 filters={mapFilters}
+                                focusSelectedSubdistricts
+                                visibleProvinces={!isAreaBreakdownView && filters.regions.length > 0 ? baseProvinces : undefined}
                                 getColor={ddcColorScale}
                                 legendConfig={ddcLegend}
                                 popupUnit="ราย"
@@ -615,7 +615,7 @@ export default function DDSDashboardPage() {
                                             <div class="text-sm font-black text-blue-400 uppercase mb-4 border-b border-white/10 pb-2">${area}</div>
                                             <div class="space-y-3">
                                                 <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl"><span>จำนวนผู้ป่วย</span><span class="text-lg font-black">${Math.round(valObj.value).toLocaleString()} ${popupUnit}</span></div>
-                                                <div class="flex items-center justify-between bg-blue-500/10 p-4 rounded-2xl"><span>อัตราป่วย</span><span class="text-lg font-black text-blue-400">${valObj.rate.toFixed(2)} ต่อแสน</span></div>
+                                                ${!isAreaBreakdownView ? `<div class="flex items-center justify-between bg-blue-500/10 p-4 rounded-2xl"><span>อัตราป่วย</span><span class="text-lg font-black text-blue-400">${valObj.rate.toFixed(2)} ต่อแสน</span></div>` : ''}
                                                 ${area.includes('-') && valObj.pm25 ? `<div class="flex items-center justify-between bg-rose-500/10 p-4 rounded-2xl"><span>PM<span class="pm25-subscript">2.5</span></span><span class="text-lg font-black text-rose-400">${valObj.pm25.toFixed(1)} มคก./ลบ.ม.</span></div>` : ''}
                                             </div>
                                         </div>

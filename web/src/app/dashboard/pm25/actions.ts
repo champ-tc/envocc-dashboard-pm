@@ -3,6 +3,7 @@
 import type * as duckdbTypes from 'duckdb';
 import { withDashboardDatabase, getDashboardDataVersion } from '@/lib/dashboard-data-engine';
 import { cachedDashboardQuery, isDashboardOverloadError, stableCacheKey } from '@/lib/dashboard-runtime';
+import { summarizeMapAreas, type AreaLevel, type AreaDay } from './map-area-data';
 
 async function runQuery(db: duckdbTypes.Database, sql: string): Promise<any[]> {
     return new Promise((resolve, reject) => {
@@ -62,7 +63,7 @@ export async function getFilterOptions() {
 export async function getDashboardData(filters: { startDate?: string, endDate?: string, regions?: string[], provinces?: string[], districts?: string[] } = {}) {
     try {
         const version = getDashboardDataVersion();
-        const cacheKey = `pm25:data:${version}:${stableCacheKey(filters)}`;
+        const cacheKey = `pm25:data:area-v1:${version}:${stableCacheKey(filters)}`;
         return await cachedDashboardQuery(cacheKey, () =>
             withDashboardDatabase(async (db) => {
         const mappedRegions = filters.regions?.map(r => r === 'กรุงเทพมหานคร' ? 'เขตสุขภาพที่ 13' : r);
@@ -83,6 +84,7 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
         }
 
         const sqlBase = `FROM pm25_raw WHERE 1=1 ${dateFilter} ${locFilters}`;
+        const mapLevel: AreaLevel = filters.districts?.length ? 'subdistrict' : filters.provinces?.length ? 'district' : 'province';
 
         const [resStats, resRegion, resProvTrend, resDistTrend, resTop10, resProvAvg] = await Promise.all([
             runQuery(db, `SELECT AVG(pm25) as avg_pm25, MAX(pm25) as max_pm25, COUNT(*) as total_measurements, COUNT(CASE WHEN pm25 > 37.5 THEN 1 END) as exceed_count, MAX(date) as report_date ${sqlBase}`),
@@ -164,6 +166,16 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
         const provinceMaxes: Record<string, number> = {};
         resProvAvg.forEach(p => { provinceMaxes[p.province] = p.value; });
 
+        // Load only the geographic detail currently displayed on the map.
+        const areaRows: AreaDay[] = mapLevel === 'province'
+            ? resProvTrend.map(row => ({ province: row.label, date: row.date, value: row.value, max: provinceMaxes[row.label] }))
+            : await runQuery(db, `SELECT TRIM(province) AS province, TRIM(district) AS district,
+                ${mapLevel === 'subdistrict' ? 'TRIM(subdistrict)' : 'NULL'} AS subdistrict,
+                strftime(date, '%Y-%m-%d') AS date, AVG(pm25) AS value, MAX(pm25) AS max
+                ${sqlBase} AND pm25 IS NOT NULL
+                GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4`);
+        const mapAreas = summarizeMapAreas(areaRows, mapLevel);
+
         const top10Exceed = resTop10.map(row => ({
             province: row.province as string,
             exceed_days: Number(row.exceed_days) || 0
@@ -180,6 +192,7 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
             districtTrend: groupByLabel(resDistTrend),
             top10Exceed,
             provinceMaxes,
+            mapAreas,
             provinceStreak37: streak37,
             provinceStreak75: streak75
         };

@@ -32,7 +32,7 @@ export default function DashboardNavbar({
     navClassName?: string;
 }) {
     return (
-        <header className={`flex shrink-0 flex-col justify-between gap-4 md:flex-row md:items-center ${className}`}>
+        <header className={`flex shrink-0 flex-col justify-between gap-4 md:flex-row md:items-center has-[details[open]]:z-dashboard-nav ${className}`}>
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-4">
                     {logos.map((logo) => (

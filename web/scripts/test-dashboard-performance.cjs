@@ -55,6 +55,10 @@ async function main() {
     assert.equal(maps.needsTambonBoundaries({ provinces: ['A'] }, 0), true);
     assert.equal(maps.needsTambonBoundaries({ districts: ['B'] }, 0), true);
     assert.equal(maps.needsTambonBoundaries({}, 1), true, 'retain DDS national station overlay');
+    assert.equal(maps.needsTambonBoundaries({}, 0, true), false, 'PM25 national view hides tambons');
+    assert.equal(maps.needsTambonBoundaries({ provinces: ['A'] }, 0, true), false, 'PM25 province alone must not load tambons');
+    assert.equal(maps.needsTambonBoundaries({ provinces: ['A'], districts: ['B'] }, 0, true), true, 'PM25 selected district shows tambons');
+    assert.equal(maps.needsTambonBoundaries({ provinces: ['A'], districts: [] }, 0, true), false, 'clearing districts hides cached tambons');
     assert.equal(requests, 0, 'national view must not initiate geometry request');
     await assert.rejects(maps.loadTambonBoundaries(), /503/);
     fail = false;
@@ -74,6 +78,7 @@ async function main() {
             (DATE '2026-01-03', 'A', 'D1', 'เขตสุขภาพที่ 1', 90.0),
             (DATE '2026-01-01', 'B', 'D2', 'เขตสุขภาพที่ 2', 10.0)
         ) t(date, province, district, "Regional Health", pm25)`);
+        await run(`ALTER TABLE pm25_raw ADD COLUMN subdistrict VARCHAR DEFAULT 'T1'`);
         let queries = 0;
         const actions = load('src/app/dashboard/pm25/actions.ts', {
             '@/lib/dashboard-data-engine': {
@@ -84,6 +89,7 @@ async function main() {
                 cachedDashboardQuery: (_key, fn) => fn(), stableCacheKey: JSON.stringify,
                 isDashboardOverloadError: () => false,
             },
+            './map-area-data': load('src/app/dashboard/pm25/map-area-data.ts'),
         });
         const result = await actions.getDashboardData({ startDate: '2026-01-01', endDate: '2026-01-03' });
         assert.equal(queries, 6, 'unused seventh query removed');
@@ -99,8 +105,15 @@ async function main() {
         const filtered = await actions.getDashboardData({ provinces: ['B'] });
         assert.equal(filtered.totalMeasurements, 1);
         assert.equal(filtered.avgPM25, '10.0');
+        assert.equal(filtered.mapAreas.level, 'district');
+        assert.equal(filtered.mapAreas.values['["B","D2"]'].max, 10);
+        const tambons = await actions.getDashboardData({ provinces: ['A'], districts: ['D1'] });
+        assert.equal(tambons.mapAreas.level, 'subdistrict');
+        assert.equal(tambons.mapAreas.values['["A","D1","T1"]'].max, 90);
+        assert.equal(tambons.mapAreas.values['["A","D1","T1"]'].streak75.start, '2026-01-02');
         const empty = await actions.getDashboardData({ provinces: ['missing'] });
         assert.equal(empty.totalMeasurements, 0);
+        assert.equal(Object.keys(empty.mapAreas.values).length, 0);
         console.log('PASS DuckDB: six queries; summary, trends, maxima, streaks, filters, empty results');
     } finally {
         await new Promise(resolve => db.close(resolve));
