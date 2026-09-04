@@ -255,10 +255,6 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         if (!needsTambons || !boundaryData) return null;
         const selectedProvinces = (filters.provinces || []).map((p: string) => cleanThaiName(p));
         const selectedDistricts = (filters.districts || []).map((d: string) => cleanThaiName(d));
-        const selectedSubdistricts = focusSelectedSubdistricts
-            ? (filters.subdistricts || []).map((s: string) => cleanThaiName(s))
-            : [];
-
         const filteredFeatures = boundaryData.features.filter((f: any) => {
             const pNameRaw = f.properties.ADM1_TH || '';
             const dNameRaw = f.properties.ADM2_TH || '';
@@ -268,14 +264,11 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             const districtTh = fixThaiMojibake(dNameRaw);
             const subdistrictTh = fixThaiMojibake(tNameRaw).trim();
 
-            if (resolveAreaData && resolveAreaData({ province: provinceTh, district: districtTh.trim(), subdistrict: subdistrictTh }, showDistrictBoundaries ? 'district' : 'subdistrict') === undefined) return false;
+            // Keep boundary features even when there is no metric, so users can
+            // identify every district/tambon by hovering the map.
             
             const cleanP = cleanThaiName(provinceTh);
             const cleanD = cleanThaiName(districtTh);
-
-            if (selectedSubdistricts.length > 0 && !selectedSubdistricts.includes(cleanThaiName(subdistrictTh))) {
-                return false;
-            }
 
             if (selectedDistricts.length > 0) {
                 const matchDistrict = selectedDistricts.includes(cleanD);
@@ -395,7 +388,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             opacity: focusSelectedSubdistricts ? 1 : 0.8,
             color: focusSelectedSubdistricts ? '#1e293b' : '#475569',
             fillOpacity,
-            interactive: showDistrictBoundaries || !!station || !!rawAreaValue || isDistrictSelected
+            interactive: showDistrictBoundaries || !!station || !!rawAreaValue || isDistrictSelected || !!resolveAreaData
         };
     };
 
@@ -411,20 +404,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                 
                 const cleanP = cleanThaiName(provinceTh);
                 const latestRawValue = resolveAreaData ? resolveAreaData({ province: provinceTh }, 'province') : dataRef.current[cleanP];
-                if (resolveAreaData && latestRawValue === undefined) return;
-                const displayValue = (latestRawValue && typeof latestRawValue === 'object') 
-                    ? (latestRawValue.value ?? 0) 
-                    : (latestRawValue ?? 0);
-
-                const popupContent = renderPopup ? renderPopup(provinceTh, latestRawValue, popupUnit) : `
-                    <div class="font-sans p-2 min-w-map-popup">
-                        <div class="text-base font-extrabold text-slate-800 mb-2 leading-tight">${provinceTh}</div>
-                        <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
-                            <span class="text-2xl font-extrabold text-slate-900">${Number(displayValue).toLocaleString()}</span>
-                            <span class="text-compact font-bold text-slate-400 ml-1">${popupUnit}</span>
-                        </div>
-                    </div>
-                `;
+                const popupContent = renderPopup ? renderPopup(provinceTh, latestRawValue, popupUnit) : `<div class="font-sans p-2 min-w-map-popup"><div class="text-base font-extrabold text-slate-800 leading-tight">${provinceTh}</div></div>`;
 
                 l.bindTooltip(popupContent, getAdaptiveTooltipOptions(e)).openTooltip(e.latlng);
             },
@@ -477,25 +457,13 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                 const latestRawValue = resolveAreaData
                     ? resolveAreaData({ province: provinceTh, district: districtTh.trim(), subdistrict: subdistrictTh }, showDistrictBoundaries ? 'district' : 'subdistrict')
                     : dataRef.current[cleanThaiName(subdistrictKey)] || dataRef.current[cleanThaiName(districtKey)] || dataRef.current[cleanD] || dataRef.current[cleanP];
-                if (resolveAreaData && latestRawValue === undefined) return;
-                const displayValue = (latestRawValue && typeof latestRawValue === 'object') 
-                    ? (latestRawValue.value ?? 0) 
-                    : (latestRawValue ?? 0);
                 const areaName = resolveAreaData
                     ? (showDistrictBoundaries ? `${districtTh.trim()}, ${provinceTh}` : `${subdistrictTh}, ${districtTh.trim()}, ${provinceTh}`)
                     : showDistrictBoundaries ? `${districtTh.trim()}, ${provinceTh}` : latestRawValue === dataRef.current[cleanThaiName(subdistrictKey)]
                     ? `${subdistrictTh}, ${districtTh.trim()}, ${provinceTh}`
                     : latestRawValue === dataRef.current[cleanP] ? provinceTh : `${districtTh.trim()}, ${provinceTh}`;
 
-                const popupContent = renderPopup ? renderPopup(areaName, latestRawValue, popupUnit) : `
-                    <div class="font-sans p-2 min-w-map-popup">
-                        <div class="text-base font-extrabold text-slate-800 mb-2 leading-tight">${areaName}</div>
-                        <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
-                            <span class="text-2xl font-extrabold text-slate-900">${Number(displayValue).toLocaleString()}</span>
-                            <span class="text-compact font-bold text-slate-400 ml-1">${popupUnit}</span>
-                        </div>
-                    </div>
-                `;
+                const popupContent = renderPopup ? renderPopup(areaName, latestRawValue, popupUnit) : `<div class="font-sans p-2 min-w-map-popup"><div class="text-base font-extrabold text-slate-800 leading-tight">${areaName}</div></div>`;
                 
                 const l = e.target;
                 // Only bind province tooltip if we don't already have a station tooltip
@@ -568,6 +536,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     border: none;
                     border-radius: 8px;
                     color: white;
+                    font-family: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
                     font-size: 10px;
                     font-weight: 800;
                     padding: 4px 8px;

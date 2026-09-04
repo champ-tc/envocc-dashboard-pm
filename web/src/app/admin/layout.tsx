@@ -1,12 +1,12 @@
 import { requireRoles } from '@/lib/auth';
 import AdminLayout from './AdminLayout';
-import { Noto_Sans_Thai } from 'next/font/google';
+import { Kanit } from 'next/font/google';
 
-const authenticatedFont = Noto_Sans_Thai({
+const authenticatedFont = Kanit({
     subsets: ['thai', 'latin'],
-    weight: 'variable',
+    weight: ['400', '500', '600', '700', '800', '900'],
     display: 'swap',
-    variable: '--font-authenticated',
+    variable: '--font-kanit',
 });
 
 export default async function Layout({

@@ -682,22 +682,25 @@ export default function DashboardPM25() {
                 interactive={false}
                 focusSelectedSubdistricts
                 requireDistrictForTambons={filters.provinces.length === 0}
-                renderPopup={(_areaName, rawValue, popupUnit) => {
-                    if (!rawValue || typeof rawValue !== 'object') return '';
+                renderPopup={(areaName, rawValue, popupUnit) => {
                     const escape = (text: string) => text.replace(/[&<>"']/g, character => ({
                         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
                     }[character]!));
                     const threshold = activeMap === 'streak37' ? '37.5' : '75';
                     const title = activeMap === 'avg' ? 'ค่าฝุ่น PM2.5 สูงสุด'
                         : `จำนวนวันที่ PM2.5 > ${threshold} มคก./ลบ.ม. ต่อเนื่อง`;
-                    const period = rawValue.period;
+                    const period = rawValue && typeof rawValue === 'object' ? rawValue.period : undefined;
                     const dates = period?.start && period?.end
-                        ? `<div class="mt-3 text-xs text-white/80">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br />${formatDateShort(period.start)} - ${formatDateShort(period.end)}</div>`
+                        ? `<div class="mt-3 text-[20px] text-purple-400">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br /><span class="text-[18px] text-white">${formatDateShort(period.start)} - ${formatDateShort(period.end)}</span></div>`
+                        : '';
+                    const name = rawValue && typeof rawValue === 'object' ? rawValue.name : areaName;
+                    const value = rawValue && typeof rawValue === 'object'
+                        ? `<div class="text-lg font-normal text-white mt-2">${rawValue.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${popupUnit}</div>`
                         : '';
                     return `<div class="font-sans p-4 min-w-60 max-w-xs bg-slate-900 text-white rounded-2xl border border-white/10">
-                        <div class="text-sm font-bold text-blue-400 mb-3">${escape(rawValue.name)}</div>
-                        <div class="text-xs text-white/70">${escape(title)}</div>
-                        <div class="text-lg font-bold mt-2">${rawValue.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${popupUnit}</div>
+                        <div class="text-[20px] font-bold text-blue-400 mb-3">${escape(name)}</div>
+                        <div class="text-[18px] font-bold text-purple-400">${escape(title)}</div>
+                        ${value}
                         ${dates}
                     </div>`;
                 }}

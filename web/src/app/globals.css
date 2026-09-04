@@ -358,9 +358,15 @@
 }
 
 .authenticated-font {
-    --font-sans: var(--font-authenticated), ui-sans-serif, system-ui, sans-serif;
-    font-family: var(--font-authenticated), ui-sans-serif, system-ui, sans-serif;
+    --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
     color: #0f172a;
+}
+
+/* Leaflet renders map tooltips outside the normal component text tree. */
+.leaflet-container,
+.leaflet-tooltip {
+    font-family: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
 }
 
 .authenticated-font .font-black {
