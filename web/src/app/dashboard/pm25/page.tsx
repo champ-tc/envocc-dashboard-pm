@@ -691,7 +691,7 @@ export default function DashboardPM25() {
                         : `จำนวนวันที่ PM2.5 > ${threshold} มคก./ลบ.ม. ต่อเนื่อง`;
                     const period = rawValue && typeof rawValue === 'object' ? rawValue.period : undefined;
                     const dates = period?.start && period?.end
-                        ? `<div class="mt-3 text-[20px] text-purple-400">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br /><span class="text-[18px] text-white">${formatDateShort(period.start)} - ${formatDateShort(period.end)}</span></div>`
+                        ? `<div class="mt-3 text-[20px] font-bold text-purple-400">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br /><span class="text-[18px] text-white">${formatDateShort(period.start)} - ${formatDateShort(period.end)}</span></div>`
                         : '';
                     const name = rawValue && typeof rawValue === 'object' ? rawValue.name : areaName;
                     const value = rawValue && typeof rawValue === 'object'
