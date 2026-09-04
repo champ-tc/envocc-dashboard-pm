@@ -528,12 +528,15 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             <MapContainer
                 center={center} zoom={4.5} minZoom={4} maxBounds={bounds}
                 zoomSnap={0.1} zoomDelta={0.5}
-                style={{ height: '100%', width: '100%', borderRadius: '0.75rem', zIndex: 0, backgroundColor: '#f8fafc' }}
+                style={{ height: '100%', width: '100%', borderRadius: '0.75rem', zIndex: 0, backgroundColor: '#dbeafe' }}
                 zoomControl={interactive} dragging={interactive} scrollWheelZoom={interactive} doubleClickZoom={interactive}
                 maxBoundsViscosity={1.0}
                 attributionControl={false}
             >
-                {/* Local boundaries only: no external basemap tiles or API key dependency. */}
+                {/* Local geography backdrop: no external basemap tiles or API key dependency. */}
+                <Pane name="geography" style={{ zIndex: 300 }}>
+                    {geoData && <GeoJSON data={geoData} interactive={false} style={() => ({ fillColor: '#cbd5e1', fillOpacity: 0.7, color: '#94a3b8', weight: 0.8 })} />}
+                </Pane>
                 <Pane name="provinces" style={{ zIndex: 400 }}>
                     {displayGeoData && (
                         <GeoJSON 

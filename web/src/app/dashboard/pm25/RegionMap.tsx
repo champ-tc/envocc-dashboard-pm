@@ -63,7 +63,8 @@ export default function RegionMap({ regions, hierarchy, values, metric, unit, ge
         <div className="relative min-h-0 flex-1">
             <MapContainer center={[13.7, 100.5]} zoom={5} zoomSnap={0.1} zoomControl={false}
                 dragging={false} scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false}
-                attributionControl={false} style={{ height: '100%', width: '100%', background: '#f8fafc' }}>
+                attributionControl={false} style={{ height: '100%', width: '100%', background: '#dbeafe' }}>
+                {source && <GeoJSON data={source} interactive={false} style={() => ({ fillColor: '#cbd5e1', fillOpacity: 0.7, color: '#94a3b8', weight: 0.8 })} />}
                 <GeoJSON key={JSON.stringify([areas.features.map(feature => feature.properties), metric])} data={areas}
                     style={feature => ({ stroke: false, fillColor: getColor(feature?.properties?.value || 0), fillOpacity: 0.85 })}
                     onEachFeature={(feature, layer) => {
