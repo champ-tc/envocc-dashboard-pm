@@ -40,7 +40,10 @@ export async function POST(request: Request) {
     try {
         const origin = request.headers.get('origin');
         const requestUrl = new URL(request.url);
-        if (origin && new URL(origin).origin !== requestUrl.origin) {
+        const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+        const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+        const publicOrigin = `${forwardedProto || requestUrl.protocol.replace(':', '')}://${forwardedHost || request.headers.get('host') || requestUrl.host}`;
+        if (origin && new URL(origin).origin !== publicOrigin) {
             return NextResponse.json({ error: 'คำขอไม่ถูกต้อง' }, { status: 403 });
         }
 
