@@ -8,7 +8,7 @@ const source = fs.readFileSync(require('node:path').join(__dirname, '../src/comp
 const code = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020,
 } }).outputText;
-assert.doesNotMatch(source, /useState|onMouseEnter|onMouseLeave|backdrop-blur|transitionDelay/);
+assert.doesNotMatch(source, /useState|onMouseEnter|onMouseLeave|transitionDelay/);
 const navbar = fs.readFileSync(require('node:path').join(__dirname, '../src/app/dashboard/_components/DashboardNavbar.tsx'), 'utf8');
 assert.ok(navbar.includes('has-[details[open]]:z-dashboard-nav'), 'Open navigation must stack above dashboard filters');
 for (const route of ['hdc', 'dds', 'pm25']) {
@@ -23,6 +23,7 @@ for (const route of ['hdc', 'dds', 'pm25']) {
     assert.match(html, /<details class="dropdown dropdown-end/);
     assert.doesNotMatch(html, /<details[^>]* open/);
     assert.match(html, /<summary aria-label="เปิดเมนูนำทาง dashboard"/);
+    assert.match(html, /ไปยังหน้า/);
     assert.equal((html.match(/<a /g) || []).length, 5);
     assert.match(html, new RegExp(`href="/dashboard/${route}" aria-current="page"`));
     for (const label of ['หน้าแรก', 'Dashboard ฝุ่น PM2.5', 'Dashboard ผู้ป่วย HDC', 'Dashboard ผู้ป่วย DDS', 'เข้าสู่ระบบ']) assert.ok(html.includes(label));

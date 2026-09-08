@@ -16,7 +16,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const secretKey = process.env.JWT_SECRET || 'my-super-secret';
+        const secretKey = process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is not defined'); })();
         const SECRET = new TextEncoder().encode(secretKey);
         const { payload } = await jwtVerify(token, SECRET);
         const userId = payload.id as number;

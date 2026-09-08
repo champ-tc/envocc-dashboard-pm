@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import {
     CalendarDays,
@@ -13,8 +13,8 @@ import {
     FileCheck2,
     Gauge,
     LayoutDashboard,
+    LogOut,
     MapPinned,
-    ShieldCheck,
     UsersRound,
     X,
 } from 'lucide-react';
@@ -30,16 +30,6 @@ type MenuGroup = {
     items: MenuItem[];
 };
 
-const roleLabels: Record<string, string> = {
-    superadmin: 'ผู้ดูแลระบบสูงสุด',
-    admin_department: 'ผู้ดูแลระบบระดับกรม',
-    adminenvocc: 'ผู้ดูแล EnvOcc',
-    admin: 'ผู้ดูแลระบบ',
-    admin_region: 'ผู้ดูแลระบบระดับเขต',
-    admin_province: 'ผู้ดูแลระบบระดับจังหวัด',
-    user: 'ผู้ใช้งาน',
-};
-
 export default function Sidebar({
     role,
     isOpen,
@@ -50,21 +40,39 @@ export default function Sidebar({
     onClose?: () => void;
 }) {
     const pathname = usePathname();
+    const router = useRouter();
     const safeRole = role || 'user';
     const isAdmin = safeRole === 'admin' || safeRole === 'adminenvocc' || safeRole === 'admin_department' || safeRole === 'superadmin';
     const isSuperAdmin = safeRole === 'superadmin';
     const homePath = isAdmin ? '/admin' : '/user/main';
     const profilePath = isAdmin ? '/admin/profile' : '/user/profile';
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        router.push('/login');
+        router.refresh();
+    };
 
     const menuGroups: MenuGroup[] = [
         {
             label: 'ทั่วไป',
             items: [
-                { label: 'ภาพรวมระบบ', href: homePath, icon: LayoutDashboard },
+                { label: isAdmin ? 'ภาพรวมระบบ' : 'หน้าแรก', href: homePath, icon: LayoutDashboard },
                 { label: 'ข้อมูลส่วนตัว', href: profilePath, icon: CircleUserRound },
             ],
         },
     ];
+
+    if (!isAdmin) {
+        menuGroups.push({
+            label: 'ขอข้อมูล',
+            items: [
+                { label: 'ขอข้อมูล PM2.5', href: '/user/pm25', icon: Gauge },
+                { label: 'ขอข้อมูล Stations', href: '/user/stations', icon: MapPinned },
+                { label: 'ขอข้อมูล BigData (HDC)', href: '/user/hdc', icon: Database },
+                { label: 'ขอข้อมูล DDS', href: '/user/dds', icon: FileCheck2 },
+            ],
+        });
+    }
 
     if (isAdmin) {
         menuGroups.push({
@@ -109,24 +117,24 @@ export default function Sidebar({
             />
 
             <aside
-                className={`fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 transform flex-col overflow-hidden border-r border-slate-200/80 bg-white text-slate-700 shadow-2xl shadow-slate-900/10 transition-transform duration-300 ease-out lg:static lg:translate-x-0 lg:shadow-none ${
+                className={`fixed inset-y-0 left-0 z-50 flex w-[260px] shrink-0 transform flex-col overflow-hidden border-r border-slate-200/80 bg-white text-slate-700 shadow-2xl shadow-slate-900/10 transition-transform duration-300 ease-out lg:static lg:translate-x-0 lg:shadow-none ${
                     isOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
-                <div className="relative flex h-20 items-center justify-between border-b border-slate-100 px-4">
+                <div className="relative flex items-center justify-between px-6 pb-6 pt-8">
                     <Link href={homePath} className="group flex min-w-0 items-center gap-3" onClick={onClose}>
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 p-1.5 ring-1 ring-blue-100 transition-transform group-hover:scale-105">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-green-200 bg-green-50 p-1 transition-transform group-hover:scale-105">
                             <Image
-                                src="/img/ddc-logo-optimized.png"
-                                alt="กรมควบคุมโรค"
-                                width={34}
-                                height={34}
-                                className="h-full w-full rounded-xl object-contain"
+                                src="/img/pm.png"
+                                alt="ENV-OCC"
+                                width={32}
+                                height={32}
+                                className="h-full w-full rounded-full object-contain"
                             />
                         </div>
                         <div className="min-w-0">
-                            <p className="truncate text-base font-bold tracking-tight text-slate-900">ENV-OCC</p>
-                            <p className="truncate text-compact-plus font-semibold tracking-wider text-blue-600">DATA PLATFORM</p>
+                            <p className="truncate text-[15px] font-bold leading-tight tracking-tight text-slate-900">ENV-OCC</p>
+                            <p className="mt-0.5 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-sky-600">DATA PLATFORM</p>
                         </div>
                     </Link>
 
@@ -140,10 +148,10 @@ export default function Sidebar({
                     </button>
                 </div>
 
-                <nav className="relative flex-1 space-y-3 overflow-y-auto px-3 py-3">
+                <nav className="relative flex-1 space-y-7 overflow-y-auto px-4 py-2">
                     {menuGroups.map((group) => (
                         <section key={group.label}>
-                            <p className="mb-1 px-3 text-compact font-semibold tracking-menu-label text-slate-400 uppercase">
+                            <p className="mb-1 px-3 text-[11px] font-medium text-slate-400">
                                 {group.label}
                             </p>
                             <div className="space-y-0.5">
@@ -153,26 +161,26 @@ export default function Sidebar({
 
                                     return (
                                         <Link
-                                            key={item.href}
+                                            key={`${group.label}-${item.label}`}
                                             href={item.href}
                                             onClick={onClose}
                                             aria-current={isActive ? 'page' : undefined}
                                             className={`group relative flex min-h-10 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 ${
                                                 isActive
-                                                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
-                                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+                                                    ? 'border border-blue-100/50 bg-blue-50 text-blue-700'
+                                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                                             }`}
                                         >
                                             <span
                                                 className={`flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors ${
                                                     isActive
-                                                        ? 'bg-blue-500 text-white'
-                                                        : 'bg-transparent text-slate-400 group-hover:text-blue-600'
+                                                    ? 'text-blue-600'
+                                                    : 'bg-transparent text-slate-400 group-hover:text-blue-600'
                                                 }`}
                                             >
                                                 <Icon className="size-4" strokeWidth={2} />
                                             </span>
-                                            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                                            <span className="min-w-0 flex-1 truncate text-[14px]">{item.label}</span>
                                             <ChevronRight
                                                 className={`size-4 transition-all ${
                                                     isActive
@@ -188,20 +196,11 @@ export default function Sidebar({
                     ))}
                 </nav>
 
-                <div className="relative border-t border-slate-100 p-3">
-                    <div className="rounded-xl bg-slate-50 p-2.5 ring-1 ring-slate-100">
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-200">
-                                <ShieldCheck className="size-4" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-compact-plus font-medium text-slate-500">สิทธิ์การใช้งาน</p>
-                                <p className="truncate text-sm font-bold text-slate-800">
-                                    {roleLabels[safeRole] || safeRole}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                <div className="border-t border-slate-100 p-3">
+                    <button type="button" onClick={handleLogout} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600">
+                        <LogOut className="size-4" />
+                        <span>ออกจากระบบ</span>
+                    </button>
                 </div>
             </aside>
         </>

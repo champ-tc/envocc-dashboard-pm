@@ -14,7 +14,7 @@ async function getUserId() {
     const token = cookieStore.get('token')?.value;
     if (!token) return null;
     try {
-        const secretKey = process.env.JWT_SECRET || 'my-super-secret';
+        const secretKey = process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is not defined'); })();
         const SECRET = new TextEncoder().encode(secretKey);
         const { payload } = await jwtVerify(token, SECRET);
         return payload.id as number;

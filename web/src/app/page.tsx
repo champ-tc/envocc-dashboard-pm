@@ -3,8 +3,16 @@ import PM25Mark, { PM25Text } from '@/components/PM25Mark';
 import GuestNavbar from '@/components/GuestNavbar';
 import SecurityModal from '@/components/SecurityModal';
 
-// --- Constants & Data ---
-const DEFINITIONS = [
+type Definition = {
+    id: number;
+    title: string;
+    desc: string;
+    items?: string[];
+    link?: string;
+    isAlert?: boolean;
+};
+
+const DEFINITIONS: Definition[] = [
     {
         id: 1,
         title: "โรคที่ประกาศตามพ.ร.บ. EnvOcc",
@@ -50,7 +58,7 @@ const DEFINITIONS = [
 ];
 
 // --- Components ---
-function DefinitionBlock({ def }: { def: typeof DEFINITIONS[0] }) {
+function DefinitionBlock({ def }: { def: Definition }) {
     return (
         <div className="card bg-white/70 shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 group">
             <div className="card-body p-5 md:p-6">
@@ -64,8 +72,8 @@ function DefinitionBlock({ def }: { def: typeof DEFINITIONS[0] }) {
                     <p className="text-slate-600 text-body-compact leading-relaxed mb-4"><PM25Text>{def.desc}</PM25Text></p>
                     {def.items && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                            {def.items.map((item, idx) => (
-                                <div key={idx} className="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-100 shadow-xs hover:border-blue-300 transition-colors">
+                            {def.items.map((item) => (
+                                <div key={item} className="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-100 shadow-xs hover:border-blue-300 transition-colors">
                                     <svg className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                     <span className="text-sm text-slate-700 leading-relaxed">{item}</span>
                                 </div>
@@ -74,7 +82,10 @@ function DefinitionBlock({ def }: { def: typeof DEFINITIONS[0] }) {
                     )}
                     {def.link && (
                         <div className="card-actions mt-4">
-                            <a target="_blank" href={def.link} rel="noopener noreferrer"
+                            <a
+                                href={def.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="btn btn-sm btn-outline rounded-full font-medium shadow-xs border-blue-500 text-blue-600 hover:bg-linear-to-br hover:from-blue-600 hover:to-sky-500 hover:text-white hover:border-none">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                 ดูข้อมูลเพิ่มเติม

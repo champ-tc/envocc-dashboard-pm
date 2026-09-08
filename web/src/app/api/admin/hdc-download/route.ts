@@ -20,7 +20,7 @@ async function isSuperadmin() {
     if (!token) return false;
 
     try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'my-super-secret');
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is not defined'); })());
         const { payload } = await jwtVerify(token, secret);
         return payload.role === 'superadmin';
     } catch {

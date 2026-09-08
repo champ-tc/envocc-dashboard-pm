@@ -5,6 +5,12 @@ import { or, eq } from 'drizzle-orm';
 
 export async function POST(request: Request) {
     try {
+        const origin = request.headers.get('origin');
+        const requestUrl = new URL(request.url);
+        if (origin && new URL(origin).origin !== requestUrl.origin) {
+            return NextResponse.json({ error: 'คำขอไม่ถูกต้อง' }, { status: 403 });
+        }
+
         const body = await request.json();
         const username = typeof body.username === 'string' ? body.username.trim() : body.username;
         const { email, idCard } = body;

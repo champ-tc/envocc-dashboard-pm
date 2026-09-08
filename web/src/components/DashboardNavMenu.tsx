@@ -16,6 +16,7 @@ const navItems = [
 export default function DashboardNavMenu({ className = '' }: { className?: string }) {
     const menu = useRef<HTMLDetailsElement>(null);
     const pathname = usePathname();
+    const currentItem = navItems.find(item => item.href === pathname);
 
     useEffect(() => {
         const closeOutside = (event: PointerEvent) => {
@@ -46,7 +47,7 @@ export default function DashboardNavMenu({ className = '' }: { className?: strin
         >
             <summary
                 aria-label="เปิดเมนูนำทาง dashboard"
-                className="btn btn-square h-12 w-12 cursor-pointer rounded-2xl border-white/15 bg-white/10 text-white shadow-sm hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
+                className="btn h-12 min-h-12 min-w-12 cursor-pointer gap-2 rounded-2xl border-white/30 bg-slate-950/75 px-3 text-white shadow-lg ring-1 ring-white/10 hover:border-white/50 hover:bg-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
             >
                 <Image
                     src="/img/home.png"
@@ -56,30 +57,38 @@ export default function DashboardNavMenu({ className = '' }: { className?: strin
                     className="size-5 object-contain brightness-0 invert"
                     aria-hidden="true"
                 />
+                <span className="hidden text-sm font-semibold sm:inline">เมนู</span>
+                <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" className="size-4 opacity-70"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" /></svg>
             </summary>
 
-            <ul aria-label="เลือกหน้า" className="dropdown-content menu mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-base-300 bg-base-100 p-2 text-base-content shadow-lg motion-reduce:transition-none">
+            <div className="dropdown-content mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-600 bg-slate-900 p-0 text-white shadow-2xl shadow-slate-950/50 ring-1 ring-white/20 motion-reduce:transition-none">
+                <div className="border-b border-slate-700 bg-slate-800 px-4 py-3">
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-blue-300">ไปยังหน้า</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-white">{currentItem?.label ?? 'เมนู Dashboard'}</p>
+                </div>
+                <ul aria-label="เลือกหน้า" className="menu gap-1 bg-slate-900 p-2">
                 {navItems.map(({ href, label, icon }) => (
                     <li key={href}>
                     <Link
                         href={href}
                         aria-current={pathname === href ? 'page' : undefined}
                         onClick={() => { if (menu.current) menu.current.open = false; }}
-                        className={`min-h-11 cursor-pointer gap-3 rounded-xl hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-neutral ${pathname === href ? 'bg-base-200 font-semibold' : ''}`}
+                        className={`min-h-12 cursor-pointer gap-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-white ${pathname === href ? 'bg-blue-500/20 font-semibold text-white ring-1 ring-blue-300/25' : ''}`}
                     >
                         <Image
                             src={icon}
                             alt=""
                             width={20}
                             height={20}
-                            className="size-5 shrink-0 object-contain"
+                            className="size-5 shrink-0 object-contain brightness-0 invert opacity-90"
                             aria-hidden="true"
                         />
                         <span>{label}</span>
                     </Link>
                     </li>
                 ))}
-            </ul>
+                </ul>
+            </div>
         </details>
     );
 }

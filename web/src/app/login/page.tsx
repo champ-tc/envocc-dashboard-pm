@@ -62,37 +62,44 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center relative bg-slate-50 font-sans">
-            <div className="absolute inset-0 bg-cover bg-center opacity-40 pointer-events-none" style={{ backgroundImage: "url('/img/background-optimized.jpg')" }} />
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-soft pointer-events-none" />
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-900 font-sans selection:bg-blue-500/30">
+            <div
+                className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{ backgroundImage: "url('/img/background-optimized.jpg')" }}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-slate-900/55" />
+            <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-blue-500/20 blur-hero-orb" />
+            <div className="pointer-events-none absolute -right-24 bottom-1/4 h-72 w-72 rounded-full bg-cyan-400/15 blur-hero-orb" />
 
-            <Link href="/" className="absolute top-6 left-6 z-50 btn btn-ghost bg-white/80 backdrop-blur-sm rounded-full shadow-sm gap-2">
+            <Link href="/" className="absolute left-4 top-4 z-50 btn btn-ghost gap-2 rounded-full border border-white/20 bg-slate-950/70 text-white shadow-lg backdrop-blur-xl hover:bg-slate-900 sm:left-6 sm:top-6">
                 <ChevronLeft size={20} />
                 <span>กลับหน้าหลัก</span>
             </Link>
 
             <div className="z-10 w-full max-w-md px-4">
-                <div className="card bg-white shadow-2xl border border-slate-100 rounded-auth-card">
+                <div className="card rounded-auth-card border border-white/20 bg-slate-900/80 text-white shadow-2xl shadow-slate-950/50 backdrop-blur-2xl ring-1 ring-white/10">
                     <form onSubmit={onSubmit} className="card-body p-8 sm:p-12">
 
                         <div className="text-center mb-8">
                             <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-linear-to-br from-blue-600 to-sky-400 text-white shadow-xl shadow-blue-500/20 mb-6">
                                 <Lock size={40} />
                             </div>
-                            <h1 className="text-3xl font-black text-slate-800">เข้าสู่ระบบ</h1>
-                            <p className="text-slate-500 font-medium mt-2"><PM25Text>PM2.5 Patient Database</PM25Text></p>
+                            <h1 className="text-3xl font-black text-white">เข้าสู่ระบบ</h1>
+                            <p className="mt-2 font-medium text-white/60"><PM25Text>PM2.5 Patient Database</PM25Text></p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="form-control">
-                                <label className="label px-1"><span className="label-text font-bold text-slate-500">ชื่อผู้ใช้งาน</span></label>
+                                <label htmlFor="username" className="label px-1"><span className="label-text font-bold text-white/70">ชื่อผู้ใช้งาน</span></label>
                                 <div className="relative">
                                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input
+                                        id="username"
                                         type="text"
+                                        autoComplete="username"
                                         placeholder="Username"
                                         required
-                                        className="input input-bordered w-full pl-12 bg-slate-50 border-slate-200 focus:bg-white transition-all rounded-2xl"
+                                        className="input input-bordered w-full rounded-2xl border-white/15 bg-white/10 pl-12 text-white placeholder:text-white/35 focus:border-blue-400 focus:bg-white/15"
                                         value={form.username}
                                         onChange={e => handleInputChange('username', e.target.value)}
                                     />
@@ -101,20 +108,24 @@ export default function LoginPage() {
 
                             <div className="form-control">
                                 <div className="label px-1 flex justify-between">
-                                    <span className="label-text font-bold text-slate-500">รหัสผ่าน</span>
+                                    <label htmlFor="password" className="label-text font-bold text-white/70">รหัสผ่าน</label>
                                 </div>
                                 <div className="relative">
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input
+                                        id="password"
                                         type={showPassword ? "text" : "password"}
+                                        autoComplete="current-password"
                                         placeholder="Password"
                                         required
-                                        className="input input-bordered w-full pl-12 pr-12 bg-slate-50 border-slate-200 focus:bg-white transition-all rounded-2xl"
+                                        className="input input-bordered w-full rounded-2xl border-white/15 bg-white/10 pl-12 pr-12 text-white placeholder:text-white/35 focus:border-blue-400 focus:bg-white/15"
                                         value={form.password}
                                         onChange={e => handleInputChange('password', e.target.value)}
                                     />
                                     <button
                                         type="button"
+                                        aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                                        aria-pressed={showPassword}
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 transition-colors"
                                     >
@@ -132,10 +143,10 @@ export default function LoginPage() {
                             {isLoading ? <span className="loading loading-spinner" /> : <><LogIn size={20} className="mr-2" /> ลงชื่อเข้าใช้</>}
                         </button>
 
-                        <div className="text-center mt-8 pt-6 border-t border-slate-100">
-                            <p className="text-sm text-slate-500">
+                        <div className="mt-8 border-t border-white/10 pt-6 text-center">
+                            <p className="text-sm text-white/60">
                                 ยังไม่มีบัญชีใช่หรือไม่?
-                                <Link href="/register" className="text-blue-600 font-black ml-2 hover:underline">สมัครสมาชิกใหม่</Link>
+                                <Link href="/register" className="ml-2 font-black text-blue-300 hover:text-blue-200 hover:underline">สมัครสมาชิกใหม่</Link>
                             </p>
                         </div>
                     </form>

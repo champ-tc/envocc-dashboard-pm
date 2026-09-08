@@ -24,26 +24,30 @@ export default async function AdminPage() {
 
     return (
         <div className="auth-page">
-            <section className="relative mb-8 overflow-hidden rounded-dashboard-card bg-slate-950 p-6 text-white shadow-2xl shadow-slate-300/70 md:p-9">
-                <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-blue-600/35 via-transparent to-sky-400/15" />
-                <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full border-[48px] border-white/5" />
-                <div className="pointer-events-none absolute bottom-0 right-1/3 h-32 w-32 bg-blue-500/20 blur-3xl" />
-                <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-100 backdrop-blur">
-                            <Sparkles className="size-3.5" />
-                            {roleLabel}
+            <section className="relative mb-10 min-h-[180px] overflow-hidden rounded-dashboard-card bg-linear-to-br from-slate-900 via-slate-800 to-blue-950 px-7 py-8 text-white shadow-2xl shadow-slate-300/50 sm:px-9 lg:px-12">
+                <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-blue-600/20 via-transparent to-sky-400/15" />
+                <div className="pointer-events-none absolute -right-20 -top-28 size-72 rounded-full border-[42px] border-sky-300/10" />
+                <div className="pointer-events-none absolute bottom-0 right-1/3 h-24 w-48 bg-blue-500/15 blur-3xl" />
+                <div className="relative z-10 flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                        <div className="mb-4 flex items-center gap-2.5">
+                            <span className="flex size-7 items-center justify-center rounded-lg bg-sky-400/15 text-sky-200 ring-1 ring-inset ring-sky-300/20">
+                                <Sparkles className="size-4" />
+                            </span>
+                            <span className="text-xs font-semibold text-sky-100">{roleLabel}</span>
                         </div>
-                        <h1 className="text-2xl font-semibold tracking-tight md:text-4xl">ยินดีต้อนรับ, {session.name}</h1>
+                        <h1 className="text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl">
+                            ยินดีต้อนรับ, <span className="text-blue-200">{session.name}</span>
+                        </h1>
                         <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">ศูนย์กลางสำหรับบริหารข้อมูลสุขภาพ สิ่งแวดล้อม และสิทธิ์การใช้งานในที่เดียว</p>
                     </div>
-                    <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md">
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
+                    <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3.5 backdrop-blur-md">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
                             <ShieldCheck className="size-6" />
                         </div>
                         <div>
-                            <p className="text-xs text-slate-300">สถานะระบบ</p>
-                            <p className="mt-0.5 flex items-center gap-2 text-sm font-semibold"><span className="size-2 rounded-full bg-emerald-400" /> พร้อมใช้งาน</p>
+                            <p className="text-[11px] font-medium text-slate-400">สถานะระบบ</p>
+                            <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-white"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" /><span className="relative inline-flex size-2 rounded-full bg-emerald-400" /></span>พร้อมใช้งาน</p>
                         </div>
                     </div>
                 </div>
@@ -57,12 +61,12 @@ export default async function AdminPage() {
                 </div>
             </div>
 
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <section className="grid auto-rows-fr grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {availableShortcuts.map((item) => {
                     const Icon = item.icon;
                     return (
-                        <Link key={item.href} href={item.href} prefetch={false} className="auth-surface group relative flex min-h-40 flex-col justify-between overflow-hidden p-5 transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100/60">
-                            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                        <Link key={item.href} href={item.href} prefetch={false} className="auth-surface group relative flex min-h-40 flex-col justify-between overflow-hidden rounded-[20px] p-6 transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/60">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-500 transition-colors group-hover:border-blue-100 group-hover:bg-blue-50 group-hover:text-blue-600">
                                 <Icon className="size-5" />
                             </span>
                             <span className="mt-7 flex items-end justify-between gap-3">

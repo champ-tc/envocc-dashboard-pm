@@ -6,6 +6,7 @@ export const PASSWORD_COMPLEXITY_MESSAGE =
 
 export const passwordSchema = z.string()
     .min(PASSWORD_MIN_LENGTH, `รหัสผ่านต้องมีอย่างน้อย ${PASSWORD_MIN_LENGTH} ตัวอักษร`)
+    .max(128, 'รหัสผ่านต้องไม่เกิน 128 ตัวอักษร')
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, PASSWORD_COMPLEXITY_MESSAGE);
 
 export function getPasswordValidationError(password: string) {

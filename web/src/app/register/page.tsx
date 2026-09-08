@@ -200,16 +200,18 @@ export default function RegisterPage() {
     const activeWp = useMemo(() => WORKPLACE_TYPES.find(w => w.label === form.workplaceType), [form.workplaceType]);
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans selection:bg-blue-200 text-slate-900 relative overflow-hidden">
+        <div className="relative min-h-screen overflow-hidden bg-slate-900 font-sans text-white selection:bg-blue-500/30">
 
             {/* Background */}
-            <div className="absolute inset-0 z-0 bg-cover bg-center bg-fixed opacity-40 pointer-events-none"
+            <div className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
                 style={{ backgroundImage: "url('/img/background-optimized.jpg')" }} />
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-soft z-0 pointer-events-none" />
+            <div className="pointer-events-none absolute inset-0 z-0 bg-slate-900/55" />
+            <div className="pointer-events-none absolute -left-24 top-1/4 z-0 h-72 w-72 rounded-full bg-blue-500/20 blur-hero-orb" />
+            <div className="pointer-events-none absolute -right-24 bottom-1/4 z-0 h-72 w-72 rounded-full bg-cyan-400/15 blur-hero-orb" />
 
             {/* Back Button */}
             <div className="absolute top-6 left-6 z-50">
-                <Link href="/" className="flex items-center gap-2 px-5 py-2.5 bg-white/90 backdrop-blur-xl border border-white/50 rounded-full shadow-sm hover:shadow-md transition-all text-slate-700 font-bold group">
+                <Link href="/" className="group flex items-center gap-2 rounded-full border border-white/20 bg-slate-950/70 px-5 py-2.5 font-bold text-white shadow-lg backdrop-blur-xl transition-all hover:bg-slate-900">
                     <ChevronLeft className="w-5 h-5 group-hover:text-blue-600" />
                     <span className="hidden xs:inline">กลับหน้าหลัก</span>
                 </Link>
@@ -217,7 +219,7 @@ export default function RegisterPage() {
 
             {/* Main Content */}
             <div className="z-10 w-full max-w-6xl mx-auto px-4 pt-28 pb-20 relative">
-                <form onSubmit={handlePreSubmit} className="card bg-white/85 backdrop-blur-2xl shadow-2xl border border-white/50 rounded-hero-card overflow-hidden">
+                <form onSubmit={handlePreSubmit} className="card overflow-hidden rounded-hero-card border border-white/50 bg-white/90 text-slate-900 shadow-2xl shadow-slate-950/50 backdrop-blur-2xl ring-1 ring-white/20">
                     <div className="card-body p-8 md:p-16">
 
                         {/* Header */}

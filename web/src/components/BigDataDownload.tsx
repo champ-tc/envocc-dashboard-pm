@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import CloudLoader from '@/components/CloudLoader';
 import toast from 'react-hot-toast';
 
-export default function BigDataDownload() {
+export default function BigDataDownload({ title = 'ข้อมูล BigData (HDC)', description = 'ไฟล์ข้อมูลสถิติผู้ป่วยจากสิ่งแวดล้อม' }: { title?: string; description?: string }) {
     const [status, setStatus] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,8 +72,8 @@ export default function BigDataDownload() {
                         </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900">ข้อมูล BigData (HDC)</h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-500">ไฟล์ข้อมูลสถิติผู้ป่วยจากสิ่งแวดล้อม</p>
+                        <h3 className="font-bold text-slate-900">{title}</h3>
+                        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
                     </div>
                     <div className="shrink-0 hidden md:block">
                         {!canDownload && status?.status !== 'pending' && (
