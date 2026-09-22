@@ -34,20 +34,20 @@ export default async function AdminPage() {
                             <span className="flex size-7 items-center justify-center rounded-lg bg-sky-400/15 text-sky-200 ring-1 ring-inset ring-sky-300/20">
                                 <Sparkles className="size-4" />
                             </span>
-                            <span className="text-xs font-semibold text-sky-100">{roleLabel}</span>
+                            <span className="typo-caption text-sky-100">{roleLabel}</span>
                         </div>
-                        <h1 className="text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl">
+                        <h1 className="typo-title text-white">
                             ยินดีต้อนรับ, <span className="text-blue-200">{session.name}</span>
                         </h1>
-                        <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">ศูนย์กลางสำหรับบริหารข้อมูลสุขภาพ สิ่งแวดล้อม และสิทธิ์การใช้งานในที่เดียว</p>
+                        <p className="typo-body-sm mt-3 max-w-2xl text-slate-300">ศูนย์กลางสำหรับบริหารข้อมูลสุขภาพ สิ่งแวดล้อม และสิทธิ์การใช้งานในที่เดียว</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3.5 backdrop-blur-md">
                         <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
                             <ShieldCheck className="size-6" />
                         </div>
                         <div>
-                            <p className="text-[11px] font-medium text-slate-400">สถานะระบบ</p>
-                            <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-white"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" /><span className="relative inline-flex size-2 rounded-full bg-emerald-400" /></span>พร้อมใช้งาน</p>
+                            <p className="typo-caption text-slate-400">สถานะระบบ</p>
+                            <p className="typo-label mt-1 flex items-center gap-2 text-white"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" /><span className="relative inline-flex size-2 rounded-full bg-emerald-400" /></span>พร้อมใช้งาน</p>
                         </div>
                     </div>
                 </div>
@@ -55,9 +55,9 @@ export default async function AdminPage() {
 
             <div className="auth-page-header">
                 <div>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-menu-label text-blue-600">Workspace</p>
-                    <h2 className="text-xl font-bold text-slate-900">พื้นที่จัดการของคุณ</h2>
-                    <p className="auth-page-description">เครื่องมือและข้อมูลตามสิทธิ์ของบัญชี</p>
+                    <p className="typo-caption mb-1 uppercase text-blue-600">Workspace</p>
+                    <h2 className="typo-subtitle text-slate-900">พื้นที่จัดการของคุณ</h2>
+                    <p className="typo-body auth-page-description">เครื่องมือและข้อมูลตามสิทธิ์ของบัญชี</p>
                 </div>
             </div>
 
@@ -71,8 +71,8 @@ export default async function AdminPage() {
                             </span>
                             <span className="mt-7 flex items-end justify-between gap-3">
                                 <span>
-                                <span className="block font-bold text-slate-900">{item.label}</span>
-                                <span className="mt-1 block text-sm leading-6 text-slate-500">{item.description}</span>
+                                <span className="typo-label block text-slate-900">{item.label}</span>
+                                <span className="typo-body-sm mt-1 block text-slate-500">{item.description}</span>
                                 </span>
                                 <ArrowUpRight className="mb-1 size-5 shrink-0 text-slate-300 transition group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-blue-600" />
                             </span>

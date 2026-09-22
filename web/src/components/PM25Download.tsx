@@ -60,7 +60,7 @@ export default function PM25Download() {
     const isReadyToDownload = startDate && endDate;
 
     return (
-        <div className="h-full rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-emerald-200 md:p-6">
+        <div className="card card-border h-full bg-base-100 p-5 md:p-6">
             <div className="flex h-full flex-col gap-6">
                 <div className="flex items-start gap-4">
                     <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
@@ -69,8 +69,8 @@ export default function PM25Download() {
                         </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900"><PM25Text>ข้อมูล PM2.5</PM25Text></h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-500">ส่งออกข้อมูลค่าฝุ่นรายวันตามช่วงเวลา</p>
+                        <h3 className="typo-section text-slate-900"><PM25Text>ข้อมูล PM2.5</PM25Text></h3>
+                        <p className="typo-body-sm mt-1 text-slate-500">ส่งออกข้อมูลค่าฝุ่นรายวันตามช่วงเวลา</p>
                     </div>
                 </div>
 
@@ -95,11 +95,7 @@ export default function PM25Download() {
                     <button 
                         onClick={handleDownload}
                         disabled={!isReadyToDownload}
-                        className={`flex w-full items-center justify-center gap-3 rounded-xl py-3.5 text-sm font-bold transition-all ${
-                            isReadyToDownload 
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            : 'cursor-not-allowed bg-slate-200 text-slate-400'
-                        }`}
+                        className="typo-label btn btn-success min-h-12 w-full gap-3 rounded-xl"
                     >
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

@@ -62,7 +62,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-900 font-sans selection:bg-blue-500/30">
+        <div className="typo-body relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-900 selection:bg-blue-500/30">
             <div
                 className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
                 style={{ backgroundImage: "url('/img/background-optimized.jpg')" }}
@@ -71,7 +71,7 @@ export default function LoginPage() {
             <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-blue-500/20 blur-hero-orb" />
             <div className="pointer-events-none absolute -right-24 bottom-1/4 h-72 w-72 rounded-full bg-cyan-400/15 blur-hero-orb" />
 
-            <Link href="/" className="absolute left-4 top-4 z-50 btn btn-ghost gap-2 rounded-full border border-white/20 bg-slate-950/70 text-white shadow-lg backdrop-blur-xl hover:bg-slate-900 sm:left-6 sm:top-6">
+            <Link href="/" className="typo-body absolute left-4 top-4 z-50 btn btn-ghost gap-2 rounded-full border border-white/20 bg-slate-950/70 text-white shadow-lg backdrop-blur-xl hover:bg-slate-900 sm:left-6 sm:top-6">
                 <ChevronLeft size={20} />
                 <span>กลับหน้าหลัก</span>
             </Link>
@@ -84,13 +84,13 @@ export default function LoginPage() {
                             <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-linear-to-br from-blue-600 to-sky-400 text-white shadow-xl shadow-blue-500/20 mb-6">
                                 <Lock size={40} />
                             </div>
-                            <h1 className="text-3xl font-black text-white">เข้าสู่ระบบ</h1>
-                            <p className="mt-2 font-medium text-white/60"><PM25Text>PM2.5 Patient Database</PM25Text></p>
+                            <h1 className="typo-title text-white">เข้าสู่ระบบ</h1>
+                            <p className="typo-body mt-2 text-white/60"><PM25Text>PM2.5 Patient Database</PM25Text></p>
                         </div>
 
                         <div className="space-y-4">
-                            <div className="form-control">
-                                <label htmlFor="username" className="label px-1"><span className="label-text font-bold text-white/70">ชื่อผู้ใช้งาน</span></label>
+                            <div className="fieldset gap-2 py-0">
+                                <label htmlFor="username" className="typo-label label px-1"><span className="typo-label text-white/70">ชื่อผู้ใช้งาน</span></label>
                                 <div className="relative">
                                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input
@@ -99,16 +99,16 @@ export default function LoginPage() {
                                         autoComplete="username"
                                         placeholder="Username"
                                         required
-                                        className="input input-bordered w-full rounded-2xl border-white/15 bg-white/10 pl-12 text-white placeholder:text-white/35 focus:border-blue-400 focus:bg-white/15"
+                                        className="typo-body-sm input w-full rounded-2xl border-white/15 bg-white/10 pl-12 text-white placeholder:text-white/35 focus:border-blue-400 focus:bg-white/15"
                                         value={form.username}
                                         onChange={e => handleInputChange('username', e.target.value)}
                                     />
                                 </div>
                             </div>
 
-                            <div className="form-control">
+                            <div className="fieldset gap-2 py-0">
                                 <div className="label px-1 flex justify-between">
-                                    <label htmlFor="password" className="label-text font-bold text-white/70">รหัสผ่าน</label>
+                                    <label htmlFor="password" className="typo-label text-white/70">รหัสผ่าน</label>
                                 </div>
                                 <div className="relative">
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -118,7 +118,7 @@ export default function LoginPage() {
                                         autoComplete="current-password"
                                         placeholder="Password"
                                         required
-                                        className="input input-bordered w-full rounded-2xl border-white/15 bg-white/10 pl-12 pr-12 text-white placeholder:text-white/35 focus:border-blue-400 focus:bg-white/15"
+                                        className="typo-body-sm input w-full rounded-2xl border-white/15 bg-white/10 pl-12 pr-12 text-white placeholder:text-white/35 focus:border-blue-400 focus:bg-white/15"
                                         value={form.password}
                                         onChange={e => handleInputChange('password', e.target.value)}
                                     />
@@ -127,26 +127,26 @@ export default function LoginPage() {
                                         aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
                                         aria-pressed={showPassword}
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 transition-colors"
+                                        className="typo-label btn btn-ghost btn-circle btn-sm absolute right-2 top-1/2 -translate-y-1/2 text-white/60"
                                     >
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
-                                <button type="button" onClick={() => toast('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน')} className="label-text-alt link link-primary no-underline text-xs">ลืมรหัสผ่าน?</button>
+                                <button type="button" onClick={() => toast('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน')} className="typo-caption link link-primary no-underline">ลืมรหัสผ่าน?</button>
                             </div>
                         </div>
 
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="btn mt-10 w-full h-14 bg-linear-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white border-none rounded-2xl font-bold shadow-lg shadow-blue-500/20 transition-all text-lg">
+                            className="typo-section btn mt-10 w-full h-14 bg-linear-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white border-none rounded-2xl shadow-lg shadow-blue-500/20 transition-all">
                             {isLoading ? <span className="loading loading-spinner" /> : <><LogIn size={20} className="mr-2" /> ลงชื่อเข้าใช้</>}
                         </button>
 
                         <div className="mt-8 border-t border-white/10 pt-6 text-center">
-                            <p className="text-sm text-white/60">
+                            <p className="typo-body-sm text-white/60">
                                 ยังไม่มีบัญชีใช่หรือไม่?
-                                <Link href="/register" className="ml-2 font-black text-blue-300 hover:text-blue-200 hover:underline">สมัครสมาชิกใหม่</Link>
+                                <Link href="/register" className="typo-label ml-2 text-blue-300 hover:text-blue-200 hover:underline">สมัครสมาชิกใหม่</Link>
                             </p>
                         </div>
                     </form>

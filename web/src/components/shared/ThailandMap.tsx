@@ -89,14 +89,14 @@ function Legend({ config }: { config: ThailandMapProps['legendConfig'] }) {
         <div className="absolute bottom-6 left-6 z-map-legend flex flex-col gap-3 pointer-events-none sm:pointer-events-auto">
             <div className="bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-100 min-w-map-legend sm:min-w-map-legend-wide flex flex-col gap-1.5 scale-90 sm:scale-100 origin-bottom-left transition-transform">
                 <div className="flex flex-col items-center text-center mb-1">
-                    <h4 className="text-2xs sm:text-2xs-plus font-extrabold text-slate-800 leading-tight uppercase tracking-tight"><PM25Text>{config.title}</PM25Text></h4>
-                    {config.unit && <div className="text-2xs uppercase font-bold text-slate-400">({config.unit})</div>}
+                    <h4 className="typo-section text-slate-800 uppercase"><PM25Text>{config.title}</PM25Text></h4>
+                    {config.unit && <div className="typo-chart uppercase text-slate-400">({config.unit})</div>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                     {config.items.map((item) => (
                         <div key={item.range} className="flex items-center gap-2 px-1">
                             <div className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: item.color }}></div>
-                            <span className="text-2xs font-extrabold text-slate-600 leading-none whitespace-nowrap">{item.range}</span>
+                            <span className="typo-chart text-slate-600 whitespace-nowrap">{item.range}</span>
                         </div>
                     ))}
                 </div>
@@ -191,6 +191,10 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
     }, []);
 
     const needsTambons = needsTambonBoundaries(filters, focusSelectedSubdistricts ? 0 : stations.length, requireDistrictForTambons);
+    // The province selector contains Thailand's full province list. Treat a
+    // full selection as the national overview, just like an empty selection.
+    const isAllProvincesSelected = (filters.provinces?.length || 0) >= 70 && !(filters.districts?.length);
+    const effectiveShowDistrictBoundaries = showDistrictBoundaries && !isAllProvincesSelected;
 
     useEffect(() => {
         if (!showDistrictBoundaries || allDistrictData) {
@@ -236,7 +240,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         const selectedProvinces = (visibleProvinces ?? filters.provinces ?? []).map((p: string) => cleanThaiName(p));
         const selectedDistricts = (filters.districts || []).map((d: string) => cleanThaiName(d));
 
-        if (selectedDistricts.length > 0 || showDistrictBoundaries) return { ...geoData, features: [] };
+        if (selectedDistricts.length > 0 || effectiveShowDistrictBoundaries) return { ...geoData, features: [] };
         if (selectedProvinces.length === 0 && visibleProvinces === undefined && !resolveAreaData) return geoData;
 
         return {
@@ -248,11 +252,11 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                 return selected && (!resolveAreaData || resolveAreaData({ province: provinceTh }, 'province') !== undefined);
             })
         };
-    }, [geoData, filters.provinces, filters.districts, showDistrictBoundaries, visibleProvinces, resolveAreaData]);
+    }, [geoData, filters.provinces, filters.districts, effectiveShowDistrictBoundaries, visibleProvinces, resolveAreaData]);
 
     const displayTambonData = useMemo(() => {
-        const boundaryData = showDistrictBoundaries ? allDistrictData : allTambonData;
-        if (!needsTambons || !boundaryData) return null;
+        const boundaryData = effectiveShowDistrictBoundaries ? allDistrictData : allTambonData;
+        if (!needsTambons || isAllProvincesSelected || !boundaryData) return null;
         const selectedProvinces = (filters.provinces || []).map((p: string) => cleanThaiName(p));
         const selectedDistricts = (filters.districts || []).map((d: string) => cleanThaiName(d));
         const filteredFeatures = boundaryData.features.filter((f: any) => {
@@ -287,7 +291,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         });
 
         return { ...boundaryData, features: filteredFeatures };
-    }, [needsTambons, allTambonData, allDistrictData, showDistrictBoundaries, filters.provinces, filters.districts, filters.subdistricts, focusSelectedSubdistricts, stationMap, resolveAreaData]);
+    }, [needsTambons, isAllProvincesSelected, effectiveShowDistrictBoundaries, allTambonData, allDistrictData, filters.provinces, filters.districts, filters.subdistricts, focusSelectedSubdistricts, stationMap, resolveAreaData]);
 
     const style = (feature: any) => {
         const provinceEn = feature.properties.name;
@@ -404,7 +408,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                 
                 const cleanP = cleanThaiName(provinceTh);
                 const latestRawValue = resolveAreaData ? resolveAreaData({ province: provinceTh }, 'province') : dataRef.current[cleanP];
-                const popupContent = renderPopup ? renderPopup(provinceTh, latestRawValue, popupUnit) : `<div class="font-sans p-2 min-w-map-popup"><div class="text-base font-extrabold text-slate-800 leading-tight">${provinceTh}</div></div>`;
+                const popupContent = renderPopup ? renderPopup(provinceTh, latestRawValue, popupUnit) : `<div class="typo-body p-2 min-w-map-popup"><div class="typo-label text-slate-800">${provinceTh}</div></div>`;
 
                 l.bindTooltip(popupContent, getAdaptiveTooltipOptions(e)).openTooltip(e.latlng);
             },
@@ -433,16 +437,16 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         if (station) {
             const tooltipContent = `
                 <div class="flex flex-col gap-0.5">
-                    <div class="text-compact text-slate-400 font-bold uppercase tracking-wider">พื้นที่</div>
-                    <div class="text-xs font-extrabold text-white mb-1">ต.${subdistrictTh}, อ.${districtTh}</div>
+                    <div class="typo-chart text-slate-400 uppercase">พื้นที่</div>
+                    <div class="typo-caption text-white mb-1">ต.${subdistrictTh}, อ.${districtTh}</div>
                     <div class="h-divider bg-slate-700 my-1"></div>
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full" style="background-color: ${pm25ColorScale(station.pm25)}"></div>
-                        <span class="text-xs font-extrabold text-blue-300">PM<span class="pm25-subscript">2.5</span>: ${station.pm25.toFixed(1)} มคก./ลบ.ม.</span>
+                        <span class="typo-caption text-blue-300">PM<span class="pm25-subscript">2.5</span>: ${station.pm25.toFixed(1)} มคก./ลบ.ม.</span>
                     </div>
                 </div>
             `;
-            layer.bindTooltip(tooltipContent, { sticky: true, className: 'custom-tooltip' });
+            layer.bindTooltip(tooltipContent, { sticky: true, className: 'typo-chart custom-tooltip' });
         }
         
         layer.on({
@@ -463,7 +467,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     ? `${subdistrictTh}, ${districtTh.trim()}, ${provinceTh}`
                     : latestRawValue === dataRef.current[cleanP] ? provinceTh : `${districtTh.trim()}, ${provinceTh}`;
 
-                const popupContent = renderPopup ? renderPopup(areaName, latestRawValue, popupUnit) : `<div class="font-sans p-2 min-w-map-popup"><div class="text-base font-extrabold text-slate-800 leading-tight">${areaName}</div></div>`;
+                const popupContent = renderPopup ? renderPopup(areaName, latestRawValue, popupUnit) : `<div class="typo-body p-2 min-w-map-popup"><div class="typo-label text-slate-800">${areaName}</div></div>`;
                 
                 const l = e.target;
                 // Only bind province tooltip if we don't already have a station tooltip
@@ -483,14 +487,14 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         <div className="w-full h-full relative group">
             {resolveAreaData && geoData && !(showDistrictBoundaries ? loadingDistricts : loadingTambon)
                 && (showDistrictBoundaries || filters.districts?.length ? displayTambonData?.features.length === 0 : displayGeoData?.features.length === 0) && (
-                <div role="status" className="absolute top-6 inset-x-6 z-map-loading rounded-xl bg-white/95 p-3 text-center text-sm text-slate-700">
+                <div role="status" className="typo-body-sm absolute top-6 inset-x-6 z-map-loading rounded-xl bg-white/95 p-3 text-center text-slate-700">
                     ไม่พบข้อมูลฝุ่นในพื้นที่และช่วงวันที่ที่เลือก
                 </div>
             )}
             {(showDistrictBoundaries ? loadingDistricts : loadingTambon) && (
                 <div className="absolute top-6 right-6 z-map-loading bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-slate-100 shadow-sm flex items-center gap-3">
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-compact font-extrabold text-slate-700 uppercase tracking-widest">Loading Map Data...</span>
+                    <div className="loading loading-spinner loading-md text-primary"></div>
+                    <span className="typo-chart text-slate-700 uppercase">Loading Map Data...</span>
                 </div>
             )}
             <MapContainer
@@ -527,7 +531,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                         />
                     )}
                 </Pane>
-                <MapResizer geoData={geoData} tambonGeoData={displayTambonData} filters={visibleProvinces ? { ...filters, provinces: visibleProvinces } : filters} />
+                <MapResizer geoData={geoData} tambonGeoData={displayTambonData} filters={isAllProvincesSelected ? { ...filters, provinces: [], districts: [] } : (visibleProvinces ? { ...filters, provinces: visibleProvinces } : filters)} />
             </MapContainer>
             <Legend config={legendConfig} />
             <style jsx global>{`
@@ -536,9 +540,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     border: none;
                     border-radius: 8px;
                     color: white;
-                    font-family: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
-                    font-size: 10px;
-                    font-weight: 800;
+                    font-family: var(--app-font-family);
                     padding: 4px 8px;
                     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
                 }

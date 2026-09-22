@@ -6,7 +6,7 @@ export default function UserPM25Page() {
 
 function RequestPage({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
     return <div className="auth-page max-w-4xl">
-        <header className="auth-page-header"><div><p className="mb-1 text-xs font-semibold uppercase tracking-menu-label text-blue-600">{eyebrow}</p><h1 className="text-2xl font-bold text-slate-900">{title}</h1><p className="auth-page-description">{description}</p></div></header>
+        <header className="auth-page-header"><div><p className="typo-caption mb-1 uppercase text-blue-600">{eyebrow}</p><h1 className="typo-title text-slate-900">{title}</h1><p className="typo-body auth-page-description">{description}</p></div></header>
         <section className="auth-surface p-5 md:p-6">{children}</section>
     </div>;
 }

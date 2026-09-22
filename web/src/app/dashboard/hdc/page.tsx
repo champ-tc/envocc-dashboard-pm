@@ -5,12 +5,13 @@ import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions, getUserAction } from './actions';
 import type { HDCFilters, HDCOptions, DashboardData, HierarchyItem, MonthlyTrendData } from './actions';
 import { HDC_DISEASES } from '@/lib/constants';
-import DashboardNavbar from '../_components/DashboardNavbar';
-import DashboardBusyAlert from '../_components/DashboardBusyAlert';
-import DashboardLoading from '../_components/DashboardLoading';
+import DashboardNavbar from '@/components/dashboard/DashboardNavbar';
+import DashboardBusyAlert from '@/components/dashboard/DashboardBusyAlert';
+import DashboardLoading from '@/components/dashboard/DashboardLoading';
 import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
 import { PM25Text } from '@/components/PM25Mark';
 import CloudLoader from '@/components/CloudLoader';
+import { Check, ChevronDown, ClipboardList } from 'lucide-react';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -20,14 +21,12 @@ function SingleSelect({ label, options, selected, onChange }: { label: string, o
     const safeOptions = options || [];
     return (
         <div className="relative col-span-1">
-            <label className="block text-xs uppercase font-bold text-white/70 mb-2 ml-2 tracking-wider">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-xs font-bold text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-36">
                     {selected || 'กรุณาเลือก'}
                 </div>
-                <svg className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
+                <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
             </div>
             {isOpen && (
                 <>
@@ -38,7 +37,7 @@ function SingleSelect({ label, options, selected, onChange }: { label: string, o
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${selected === opt ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
                                     {selected === opt && <div className="w-2 h-2 bg-white rounded-full"></div>}
                                 </div>
-                                <span className={`text-xs transition-colors ${selected === opt ? 'font-extrabold text-blue-400' : 'font-bold text-white/70'}`}>{opt}</span>
+                                <span className={`typo-caption transition-colors ${selected === opt ? 'text-blue-400' : 'text-white/70'}`}>{opt}</span>
                             </div>
                         ))}
                     </div>
@@ -50,37 +49,48 @@ function SingleSelect({ label, options, selected, onChange }: { label: string, o
 
 function MultiSelect({ label, options, selected, onChange, placeholder = "ทั้งหมด" }: { label: string, options: string[], selected: string[], onChange: (val: string[]) => void, placeholder?: string }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [searchText, setSearchText] = useState('');
     const safeOptions = options || [];
     const safeSelected = selected || [];
+    const searchable = label === 'จังหวัด';
+    const normalizedSearch = searchText.trim().toLocaleLowerCase('th');
+    const filteredOptions = normalizedSearch
+        ? safeOptions.filter((option) => option.toLocaleLowerCase('th').includes(normalizedSearch))
+        : safeOptions;
     return (
         <div className="relative col-span-1">
-            <label className="block text-xs uppercase font-bold text-white/70 mb-2 ml-2 tracking-wider">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-xs font-bold text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-36">
                     {safeSelected.length === 0 ? placeholder : (safeSelected.length === safeOptions.length ? 'ทั้งหมด' : safeSelected.join(', '))}
                 </div>
-                <svg className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
+                <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
             </div>
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
                     <div className="absolute z-dropdown mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                        {searchable && (
+                            <div className="relative mb-1">
+                                <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} onClick={(event) => event.stopPropagation()} placeholder="ค้นหาจังหวัด" aria-label="ค้นหาจังหวัด" className="typo-caption input input-sm w-full rounded-2xl border-white/15 bg-white/10 pr-9 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none" />
+                                {searchText && <button type="button" aria-label="ล้างคำค้นหาจังหวัด" onClick={(event) => { event.stopPropagation(); setSearchText(''); }} className="typo-label btn btn-ghost btn-xs btn-circle absolute right-1.5 top-1/2 -translate-y-1/2 text-white/70 hover:bg-white/10 hover:text-white">×</button>}
+                            </div>
+                        )}
                         <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
                             <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
-                                {safeSelected.length === safeOptions.length && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                                {safeSelected.length === safeOptions.length && <Check aria-hidden="true" className="size-4 text-white" strokeWidth={4} />}
                             </div>
-                            <span className="text-xs font-bold text-white">เลือกทั้งหมด</span>
+                            <span className="typo-caption text-white">เลือกทั้งหมด</span>
                         </div>
-                        {safeOptions.map((opt: string) => (
+                        {filteredOptions.map((opt: string) => (
                             <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
                                 <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.includes(opt) ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
-                                    {safeSelected.includes(opt) && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                                    {safeSelected.includes(opt) && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
                                 </div>
-                                <span className={`text-xs transition-colors ${safeSelected.includes(opt) ? 'font-extrabold text-blue-400' : 'font-bold text-white/70'}`}>{opt}</span>
+                                <span className={`typo-caption transition-colors ${safeSelected.includes(opt) ? 'text-blue-400' : 'text-white/70'}`}>{opt}</span>
                             </div>
                         ))}
+                        {searchable && filteredOptions.length === 0 && <div className="typo-caption px-3 py-4 text-center text-white/50">ไม่พบจังหวัดที่ค้นหา</div>}
                     </div>
                 </>
             )}
@@ -111,14 +121,12 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
 
     return (
         <div className="relative col-span-1">
-            <label className="block text-xs uppercase font-bold text-white/70 mb-2 ml-2 tracking-wider">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-xs font-bold text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-36">
                     {formatDate(value)}
                 </div>
-                <svg className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
+                <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
             </div>
             {isOpen && (
                 <>
@@ -127,7 +135,7 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
                         {years.map(year => (
                             <div key={year} className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3 px-2">
-                                    <span className="text-sm font-extrabold text-blue-400 tabular-nums">พ.ศ. {parseInt(year) + 543}</span>
+                                    <span className="typo-label text-blue-400 tabular-nums">พ.ศ. {parseInt(year) + 543}</span>
                                     <div className="h-px flex-1 bg-white/10"></div>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
@@ -137,8 +145,7 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
                                         const isActive = value === opt;
                                         return (
                                             <div key={opt} onClick={() => { onChange(opt); setIsOpen(false); }}
-                                                className={`flex items-center justify-center p-2.5 rounded-xl cursor-pointer transition-all border text-xs font-bold
-                                                 ${isActive ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/40' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:border-white/20 hover:text-white'}`}>
+                                                className={`typo-caption flex items-center justify-center p-2.5 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/40' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:border-white/20 hover:text-white'}`}>
                                                 {mName}
                                             </div>
                                         );
@@ -239,43 +246,31 @@ function StatCards({ data, loading }: StatCardsProps) {
 
     return (
         <div className="flex flex-col gap-4 shrink-0 relative z-30">
-            {/* Top Row: Main Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/30 transition-all group flex flex-col justify-between">
-                    <div className="text-xs font-bold text-blue-100/70 uppercase tracking-widest mb-1 flex justify-between items-center">
-                        <span>จำนวนผู้ป่วยการวินิจฉัยโรคทั้งหมด</span>
-                        <svg className="w-5 h-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                    </div>
-                    <div className="text-4xl font-black text-white tracking-tight tabular-nums drop-shadow-md">
-                        {loading ? <div className="h-10 w-32 bg-white/20 animate-pulse rounded-lg"></div> : data?.totalPatients?.toLocaleString()}
-                    </div>
-                    <div className="text-xs font-bold text-white/50 uppercase tracking-widest">ราย</div>
-                </div>
-
-                <div className="bg-white/10 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/20 transition-all group flex flex-col justify-between ring-1 ring-white/10">
-                    <div className="text-xs font-bold text-white/70 uppercase tracking-widest mb-1 flex justify-between items-center">
+            <div>
+                <div className="bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/30 transition-all group flex flex-col justify-between ring-1 ring-blue-300/20">
+                    <div className="typo-caption text-blue-100 uppercase mb-1 flex justify-between items-center">
                         <span>จำนวนการวินิจฉัยทั้งหมด (ครั้ง)</span>
-                        <svg className="w-5 h-5 text-blue-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                        <ClipboardList aria-hidden="true" className="size-5 text-white/70" strokeWidth={2.5} />
                     </div>
-                    <div className="text-4xl font-black text-white tracking-tight tabular-nums drop-shadow-md">
+                    <div className="typo-metric text-white tabular-nums drop-shadow-md">
                         {loading ? <div className="h-10 w-32 bg-white/20 animate-pulse rounded-lg"></div> : data?.totalDiagnoses?.toLocaleString()}
                     </div>
-                    <div className="text-xs font-bold text-white/40 uppercase tracking-widest italic">ตามเงื่อนไขตัวกรองการวินิจฉัยที่เลือก</div>
+                    <div className="typo-caption text-blue-100/80 uppercase italic">ตามเงื่อนไขตัวกรองการวินิจฉัยที่เลือก</div>
                 </div>
             </div>
 
             {/* Bottom Row: Disease Group Stats */}
             <div className="flex items-center gap-3 mb-1 mt-2">
                 <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
-                <span className="text-compact font-black text-white/40 uppercase tracking-stat-label">จำนวนการวินิจฉัยแยกตามกลุ่มโรค</span>
+                <span className="typo-chart text-white/40 uppercase">จำนวนการวินิจฉัยแยกตามกลุ่มโรค</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 {top5Sorted.map((stat, i) => (
                     <div key={i} className="bg-white/5 backdrop-blur-lg p-4 rounded-3xl shadow-xl border border-white/10 transition-all group ring-1 ring-white/5 min-h-24 flex flex-col justify-between hover:bg-white/10">
-                        <div className="text-compact font-bold text-white/50 uppercase tracking-tight mb-1 leading-tight line-clamp-2" title={stat.label}>
+                        <div className="typo-chart text-white/50 uppercase mb-1 line-clamp-2" title={stat.label}>
                             {stat.label}
                         </div>
-                        <div className="text-xl font-black text-white tracking-tight tabular-nums flex items-end gap-2">
+                        <div className="typo-subtitle text-white tabular-nums flex items-end gap-2">
                             {loading ? <div className="h-7 w-20 bg-white/10 animate-pulse rounded-lg"></div> : stat.value?.toLocaleString()}
                             <div className="w-1 h-5 rounded-full mb-0.5 shadow-sm" style={{ backgroundColor: getHexColor(stat.color) }}></div>
                         </div>
@@ -301,7 +296,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
     return (
         <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-chart lg:min-h-0">
             <div className="flex items-center justify-between mb-8 shrink-0">
-                <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
+                <h4 className="typo-section text-white flex items-center gap-4 uppercase">
                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                     <PM25Text>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text>
                 </h4>
@@ -309,13 +304,13 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
 
             <div className="flex-1 relative flex flex-col justify-end px-12 min-h-0 overflow-visible">
                 <div className="absolute left-12 top-0 bottom-0 w-px bg-white/10 z-20">
-                    <div className="absolute top-chart-caption left-0 text-compact font-black text-white/80 uppercase tracking-wider whitespace-nowrap">
+                    <div className="typo-chart absolute top-chart-caption left-0 text-white/80 uppercase whitespace-nowrap">
                         จำนวนการวินิจฉัยแยกตามกลุ่มโรค
                     </div>
                 </div>
 
                 <div className="absolute right-12 top-0 bottom-0 w-px bg-white/10 z-20">
-                    <div className="absolute top-chart-caption right-0 text-compact font-black text-rose-300 uppercase tracking-wider whitespace-nowrap text-right">
+                    <div className="typo-chart absolute top-chart-caption right-0 text-rose-300 uppercase whitespace-nowrap text-right">
                         <PM25Text>ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</PM25Text>
                     </div>
                 </div>
@@ -325,12 +320,12 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                     const pm25Max = Math.max(...data.map(x => x.avg_pm25 || 0), 50) * 1.1;
                     return (
                         <>
-                            <div className="absolute left-4 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-2xs-plus font-bold text-white/20 tabular-nums pointer-events-none z-30">
+                            <div className="typo-chart absolute left-4 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-white/20 tabular-nums pointer-events-none z-30">
                                 {[...Array(5)].map((_, i) => (
                                     <span key={i}>{Math.round(maxVal * (1 - i / 4)).toLocaleString()}</span>
                                 ))}
                             </div>
-                            <div className="absolute right-4 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-2xs-plus font-bold text-rose-500/30 tabular-nums pointer-events-none z-30">
+                            <div className="typo-chart absolute right-4 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-rose-500/30 tabular-nums pointer-events-none z-30">
                                 {[...Array(5)].map((_, i) => (
                                     <span key={i}>{Math.round(pm25Max * (1 - i / 4)).toLocaleString()}</span>
                                 ))}
@@ -382,13 +377,13 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
 
                                     <div className="flex-1 w-full flex items-end justify-center relative z-10 pb-1">
                                         <div className={`fixed-top-tooltip absolute top-chart-tooltip ${i < data.length / 2 ? 'left-0' : 'right-0'} bg-slate-900/98 backdrop-blur-3xl text-white p-4 rounded-3xl transition-all duration-300 pointer-events-none shadow-chart-tooltip min-w-chart-tooltip-wide border border-white/20 ring-1 ring-white/10 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-                                            <div className="font-black mb-3 border-b border-white/10 pb-2 flex justify-between items-center shrink-0">
+                                            <div className="typo-label mb-3 border-b border-white/10 pb-2 flex justify-between items-center shrink-0">
                                                 <div className="flex flex-col">
-                                                    <span className="text-lg text-white leading-none font-black">{monthLabel}</span>
+                                                    <span className="typo-section text-white">{monthLabel}</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-2xs-plus text-rose-400 uppercase tracking-widest mb-0.5 font-bold"><PM25Text>ค่าเฉลี่ย PM2.5</PM25Text></div>
-                                                    <span className="text-2xl text-rose-500 font-black tabular-nums leading-none">{m.avg_pm25 || 0} <small className="text-compact opacity-40 font-bold">มคก./ลบ.ม.</small></span>
+                                                    <div className="typo-chart text-rose-400 uppercase mb-0.5"><PM25Text>ค่าเฉลี่ย PM2.5</PM25Text></div>
+                                                    <span className="typo-metric text-rose-500 tabular-nums">{m.avg_pm25 || 0} <small className="typo-chart opacity-40">มคก./ลบ.ม.</small></span>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -396,20 +391,20 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                                                     <div key={d.id} className="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5 transition-colors">
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: d.hex }}></div>
-                                                            <span className="text-compact text-white/80 font-bold leading-tight truncate">{d.label}</span>
+                                                            <span className="typo-chart text-white/80 truncate">{d.label}</span>
                                                         </div>
                                                         <div className="flex items-baseline gap-1 shrink-0 ml-1">
-                                                            <b className="font-black tabular-nums text-xs text-white">{(m[d.id] || 0).toLocaleString()}</b>
-                                                            <span className="text-micro text-white/80 font-bold uppercase">ราย</span>
+                                                            <b className="typo-caption tabular-nums text-white">{(m[d.id] || 0).toLocaleString()}</b>
+                                                            <span className="typo-chart text-white/80 uppercase">ราย</span>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                             <div className="mt-3 pt-2 border-t border-white/10 flex justify-between items-center">
-                                                <span className="text-compact text-white/80 font-black uppercase tracking-widest">ผู้ป่วยสะสมรวม</span>
+                                                <span className="typo-chart text-white/80 uppercase">ผู้ป่วยสะสมรวม</span>
                                                 <div className="flex items-baseline gap-1.5">
-                                                    <span className="text-2xl text-blue-400 font-black tabular-nums drop-shadow-stat-glow">{(m.total || 0).toLocaleString()}</span>
-                                                    <span className="text-2xs-plus text-blue-400/50 font-bold uppercase">ราย</span>
+                                                    <span className="typo-metric text-blue-400 tabular-nums drop-shadow-stat-glow">{(m.total || 0).toLocaleString()}</span>
+                                                    <span className="typo-chart text-blue-400/50 uppercase">ราย</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -426,7 +421,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                                         </div>
                                     </div>
                                     {(i === 0 || i === data.length - 1 || (i % monthLabelStep === 0 && data.length - 1 - i >= monthLabelStep)) && (
-                                        <span className={`absolute bottom-chart-label text-2xs-plus font-black whitespace-nowrap uppercase tracking-tighter transition-colors ${isHovered ? 'text-blue-400' : 'text-white/80'}`}>
+                                        <span className={`typo-chart absolute bottom-chart-label whitespace-nowrap uppercase transition-colors ${isHovered ? 'text-blue-400' : 'text-white/80'}`}>
                                             {monthShortLabel}
                                         </span>
                                     )}
@@ -440,12 +435,12 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                     {HDC_DISEASES.map(d => (
                         <div key={d.id} className="flex items-center gap-2 group cursor-default">
                             <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: d.hex }}></div>
-                            <span className="text-compact font-black text-white/80 uppercase tracking-widest group-hover:text-white transition-colors">{d.label}</span>
+                            <span className="typo-chart text-white/80 uppercase group-hover:text-white transition-colors">{d.label}</span>
                         </div>
                     ))}
                     <div className="flex items-center gap-2 group cursor-default">
                         <div className="w-6 h-0.5 bg-rose-500 rounded-full shadow-lg"></div>
-                        <span className="text-compact font-black text-rose-500/80 uppercase tracking-widest group-hover:text-rose-400 transition-colors"><PM25Text>ฝุ่น PM2.5</PM25Text></span>
+                        <span className="typo-chart text-rose-500/80 uppercase group-hover:text-rose-400 transition-colors"><PM25Text>ฝุ่น PM2.5</PM25Text></span>
                     </div>
                 </div>
             </div>
@@ -604,7 +599,7 @@ export default function DashboardHDC() {
     }, [filters, fetchData, user]);
 
     return (
-        <div className="min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden font-sans"
+        <div className="typo-body min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden"
             style={{ backgroundImage: "url('/img/background-optimized.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
             
             <div className="absolute inset-0 bg-slate-900/40 z-0"></div>
@@ -647,7 +642,7 @@ export default function DashboardHDC() {
 
                     <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
-                            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
+                            <h4 className="typo-section text-white flex items-center gap-4 uppercase">
                                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                                 จำนวนผู้ป่วยรายจังหวัด
                             </h4>
@@ -658,7 +653,7 @@ export default function DashboardHDC() {
                                 filters={provinceMapFilters}
                                 visibleProvinces={filters.provinces.length ? filters.provinces : filters.regions.length ? baseProvinces : undefined}
                                 resolveAreaData={(area, level) => level === 'province' ? data?.provinceAverages[area.province] : undefined}
-                                requireDistrictForTambons
+                                requireDistrictForTambons={false}
                                 interactive={false}
                                 getColor={ddcColorScale} 
                                 legendConfig={ddcLegend} 
@@ -667,16 +662,16 @@ export default function DashboardHDC() {
                                     const value = typeof rawValue === 'object' ? rawValue.value : 0;
                                     const rate = typeof rawValue === 'object' ? rawValue.rate : 0;
                                     return `
-                                        <div class="font-sans p-6 min-w-60 bg-slate-900 text-white rounded-3xl border border-white/10 shadow-2xl">
-                                            <div class="text-sm font-black text-blue-400 uppercase tracking-widest mb-4 border-b border-white/10 pb-2">${province}</div>
+                                        <div class="typo-body p-6 min-w-60 bg-slate-900 text-white rounded-3xl border border-white/10 shadow-2xl">
+                                            <div class="typo-label text-blue-400 uppercase mb-4 border-b border-white/10 pb-2">${province}</div>
                                             <div class="space-y-3">
                                                 <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
-                                                    <span class="text-xs font-bold text-white/50 uppercase tracking-widest">จำนวนผู้ป่วย</span>
-                                                    <span class="text-lg font-black text-white tabular-nums">${Math.round(value).toLocaleString()} <small class="text-xs opacity-40 font-bold">${popupUnit}</small></span>
+                                                    <span class="typo-caption text-white/50 uppercase">จำนวนผู้ป่วย</span>
+                                                    <span class="typo-section text-white tabular-nums">${Math.round(value).toLocaleString()} <small class="typo-caption opacity-40">${popupUnit}</small></span>
                                                 </div>
                                                 <div class="flex items-center justify-between bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
-                                                    <span class="text-xs font-bold text-blue-400 uppercase tracking-widest">อัตราป่วย</span>
-                                                    <span class="text-lg font-black text-blue-400 tabular-nums">${rate.toFixed(2)} <small class="text-xs opacity-60 font-bold">ต่อแสน</small></span>
+                                                    <span class="typo-caption text-blue-400 uppercase">อัตราป่วย</span>
+                                                    <span class="typo-section text-blue-400 tabular-nums">${rate.toFixed(2)} <small class="typo-caption opacity-60">ต่อแสน</small></span>
                                                 </div>
                                             </div>
                                         </div>

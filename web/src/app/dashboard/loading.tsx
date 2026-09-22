@@ -1,4 +1,4 @@
-import DashboardLoading from './_components/DashboardLoading';
+import DashboardLoading from '@/components/dashboard/DashboardLoading';
 
 export default function Loading() {
     return <DashboardLoading />;

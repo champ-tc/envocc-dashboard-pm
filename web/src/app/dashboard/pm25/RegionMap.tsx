@@ -54,7 +54,7 @@ export default function RegionMap({ regions, hierarchy, values, metric, unit, ge
 
     if (error) return <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 text-white">
         โหลดขอบเขตพื้นที่ไม่สำเร็จ
-        <button type="button" className="btn btn-sm btn-primary" onClick={() => setAttempt(value => value + 1)}>ลองอีกครั้ง</button>
+        <button type="button" className="typo-label btn btn-sm btn-primary" onClick={() => setAttempt(value => value + 1)}>ลองอีกครั้ง</button>
     </div>;
     if (!areas) return <div role="status" className="flex h-full items-center justify-center text-white/70">กำลังโหลดแผนที่เขตสุขภาพ…</div>;
     if (!areas.features.length) return <div role="status" className="flex h-full items-center justify-center text-white/70">ไม่พบขอบเขตของเขตสุขภาพที่เลือก</div>;
@@ -80,8 +80,8 @@ export default function RegionMap({ regions, hierarchy, values, metric, unit, ge
                 <FitRegions areas={areas} />
             </MapContainer>
         </div>
-        <div className="max-h-32 shrink-0 space-y-1 overflow-y-auto p-3 text-xs text-white/80">
-            <p>{metric} — เลือกค่าสูงสุดจากจังหวัดในเขต ไม่รวมค่าเข้าด้วยกัน</p>
+        <div className="typo-caption max-h-32 shrink-0 space-y-1 overflow-y-auto p-3 text-white/80">
+            <p className="typo-body">{metric} — เลือกค่าสูงสุดจากจังหวัดในเขต ไม่รวมค่าเข้าด้วยกัน</p>
             {areas.features.map(feature => <div key={feature.properties.region} className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: getColor(feature.properties.value) }} />
                 <span>{displayName(feature.properties.region)}: {feature.properties.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} {unit}</span>

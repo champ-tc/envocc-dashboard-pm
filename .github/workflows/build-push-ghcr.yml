@@ -54,8 +54,17 @@ jobs:
       - name: Check format with black
         run: black --check airflow || true
 
+  nginx-tls-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate TLS checks
+        run: |
+          sh -n nginx/validate-tls.sh
+          python3 -m unittest discover -s nginx/tests
+
   build-and-push:
-    needs: [web-lint, airflow-lint]
+    needs: [web-lint, airflow-lint, nginx-tls-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: read

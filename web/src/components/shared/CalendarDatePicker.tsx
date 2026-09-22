@@ -79,19 +79,19 @@ export default function CalendarDatePicker({
 
     return (
         <div className={`relative ${className}`}>
-            {label && <label className="mb-2 block text-sm font-semibold text-slate-700">{label}</label>}
+            {label && <label className="typo-label mb-2 block text-slate-700">{label}</label>}
             <button
                 type="button"
                 disabled={disabled}
                 onClick={() => setIsOpen(true)}
-                className={`flex min-h-12 w-full items-center gap-3 rounded-xl border bg-white px-3.5 text-left transition disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
+                className={`typo-label btn min-h-12 w-full justify-start gap-3 rounded-xl bg-base-100 text-left ${
                     isOpen ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-blue-300'
                 }`}
             >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                     <CalendarDays className="size-4" />
                 </span>
-                <span className={`min-w-0 flex-1 truncate text-sm font-semibold ${value ? 'text-slate-800' : 'text-slate-400'}`}>
+                <span className={`typo-label min-w-0 flex-1 truncate ${value ? 'text-slate-800' : 'text-slate-400'}`}>
                     {formatDisplay(value)}
                 </span>
                 {required && !value && <span className="text-rose-500">*</span>}
@@ -99,23 +99,23 @@ export default function CalendarDatePicker({
 
             {isOpen && (
                 <>
-                    <button type="button" aria-label="ปิดปฏิทิน" className="fixed inset-0 z-overlay cursor-default bg-slate-950/20 backdrop-blur-subtle" onClick={() => setIsOpen(false)} />
+                    <button type="button" aria-label="ปิดปฏิทิน" className="typo-label fixed inset-0 z-overlay cursor-default bg-slate-950/20 backdrop-blur-subtle" onClick={() => setIsOpen(false)} />
                     <div className="absolute left-0 z-popover mt-2 w-date-popover overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
                         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
-                            <button type="button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="btn btn-square btn-ghost btn-sm">
+                            <button type="button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="typo-label btn btn-square btn-ghost btn-sm">
                                 <ChevronLeft className="size-4" />
                             </button>
                             <div className="text-center">
-                                <p className="font-bold text-slate-900">{THAI_MONTHS[viewDate.getMonth()]}</p>
-                                <p className="text-xs text-slate-500">พ.ศ. {viewDate.getFullYear() + 543}</p>
+                                <p className="typo-body text-slate-900">{THAI_MONTHS[viewDate.getMonth()]}</p>
+                                <p className="typo-caption text-slate-500">พ.ศ. {viewDate.getFullYear() + 543}</p>
                             </div>
-                            <button type="button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="btn btn-square btn-ghost btn-sm">
+                            <button type="button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="typo-label btn btn-square btn-ghost btn-sm">
                                 <ChevronRight className="size-4" />
                             </button>
                         </div>
 
                         <div className="grid grid-cols-7 px-4 pt-4">
-                            {WEEKDAYS.map((day) => <span key={day} className="py-1 text-center text-xs font-semibold text-slate-400">{day}</span>)}
+                            {WEEKDAYS.map((day) => <span key={day} className="typo-caption py-1 text-center text-slate-400">{day}</span>)}
                         </div>
                         <div className="grid grid-cols-7 gap-1 p-4 pt-2">
                             {calendarDays.map(({ date, currentMonth }) => {
@@ -132,14 +132,8 @@ export default function CalendarDatePicker({
                                             onChange(dateValue);
                                             setIsOpen(false);
                                         }}
-                                        className={`relative aspect-square rounded-xl text-sm font-semibold transition ${
-                                            selected
-                                                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                                                : unavailable
-                                                    ? 'cursor-not-allowed text-slate-200'
-                                                    : currentMonth
-                                                        ? 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'
-                                                        : 'text-slate-300 hover:bg-slate-50'
+                                        className={`typo-label btn relative h-auto min-h-0 aspect-square px-0 rounded-xl ${
+                                            selected ? 'btn-primary' : currentMonth ? 'btn-ghost' : 'btn-ghost text-base-content/30'
                                         }`}
                                     >
                                         {date.getDate()}
@@ -159,11 +153,11 @@ export default function CalendarDatePicker({
                                         setIsOpen(false);
                                     }
                                 }}
-                                className="btn btn-ghost btn-sm gap-1 text-blue-600"
+                                className="typo-label btn btn-ghost btn-sm gap-1 text-blue-600"
                             >
                                 <RotateCcw className="size-4" /> วันนี้
                             </button>
-                            <button type="button" onClick={() => setIsOpen(false)} className="btn btn-ghost btn-sm gap-1 text-slate-500">
+                            <button type="button" onClick={() => setIsOpen(false)} className="typo-label btn btn-ghost btn-sm gap-1 text-slate-500">
                                 <X className="size-4" /> ปิด
                             </button>
                         </div>

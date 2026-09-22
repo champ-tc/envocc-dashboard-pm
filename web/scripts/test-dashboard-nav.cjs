@@ -4,12 +4,12 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
-const source = fs.readFileSync(require('node:path').join(__dirname, '../src/components/DashboardNavMenu.tsx'), 'utf8');
+const source = fs.readFileSync(require('node:path').join(__dirname, '../src/components/dashboard/DashboardNavbar.tsx'), 'utf8');
 const code = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020,
 } }).outputText;
 assert.doesNotMatch(source, /useState|onMouseEnter|onMouseLeave|transitionDelay/);
-const navbar = fs.readFileSync(require('node:path').join(__dirname, '../src/app/dashboard/_components/DashboardNavbar.tsx'), 'utf8');
+const navbar = source;
 assert.ok(navbar.includes('has-[details[open]]:z-dashboard-nav'), 'Open navigation must stack above dashboard filters');
 for (const route of ['hdc', 'dds', 'pm25']) {
     const exports = {};
@@ -19,7 +19,9 @@ for (const route of ['hdc', 'dds', 'pm25']) {
         if (name === 'next/image') return { default: props => React.createElement('img', props) };
         return require(name);
     } });
-    const html = renderToStaticMarkup(React.createElement(exports.default));
+    const html = renderToStaticMarkup(React.createElement(exports.default, {
+        logos: [], title: 'Dashboard title', subtitle: 'Dashboard subtitle',
+    }));
     assert.match(html, /<details class="dropdown dropdown-end/);
     assert.doesNotMatch(html, /<details[^>]* open/);
     assert.match(html, /<summary aria-label="เปิดเมนูนำทาง dashboard"/);

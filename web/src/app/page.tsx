@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import PM25Mark, { PM25Text } from '@/components/PM25Mark';
 import GuestNavbar from '@/components/GuestNavbar';
-import SecurityModal from '@/components/SecurityModal';
 
 type Definition = {
     id: number;
@@ -62,20 +61,20 @@ function DefinitionBlock({ def }: { def: Definition }) {
     return (
         <div className="card bg-white/70 shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 group">
             <div className="card-body p-5 md:p-6">
-                <h4 className={`card-title items-start gap-3 mb-1 text-lg ${def.isAlert ? 'text-red-500' : 'text-slate-800'}`}>
-                    <span className={`badge badge-sm h-7 w-7 p-0 font-bold border-none text-white ${def.isAlert ? 'bg-red-500' : 'bg-linear-to-br from-blue-600 to-sky-500'}`}>
+                <h4 className="typo-section card-title items-start gap-3 mb-1 text-slate-800">
+                    <span className="typo-label badge badge-sm h-7 w-7 p-0 border-none bg-linear-to-br from-blue-600 to-sky-500 text-white">
                         {def.id}
                     </span>
                     <PM25Text>{def.title}</PM25Text>
                 </h4>
                 <div className="pl-10">
-                    <p className="text-slate-600 text-body-compact leading-relaxed mb-4"><PM25Text>{def.desc}</PM25Text></p>
+                    <p className="typo-body-sm text-slate-600 mb-4"><PM25Text>{def.desc}</PM25Text></p>
                     {def.items && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                             {def.items.map((item) => (
                                 <div key={item} className="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-100 shadow-xs hover:border-blue-300 transition-colors">
                                     <svg className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    <span className="text-sm text-slate-700 leading-relaxed">{item}</span>
+                                    <span className="typo-body-sm text-slate-700">{item}</span>
                                 </div>
                             ))}
                         </div>
@@ -86,7 +85,7 @@ function DefinitionBlock({ def }: { def: Definition }) {
                                 href={def.link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn btn-sm btn-outline rounded-full font-medium shadow-xs border-blue-500 text-blue-600 hover:bg-linear-to-br hover:from-blue-600 hover:to-sky-500 hover:text-white hover:border-none">
+                                className="typo-label btn btn-sm btn-outline rounded-full shadow-xs border-blue-500 text-blue-600 hover:bg-linear-to-br hover:from-blue-600 hover:to-sky-500 hover:text-white hover:border-none">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                 ดูข้อมูลเพิ่มเติม
                             </a>
@@ -101,33 +100,32 @@ function DefinitionBlock({ def }: { def: Definition }) {
 // --- Main Page ---
 export default function HomePage() {
     return (
-        <div className="min-h-screen flex flex-col items-center text-slate-900 relative overflow-hidden font-sans selection:bg-blue-100"
+        <div className="typo-body min-h-screen flex flex-col items-center text-slate-900 relative overflow-hidden selection:bg-blue-100"
             style={{ backgroundImage: "url('/img/background-optimized.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
 
             <div className="absolute inset-0 bg-white/20 z-0" />
             <GuestNavbar />
-            <SecurityModal />
 
             {/* Background Decorative Elements */}
             <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 z-0">
-                <div className="w-data-table h-dashboard-map bg-linear-to-tr from-blue-200/20 to-white/5 rounded-full blur-hero-orb opacity-40" />
+                <div className="typo-body w-data-table h-dashboard-map bg-linear-to-tr from-blue-200/20 to-white/5 rounded-full blur-hero-orb opacity-40" />
             </div>
 
             <div className="z-10 text-center space-y-8 md:space-y-12 px-4 max-w-5xl mx-auto mt-24 md:mt-32">
                 {/* Hero Section */}
                 <header className="space-y-4">
-                    <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg leading-tight tracking-tight uppercase">
+                    <h1 className="text-6xl text-white drop-shadow-lg uppercase">
                         <PM25Mark /> Patient Database <br className="hidden sm:block" />
-                        <span className="text-xl sm:text-2xl md:text-3xl block mt-2 font-bold opacity-90 capitalize">
+                        <span className="typo-title block mt-2 opacity-90 capitalize">
                             ระบบฐานข้อมูลผู้ป่วยจากฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน (<PM25Mark />)
                         </span>
                     </h1>
 
                     <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <Link href="/login" className="btn btn-lg rounded-full px-12 shadow-xl shadow-blue-500/20 hover:scale-105 transition-all w-full sm:w-auto bg-linear-to-br from-blue-600 to-sky-500 border-none text-white hover:shadow-blue-500/40">
+                        <Link href="/login" className="typo-body btn btn-lg rounded-full px-12 shadow-xl shadow-blue-500/20 hover:scale-105 transition-all w-full sm:w-auto bg-linear-to-br from-blue-600 to-sky-500 border-none text-white hover:shadow-blue-500/40">
                             เข้าสู่ระบบ (Login)
                         </Link>
-                        <Link href="/register" className="btn btn-lg btn-outline bg-white/90 rounded-full px-12 shadow-md hover:-translate-y-0.5 transition-all w-full sm:w-auto border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300">
+                        <Link href="/register" className="typo-body btn btn-lg btn-outline bg-white/90 rounded-full px-12 shadow-md hover:-translate-y-0.5 transition-all w-full sm:w-auto border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300">
                             สมัครสมาชิกใหม่
                         </Link>
                     </div>
@@ -140,7 +138,7 @@ export default function HomePage() {
                             <div className="bg-linear-to-br from-blue-600 to-sky-500 text-white p-3.5 rounded-2xl shadow-lg shadow-blue-500/20">
                                 <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </div>
-                            <h3 className="card-title text-3xl font-black tracking-tight text-slate-800">คำนิยามที่ควรรู้</h3>
+                            <h3 className="typo-section card-title text-slate-800">คำนิยามที่ควรรู้</h3>
                         </div>
 
                         <div className="space-y-6">
@@ -150,9 +148,13 @@ export default function HomePage() {
                 </section>
 
                 <footer className="mt-20 pb-12">
-                    <p className="text-sm font-bold text-slate-400 tracking-widest uppercase">
-                        โดย กลุ่มเฝ้าระวังและตอบโต้ภาวะฉุกเฉิน กองโรคจากการประกอบอาชีพและสิ่งแวดล้อม กรมควบคุมโรค
-                    </p>
+                    <div className="card card-border mx-auto w-fit max-w-[calc(100vw-2rem)] rounded-full border border-white/20 bg-slate-950/75 text-white shadow-lg shadow-slate-950/25 backdrop-blur-md">
+                        <div className="overflow-x-auto px-5 py-2 md:px-7">
+                            <p className="typo-caption whitespace-nowrap text-center text-white/85">
+                                โดย กลุ่มเฝ้าระวังและตอบโต้ภาวะฉุกเฉิน กองโรคจากการประกอบอาชีพและสิ่งแวดล้อม กรมควบคุมโรค
+                            </p>
+                        </div>
+                    </div>
                 </footer>
             </div>
         </div>

@@ -57,7 +57,7 @@ docker compose logs --tail=100 web airflow-webserver airflow-scheduler airflow-w
 
 ช่องทางเข้าใช้งานในเครื่อง:
 
-- Web ผ่าน Nginx: `https://localhost/` หรือ port/domain ที่ตั้งไว้
+- Web ผ่าน Nginx: `https://pm25-patients.ddc.moph.go.th/` (DNS ต้องชี้มายังเซิร์ฟเวอร์)
 - Web โดยตรงภายใน Compose network: port `3000` (ไม่ได้ publish ออก host)
 - Airflow: `http://localhost:8080/airflow/`
 - PostgreSQL ETL: `localhost:15432` โดยค่าเริ่มต้น
@@ -86,7 +86,48 @@ docker compose up -d --force-recreate nginx
 
 ห้ามใช้ไฟล์ leaf-only กับ `ssl_certificate` ตัวตรวจตอนเริ่ม Nginx จะไม่ยอมให้
 container ทำงานเมื่อ chain มีน้อยกว่า 2 ใบ, certificate/key ไม่ตรงกัน หรือ
-certificate จะหมดอายุภายใน 30 วัน
+certificate หมดอายุ/ยังไม่เริ่มมีผล รวมถึง chain ไม่เชื่อมถึง trusted CA หรือชื่อโดเมนไม่ตรง
+ไม่มีการแจ้งเตือนหรือหยุด Nginx ตามจำนวนวันที่เหลือก่อนหมดอายุ
+ยังตรวจวันเริ่มมีผลและวันหมดอายุจริงของ certificate ตามปกติ
+ตัวตรวจอ่าน path จาก `nginx -T` โดยตรง ไม่ใช้ `TLS_CERTIFICATE` หรือ `TLS_PRIVATE_KEY` override
+
+ใช้โดเมน `pm25-patients.ddc.moph.go.th` แทน IP สำหรับ HTTPS เสมอ:
+TLS handshake เกิดก่อน HTTP redirect จึงแก้ certificate mismatch ของ HTTPS ผ่าน IP ด้วย redirect ไม่ได้
+Nginx ส่งทุก HTTP host ไปยังโดเมนหลัก และส่ง HSTS หลังเชื่อมต่อ HTTPS สำเร็จ
+ตั้งค่า `AIRFLOW__API__BASE_URL` และ `AIRFLOW__WEBSERVER__BASE_URL` ใน `.env`
+(หากมี override) เป็น `https://pm25-patients.ddc.moph.go.th/airflow`
+แล้ว recreate `airflow-webserver` ด้วย เพื่อให้ค่าใหม่มีผล
+
+เมื่ออัปเดตตัวตรวจ TLS ต้องใช้ Nginx image ที่ build จาก Dockerfile ใหม่ด้วย
+การเปลี่ยนเฉพาะไฟล์ config หรือ restart image เก่าจะไม่อัปเดตตัวตรวจ
+สำหรับการ build จาก checkout นี้บนเครื่อง deployment:
+
+```bash
+./scripts/deploy-https.sh
+# Also apply Airflow BASE_URL changes when needed:
+docker compose up -d --force-recreate airflow-webserver
+```
+
+สคริปต์ตรวจทุก IPv4 ที่ DNS ตอบกลับ ตรวจ full chain และเทียบ fingerprint
+กับ certificate ที่กำหนดไว้ ค่า IP ที่อนุญาตโดยปริยายคือ `192.168.110.5`
+และ `203.156.15.88` หากย้ายปลายทางโดยตั้งใจ ให้รันเช่น
+`EXPECTED_TLS_IPS="192.168.110.6 203.156.15.89" ./scripts/deploy-https.sh`
+การตรวจ fingerprint จะพบ proxy หรือ antivirus ที่เปลี่ยน certificate ระหว่างทาง
+ส่วน HTTPS inspection, เวลาเครื่อง และ root CA ของระบบเก่าต้องจัดการผ่าน GPO/MDM
+
+ทดสอบตัวตรวจด้วย OpenSSL 3 บน PATH:
+
+```bash
+python3 -m unittest discover -s nginx/tests
+```
+
+ตรวจใบรับรองที่ปลายทางส่งจริงหลัง deploy จากเครือข่ายผู้ใช้งาน:
+
+```bash
+openssl s_client -connect pm25-patients.ddc.moph.go.th:443 -servername pm25-patients.ddc.moph.go.th -verify_hostname pm25-patients.ddc.moph.go.th -verify_return_error -showcerts </dev/null
+```
+
+ต้องได้ `Verify return code: 0 (ok)` และได้รับทั้ง leaf กับ intermediate certificate
 
 Compose จะรัน service สำหรับเตรียม schema, seed ผู้ใช้ และเตรียม shared volumes ก่อนเริ่ม Web และ Airflow
 
@@ -104,3 +145,5 @@ Compose จะรัน service สำหรับเตรียม schema, see
 แดชบอร์ดเป็นหลัก
 
 กฎสำหรับผู้ช่วยเขียนโค้ดอยู่ใน `AGENTS.md` ตาม root และโฟลเดอร์ของแต่ละ service ส่วนรายละเอียดเฉพาะ Dashboard อยู่ใน `web/src/app/dashboard/*/README.md`
+
+The HTTPS deployment script validates the new image and mounted certificates before replacing Nginx, then verifies the served chain on localhost and the public domain. If localhost passes but the domain fails, check the TLS certificate on the upstream load balancer/proxy. Run it on the deployment server with upstream services already running.

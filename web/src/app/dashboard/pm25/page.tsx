@@ -2,15 +2,16 @@
 import { useEffect, useState, memo, useMemo, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions } from './actions';
-import DashboardNavbar from '../_components/DashboardNavbar';
-import DashboardBusyAlert from '../_components/DashboardBusyAlert';
-import DashboardLoading from '../_components/DashboardLoading';
+import DashboardNavbar from '@/components/dashboard/DashboardNavbar';
+import DashboardBusyAlert from '@/components/dashboard/DashboardBusyAlert';
+import DashboardLoading from '@/components/dashboard/DashboardLoading';
 import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
 import { PM25Text } from '@/components/PM25Mark';
 import CloudLoader from '@/components/CloudLoader';
-import DeferredChart from '../_components/DeferredChart';
+import DeferredChart from '@/components/dashboard/DeferredChart';
 import { nearestChartPoint, prepareChartSeries } from '@/lib/dashboard-chart';
 import { areaKey, type MapAreas } from './map-area-data';
+import { CalendarDays, Check, ChevronDown } from 'lucide-react';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -37,7 +38,8 @@ interface DashboardData {
     regionTrend: Record<string, TrendPoint[]>;
     provinceTrend: Record<string, TrendPoint[]>;
     districtTrend: Record<string, TrendPoint[]>;
-    top10Exceed: { province: string; exceed_days: number }[];
+    top10Exceed: { area: string; exceed_days: number }[];
+    top10Level: 'province' | 'district' | 'subdistrict';
     provinceAverages: Record<string, number>;
     provinceMaxes: Record<string, number>;
     provinceStreak37: Record<string, number>;
@@ -137,37 +139,48 @@ const thaiMonthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "
 // --- Sub-Components ---
 function MultiSelect({ label, options, selected, onChange, placeholder = "ทั้งหมด" }: any) {
     const [isOpen, setIsOpen] = useState(false);
+    const [searchText, setSearchText] = useState('');
     const safeOptions = options || [];
     const safeSelected = selected || [];
+    const searchable = label === 'จังหวัด';
+    const normalizedSearch = searchText.trim().toLocaleLowerCase('th');
+    const filteredOptions = normalizedSearch
+        ? safeOptions.filter((option: string) => option.toLocaleLowerCase('th').includes(normalizedSearch))
+        : safeOptions;
     return (
         <div className="relative col-span-1">
-            <label className="block text-xs uppercase font-bold text-white/70 mb-2 ml-2 tracking-wider">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-xs font-bold text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-filter-label">
                     {safeSelected.length === 0 ? placeholder : (safeSelected.length === safeOptions.length ? 'ทั้งหมด' : safeSelected.join(', '))}
                 </div>
-                <svg className={`w-4 h-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
+                <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
             </div>
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
                     <div className="absolute z-dropdown mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                        {searchable && (
+                            <div className="relative mb-1">
+                                <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} onClick={(event) => event.stopPropagation()} placeholder="ค้นหาจังหวัด" aria-label="ค้นหาจังหวัด" className="typo-caption input input-sm w-full rounded-2xl border-white/15 bg-white/10 pr-9 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none" />
+                                {searchText && <button type="button" aria-label="ล้างคำค้นหาจังหวัด" onClick={(event) => { event.stopPropagation(); setSearchText(''); }} className="typo-label btn btn-ghost btn-xs btn-circle absolute right-1.5 top-1/2 -translate-y-1/2 text-white/70 hover:bg-white/10 hover:text-white">×</button>}
+                            </div>
+                        )}
                         <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
                             <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
-                                {safeSelected.length === safeOptions.length && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                                {safeSelected.length === safeOptions.length && <Check aria-hidden="true" className="size-4 text-white" strokeWidth={4} />}
                             </div>
-                            <span className="text-xs font-bold text-white">เลือกทั้งหมด</span>
+                            <span className="typo-caption text-white">เลือกทั้งหมด</span>
                         </div>
-                        {safeOptions.map((opt: string) => (
+                        {filteredOptions.map((opt: string) => (
                             <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
                                 <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.includes(opt) ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
-                                    {safeSelected.includes(opt) && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                                    {safeSelected.includes(opt) && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
                                 </div>
-                                <span className={`text-xs transition-colors ${safeSelected.includes(opt) ? 'font-extrabold text-blue-400' : 'font-bold text-white/70'}`}>{opt}</span>
+                                <span className={`typo-caption transition-colors ${safeSelected.includes(opt) ? 'text-blue-400' : 'text-white/70'}`}>{opt}</span>
                             </div>
                         ))}
+                        {searchable && filteredOptions.length === 0 && <div className="typo-caption px-3 py-4 text-center text-white/50">ไม่พบจังหวัดที่ค้นหา</div>}
                     </div>
                 </>
             )}
@@ -242,26 +255,26 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
 
     return (
         <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
-            <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase mb-8 shrink-0">
+            <h4 className="typo-section text-white flex items-center gap-4 uppercase mb-8 shrink-0">
                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                 <PM25Text>{title}</PM25Text>
                 {!loading && labels.length > 0 && (
-                    <span className="text-sm font-black text-blue-400 bg-blue-500/10 px-3 py-1 rounded-xl border border-blue-500/20 shadow-inner">
-                        {labels.length}
+                    <span className="typo-label text-blue-400 bg-blue-500/10 px-3 py-1 rounded-xl border border-blue-500/20 shadow-inner">
+                        (N={labels.length})
                     </span>
                 )}
             </h4>
             <div className="flex-1 flex gap-4 min-h-0 relative">
                 <div className="flex-1 relative border-r border-white/5 pr-4 flex min-w-0">
                     <div className="w-5 shrink-0 flex items-center justify-center">
-                        <span className="text-2xs-plus font-bold text-white/80 whitespace-nowrap writing-mode-vertical rotate-180">
+                        <span className="typo-chart text-white/80 whitespace-nowrap writing-mode-vertical rotate-180">
                             <PM25Text>ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</PM25Text>
                         </span>
                     </div>
                     {loading ? <div className="w-full h-full bg-white/5 animate-pulse rounded-2xl"></div> : (
                         <div className="flex-1 min-w-0 h-full flex flex-col">
                             <div className="flex-1 min-h-0 flex">
-                                <div className="w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-2xs font-bold text-white/80 tabular-nums">
+                                <div className="typo-chart w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-white/80 tabular-nums">
                                     {yAxisTicks.map((tick, index) => (
                                         <span key={index}>{Math.round(tick)}</span>
                                     ))}
@@ -326,7 +339,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                                     style={{ left: `${hoveredPoint.x}%`, top: `${hoveredPoint.y}%`, backgroundColor: hoveredPoint.color }}
                                                 />
                                                 <div
-                                                    className="absolute z-40 min-w-48 rounded-xl border border-white/15 bg-slate-950/95 p-3 text-compact-plus text-white shadow-2xl backdrop-blur-xl pointer-events-none"
+                                                    className="typo-chart absolute z-40 min-w-48 rounded-xl border border-white/15 bg-slate-950/95 p-3 text-white shadow-2xl backdrop-blur-xl pointer-events-none"
                                                     role="status"
                                                     style={{
                                                         left: `${hoveredPoint.x}%`,
@@ -334,17 +347,17 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                                         transform: `translate(${hoveredPoint.x > 70 ? '-100%' : hoveredPoint.x < 30 ? '0' : '-50%'}, ${hoveredPoint.y < 35 ? '12px' : 'calc(-100% - 12px)'})`
                                                     }}
                                                 >
-                                                    <div className="mb-2 flex items-center gap-2 font-extrabold text-white">
+                                                    <div className="typo-label mb-2 flex items-center gap-2 text-white">
                                                         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hoveredPoint.color }} />
                                                         {hoveredPoint.label}
                                                     </div>
                                                     <div className="grid grid-cols-metric gap-x-3 gap-y-1 text-white/70">
                                                         <span>วันที่</span>
-                                                        <span className="text-right font-bold text-white">{formatDateShort(hoveredPoint.date)}</span>
+                                                        <span className="typo-label text-right text-white">{formatDateShort(hoveredPoint.date)}</span>
                                                         <span>พื้นที่</span>
-                                                        <span className="text-right font-bold text-white">{hoveredPoint.label}</span>
+                                                        <span className="typo-label text-right text-white">{hoveredPoint.label}</span>
                                                         <span><PM25Text>ค่าฝุ่น PM2.5</PM25Text></span>
-                                                        <span className="text-right font-bold text-blue-300">{hoveredPoint.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} มคก./ลบ.ม.</span>
+                                                        <span className="typo-label text-right text-blue-300">{hoveredPoint.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} มคก./ลบ.ม.</span>
                                                     </div>
                                                 </div>
                                             </>
@@ -353,7 +366,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                 </div>
                             </div>
                             <div
-                                className="ml-9 mt-1 grid text-2xs font-bold text-white/80 tabular-nums"
+                                className="typo-chart ml-9 mt-1 grid text-white/80 tabular-nums"
                                 style={{ gridTemplateColumns: `repeat(${Math.max(xAxisLabels.length, 1)}, minmax(0, 1fr))` }}
                             >
                                 {xAxisLabels.map((date, index) => (
@@ -373,7 +386,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                     </span>
                                 ))}
                             </div>
-                            <div className="ml-9 text-center text-2xs-plus font-bold text-white/80">วันที่</div>
+                            <div className="typo-chart ml-9 text-center text-white/80">วันที่</div>
                         </div>
                     )}
                 </div>
@@ -392,7 +405,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                 }}
                                 className={`flex items-center gap-2 min-w-0 cursor-pointer transition-all ${isHidden ? 'opacity-40 grayscale' : 'hover:opacity-80'}`}>
                                 <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isHidden ? '#475569' : colors[idx % colors.length] }}></div>
-                                <span className={`text-compact font-bold truncate transition-colors ${isHidden ? 'text-white/30' : 'text-white/80'}`} title={label}>{label}</span>
+                                <span className={`typo-chart truncate transition-colors ${isHidden ? 'text-white/30' : 'text-white/80'}`} title={label}>{label}</span>
                             </div>
                         );
                     })}
@@ -402,53 +415,56 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
     );
 });
 
-function TopExceedRanking({ data, loading }: { data?: { province: string; exceed_days: number }[]; loading: boolean }) {
+function TopExceedRanking({ data, level = 'province', loading }: { data?: { area: string; exceed_days: number }[]; level?: 'province' | 'district' | 'subdistrict'; loading: boolean }) {
     const rows = data || [];
     const maxDays = Math.max(...rows.map(row => Number(row.exceed_days) || 0), 1);
+    const areaLabel = level === 'subdistrict' ? 'ตำบล' : level === 'district' ? 'อำเภอ/เขต' : 'จังหวัด';
 
     return (
         <div className="bg-slate-700 p-4 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
-                <h4 className="font-extrabold text-sm text-white flex items-center gap-3 tracking-tight uppercase leading-tight">
+                <h4 className="typo-section text-white flex items-center gap-3 uppercase">
                     <div className="w-2 h-6 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
-                    10 อันดับจังหวัดที่มีจำนวนวันเกินมาตรฐานมากที่สุด
+                    10 อันดับ{areaLabel}ที่มีจำนวนวันเกินมาตรฐานมากที่สุด
                 </h4>
-                <span className="text-compact font-black text-orange-200 bg-orange-500/15 px-2.5 py-1 rounded-xl border border-orange-500/20 whitespace-nowrap">
+                <span className="typo-chart text-orange-200 bg-orange-500/15 px-2.5 py-1 rounded-xl border border-orange-500/20 whitespace-nowrap">
                     &gt; 37.5 มคก./ลบ.ม.
                 </span>
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden">
                 {loading ? (
-                    <div className="flex flex-col gap-0.5">
+                    <div className="grid h-full grid-rows-10 gap-1">
                         {[...Array(10)].map((_, idx) => (
                             <div key={idx} className="h-7 rounded-xl bg-white/5 animate-pulse"></div>
                         ))}
                     </div>
                 ) : rows.length === 0 ? (
-                    <div className="h-full min-h-40 flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-bold text-white/80">
-                        ไม่พบจังหวัดที่เกินค่ามาตรฐานในช่วงวันที่เลือก
+                    <div className="typo-label h-full min-h-40 flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/80">
+                        ไม่พบ{areaLabel}ที่เกินค่ามาตรฐานในช่วงวันที่เลือก
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-0.5">
+                    <div
+                        className="grid h-full gap-1"
+                        style={{ gridTemplateRows: `repeat(${rows.length}, minmax(0, 1fr))` }}
+                    >
                         {rows.map((row, idx) => {
                             const days = Number(row.exceed_days) || 0;
                             const percent = Math.max((days / maxDays) * 100, 6);
-                            const isTopThree = idx < 3;
 
                             return (
-                                <div key={`${row.province}-${idx}`} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/5 px-2.5 py-0.5 min-h-7">
-                                    <div className={`absolute inset-y-0 left-0 rounded-xl ${isTopThree ? 'bg-orange-500/25' : 'bg-blue-500/15'}`} style={{ width: `${percent}%` }}></div>
+                                <div key={`${row.area}-${idx}`} className="relative flex min-h-0 items-center overflow-hidden rounded-xl border border-orange-400/20 bg-white/5 px-2.5 py-0.5">
+                                    <div className="absolute inset-y-0 left-0 rounded-xl bg-orange-500/25" style={{ width: `${percent}%` }}></div>
                                     <div className="relative z-10 flex items-center gap-2.5 min-w-0">
-                                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-compact font-black tabular-nums shrink-0 ${isTopThree ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-white/10 text-white/70'}`}>
+                                        <div className="typo-chart w-5 h-5 rounded-md flex items-center justify-center tabular-nums shrink-0 bg-orange-500 text-white shadow-lg shadow-orange-500/30">
                                             {idx + 1}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-xs font-extrabold text-white truncate">{row.province}</div>
+                                            <div className="typo-caption text-white truncate" title={row.area}>{row.area}</div>
                                         </div>
                                         <div className="text-right shrink-0 flex items-baseline gap-1">
-                                            <div className="text-sm font-black text-white tabular-nums leading-none">{days.toLocaleString()}</div>
-                                            <div className="text-compact font-bold text-white/80">วัน</div>
+                                            <div className="typo-label text-white tabular-nums">{days.toLocaleString()}</div>
+                                            <div className="typo-chart text-white/80">วัน</div>
                                         </div>
                                     </div>
                                 </div>
@@ -589,8 +605,11 @@ function useDashboard() {
             })
             .map(([region, items]) => {
                 let regionName = region;
+                if (/^\d+$/.test(regionName.trim())) {
+                    regionName = `เขตสุขภาพ ${regionName.trim()}`;
+                }
                 if (regionName.includes('เขต') && !regionName.includes('เขตสุขภาพที่') && !regionName.includes('กรุงเทพ')) {
-                    regionName = regionName.replace('เขต', 'เขตสุขภาพที่').replace(/\s+/g, ' ').trim();
+                    regionName = regionName.replace(/^เขต\s*(\d+)/, 'เขตสุขภาพ $1').replace(/\s+/g, ' ').trim();
                 }
                 const provListStr = items.map(i => i.prov).join(', ');
                 return { region: regionName, count: items.length, provinces: provListStr };
@@ -628,8 +647,11 @@ function useDashboard() {
             })
             .map(([region, items]) => {
                 let regionName = region;
+                if (/^\d+$/.test(regionName.trim())) {
+                    regionName = `เขตสุขภาพ ${regionName.trim()}`;
+                }
                 if (regionName.includes('เขต') && !regionName.includes('เขตสุขภาพที่') && !regionName.includes('กรุงเทพ')) {
-                    regionName = regionName.replace('เขต', 'เขตสุขภาพที่').replace(/\s+/g, ' ').trim();
+                    regionName = regionName.replace(/^เขต\s*(\d+)/, 'เขตสุขภาพ $1').replace(/\s+/g, ' ').trim();
                 }
                 const provListStr = items.map(i => i.prov).join(', ');
                 return { region: regionName, count: items.length, provinces: provListStr };
@@ -644,9 +666,23 @@ function useDashboard() {
 // --- Main Page Component ---
 export default function DashboardPM25() {
     const { data, options, loading, busyMessage, filters, setFilters, baseProvinces, baseDistricts, provinceMaxes, exceedData37, exceedData75 } = useDashboard();
+    const exceedDialogRef = useRef<HTMLDialogElement>(null);
+    const exceedTriggerRef = useRef<HTMLButtonElement>(null);
+    const [activeExceedThreshold, setActiveExceedThreshold] = useState<37 | 75 | null>(null);
+    const activeExceedData = activeExceedThreshold === 37 ? exceedData37 : exceedData75;
+    const openExceedDetails = (threshold: 37 | 75, trigger: HTMLButtonElement) => {
+        exceedTriggerRef.current = trigger;
+        setActiveExceedThreshold(threshold);
+        exceedDialogRef.current?.showModal();
+    };
     const renderMap = (activeMap: 'avg' | 'streak37' | 'streak75') => {
-    const level = filters.districts.length ? 'subdistrict' : filters.provinces.length ? 'district' : 'province';
-    const summaries = data?.mapAreas?.level === level ? data.mapAreas.values : {};
+    const isAllProvinces = filters.districts.length === 0 && filters.provinces.length > 0 && (
+        filters.provinces.length === options.provinces.length || filters.provinces.length >= 70
+    );
+    const level = filters.districts.length ? 'subdistrict' : filters.provinces.length && !isAllProvinces ? 'district' : 'province';
+    const summaries = isAllProvinces
+        ? Object.fromEntries(Object.entries(activeMap === 'avg' ? (data?.provinceMaxes || {}) : activeMap === 'streak37' ? (data?.provinceStreak37 || {}) : (data?.provinceStreak75 || {})).map(([name, value]) => [name, { max: value, value, streak37: { days: value }, streak75: { days: value } }]))
+        : (data?.mapAreas?.level === level ? data.mapAreas.values : {});
     const mapValues = Object.fromEntries(Object.entries(summaries).map(([key, summary]) => {
         const period = activeMap === 'avg' ? null : activeMap === 'streak37' ? summary.streak37 : summary.streak75;
         return [key, { value: period ? period.days : summary.max, name: summary.name, period }];
@@ -655,13 +691,13 @@ export default function DashboardPM25() {
     <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
         <div className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
-                <h4 className="font-extrabold text-lg text-white flex items-center gap-4 tracking-tight uppercase">
+                <h4 className="typo-section text-white flex items-center gap-4 uppercase">
                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40 shrink-0"></div>
-                    <PM25Text>{activeMap === 'avg' ? 'แผนที่ค่าฝุ่น PM2.5' : activeMap === 'streak37' ? 'ค่าฝุ่น PM2.5 มากกว่า 37.5 มคก./ลบ.ม.' : 'ค่าฝุ่น PM2.5 มากกว่า 75 มคก./ลบ.ม.'}</PM25Text>
+                    <PM25Text>{activeMap === 'avg' ? 'แผนที่ค่าฝุ่น PM2.5 เฉลี่ย 24 ชั่วโมง สูงสุด' : activeMap === 'streak37' ? 'ค่าฝุ่น PM2.5 มากกว่า 37.5 มคก./ลบ.ม.' : 'ค่าฝุ่น PM2.5 มากกว่า 75 มคก./ลบ.ม.'}</PM25Text>
                 </h4>
                 {filters.startDate && filters.endDate && (
-                    <div className="text-compact-plus font-bold text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <div className="typo-chart text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
+                        <CalendarDays aria-hidden="true" className="size-3.5" strokeWidth={2} />
                         ข้อมูล: {filters.startDate === filters.endDate
                             ? formatDateShort(filters.startDate)
                             : `${formatDateShort(filters.startDate)} - ${formatDateShort(filters.endDate)}`}
@@ -673,7 +709,7 @@ export default function DashboardPM25() {
         <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 shadow-inner bg-slate-800/50">
             <ThailandMap
                 data={mapValues}
-                resolveAreaData={(area, areaLevel) => areaLevel === level ? mapValues[areaKey(area, level)] : undefined}
+                resolveAreaData={isAllProvinces ? undefined : ((area, areaLevel) => areaLevel === level ? mapValues[areaKey(area, level)] : undefined)}
                 filters={filters}
                 visibleProvinces={filters.provinces.length ? filters.provinces : filters.regions.length ? baseProvinces : undefined}
                 getColor={(v: number) => getColor(v, activeMap === 'avg' ? LEGENDS.pm25.items : (activeMap === 'streak37' ? LEGENDS.streak37.items : LEGENDS.streak75.items))}
@@ -681,7 +717,7 @@ export default function DashboardPM25() {
                 popupUnit={activeMap === 'avg' ? "มคก./ลบ.ม." : "วัน"}
                 interactive={false}
                 focusSelectedSubdistricts
-                requireDistrictForTambons={filters.provinces.length === 0}
+                requireDistrictForTambons={false}
                 renderPopup={(areaName, rawValue, popupUnit) => {
                     const escape = (text: string) => text.replace(/[&<>"']/g, character => ({
                         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -691,15 +727,15 @@ export default function DashboardPM25() {
                         : `จำนวนวันที่ PM2.5 > ${threshold} มคก./ลบ.ม. ต่อเนื่อง`;
                     const period = rawValue && typeof rawValue === 'object' ? rawValue.period : undefined;
                     const dates = period?.start && period?.end
-                        ? `<div class="mt-3 text-[20px] font-bold text-purple-400">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br /><span class="text-[18px] text-white">${formatDateShort(period.start)} - ${formatDateShort(period.end)}</span></div>`
+                        ? `<div class="typo-subtitle mt-3 text-purple-400">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br /><span class="typo-section text-white">${formatDateShort(period.start)} - ${formatDateShort(period.end)}</span></div>`
                         : '';
                     const name = rawValue && typeof rawValue === 'object' ? rawValue.name : areaName;
                     const value = rawValue && typeof rawValue === 'object'
-                        ? `<div class="text-lg font-normal text-white mt-2">${rawValue.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${popupUnit}</div>`
+                        ? `<div class="typo-section text-white mt-2">${rawValue.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${popupUnit}</div>`
                         : '';
-                    return `<div class="font-sans p-4 min-w-60 max-w-xs bg-slate-900 text-white rounded-2xl border border-white/10">
-                        <div class="text-[20px] font-bold text-blue-400 mb-3">${escape(name)}</div>
-                        <div class="text-[18px] font-bold text-purple-400">${escape(title)}</div>
+                    return `<div class="typo-body p-4 min-w-60 max-w-xs bg-slate-900 text-white rounded-2xl border border-white/10">
+                        <div class="typo-subtitle text-blue-400 mb-3">${escape(name)}</div>
+                        <div class="typo-section text-purple-400">${escape(title)}</div>
                         ${value}
                         ${dates}
                     </div>`;
@@ -711,7 +747,7 @@ export default function DashboardPM25() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden font-sans">
+        <div className="typo-body min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden">
             <div
                 aria-hidden="true"
                 className="pointer-events-none fixed inset-0 z-0"
@@ -759,37 +795,29 @@ export default function DashboardPM25() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 relative z-summary">
                     {[
-                        { label: 'ค่าเฉลี่ย 24 ชั่วโมงฝุ่น PM2.5', value: data?.avgPM25, unit: 'มคก./ลบ.ม.', color: '#3b82f6', isPrimary: true },
-                        { label: 'ค่าเฉลี่ย 24 ชั่วโมงฝุ่น PM2.5 สูงสุด', value: data?.maxPM25, unit: 'มคก./ลบ.ม.', color: '#f43f5e', isPrimary: false },
+                        { label: 'ค่าฝุ่น PM2.5 เฉลี่ย 24 ชั่วโมง', value: data?.avgPM25, unit: 'มคก./ลบ.ม.', color: '#3b82f6', isPrimary: true },
+                        { label: 'ค่าฝุ่น PM2.5 เฉลี่ย 24 ชั่วโมงสูงสุด', value: data?.maxPM25, unit: 'มคก./ลบ.ม.', color: '#f43f5e', isPrimary: false },
                         { label: 'จำนวนจังหวัดที่ค่าฝุ่น PM2.5 เกินค่ามาตรฐาน (37.5 มคก./ลบ.ม.)', value: exceedData37.count, unit: 'จังหวัด', color: '#f97316', isPrimary: false, tooltip: exceedData37.tooltip },
                         { label: 'จำนวนจังหวัดที่ค่าฝุ่น PM2.5 มากกว่า 75 มคก./ลบ.ม.', value: exceedData75.count, unit: 'จังหวัด', color: '#e11d48', isPrimary: false, tooltip: exceedData75.tooltip }
                     ].map((stat, i) => (
                         <div key={i} className={`relative ${stat.isPrimary
                             ? "bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-5 rounded-3xl shadow-2xl border border-white/30 transition-all group min-h-32 flex flex-col justify-between"
-                            : `bg-white/10 backdrop-blur-xl p-5 rounded-3xl shadow-xl border border-white/20 transition-all group ring-1 ring-white/5 min-h-32 flex flex-col justify-between ${stat.tooltip ? 'cursor-default hover:bg-white/20' : ''}`}`}>
-                            <div className={`text-xs font-bold tracking-tight mb-2 leading-snug ${stat.isPrimary ? 'text-blue-100/90' : 'text-white/70'}`}><PM25Text>{stat.label}</PM25Text></div>
-                            <div className="text-3xl font-extrabold text-white tracking-tight tabular-nums flex items-end gap-2 drop-shadow-md">
-                                {loading ? <div className={`h-9 w-24 animate-pulse rounded-lg ${stat.isPrimary ? 'bg-white/20' : 'bg-white/10'}`}></div> : stat.value?.toLocaleString()}
+                            : 'bg-white/10 backdrop-blur-xl p-5 rounded-3xl shadow-xl border border-white/20 transition-all group ring-1 ring-white/5 min-h-32 flex flex-col justify-between'}`}>
+                            <div className={`typo-caption mb-2 ${stat.isPrimary ? 'text-blue-100/90' : 'text-white/70'}`}>
+                                {i === 2 ? <><PM25Text>จำนวนจังหวัดที่ค่าฝุ่น PM2.5 </PM25Text><span className="text-orange-300">เกินค่ามาตรฐาน (37.5 มคก./ลบ.ม.)</span></> : i === 3 ? <><PM25Text>จำนวนจังหวัดที่ค่าฝุ่น PM2.5 </PM25Text><span className="text-red-300">มากกว่า 75 มคก./ลบ.ม.</span></> : <PM25Text>{stat.label}</PM25Text>}
+                            </div>
+                            <div className="typo-metric text-white tabular-nums flex items-end gap-2 drop-shadow-md">
+                                {loading ? <div className={`h-9 w-24 animate-pulse rounded-lg ${stat.isPrimary ? 'bg-white/20' : 'bg-white/10'}`}></div> : i === 2 ? (
+                                    <span className="flex items-baseline gap-2"><span>{stat.value?.toLocaleString()}</span><span className="typo-label">จังหวัด</span></span>
+                                ) : i === 3 ? (
+                                    <span className="flex items-baseline gap-2"><span>{stat.value?.toLocaleString()}</span><span className="typo-label">จังหวัด</span></span>
+                                ) : stat.value?.toLocaleString()}
                                 {!stat.isPrimary && <div className="w-1.5 h-6 rounded-full mb-1" style={{ backgroundColor: stat.color }}></div>}
                             </div>
-                            <div className={`text-compact font-bold uppercase mt-1 ${stat.isPrimary ? 'text-white/50' : 'text-white/30'}`}>{stat.unit}</div>
-
-                            {stat.tooltip && Array.isArray(stat.tooltip) && stat.tooltip.length > 0 && (
-                                <div className={`absolute top-full mt-3 w-tooltip-sm sm:w-tooltip-md lg:w-tooltip-lg max-h-dashboard-tooltip overflow-y-auto custom-scrollbar p-5 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl z-overlay opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none ${i >= 2 ? 'right-0' : 'left-0'}`}>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                        {stat.tooltip.map((item: any, idx: number) => (
-                                            <div key={idx} className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-xs font-extrabold text-blue-400 drop-shadow-sm">{item.region}</span>
-                                                    <span className="text-compact font-extrabold text-blue-100 bg-blue-500/20 px-2.5 py-1 rounded-full border border-blue-500/30 whitespace-nowrap">{item.count} จังหวัด</span>
-                                                </div>
-                                                <div className="text-compact-plus text-white/80 leading-relaxed font-medium">
-                                                    {item.provinces}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                            {i < 2 ? <div className={`typo-chart uppercase mt-1 ${stat.isPrimary ? 'text-white/50' : 'text-white/30'}`}>{stat.unit}</div> : (
+                                <button type="button" disabled={loading} onClick={(event) => openExceedDetails(i === 2 ? 37 : 75, event.currentTarget)} className={`typo-label mt-2 min-h-9 self-start rounded-lg px-3 text-white cursor-pointer border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${i === 2 ? 'border-orange-400/40 bg-orange-500/25 hover:bg-orange-500/40 focus-visible:outline-orange-300' : 'border-red-400/40 bg-red-500/25 hover:bg-red-500/40 focus-visible:outline-red-300'}`}>
+                                    ดูรายละเอียด
+                                </button>
                             )}
                         </div>
                     ))}
@@ -798,7 +826,7 @@ export default function DashboardPM25() {
                 <div className="flex flex-col gap-4 relative z-content">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="h-[560px] lg:h-[640px] min-w-0">
-                            <TopExceedRanking data={data?.top10Exceed || []} loading={loading} />
+                            <TopExceedRanking data={data?.top10Exceed || []} level={data?.top10Level} loading={loading} />
                         </div>
                         <div className="h-[560px] lg:h-[640px] min-w-0">{renderMap('avg')}</div>
                     </div>
@@ -813,6 +841,36 @@ export default function DashboardPM25() {
                     </div>
                 </div>
             </main>
+
+            <dialog ref={exceedDialogRef} className="modal p-3" aria-labelledby="pm25-exceed-dialog-title" onClose={() => { setActiveExceedThreshold(null); exceedTriggerRef.current?.focus(); }}>
+                <div className="modal-box flex max-h-[calc(100dvh-1.5rem)] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 p-0 text-left text-base-content shadow-2xl">
+                    <header className="flex shrink-0 items-start justify-between gap-3 border-b border-base-300 px-4 py-2 sm:px-5">
+                        <div>
+                            <h2 id="pm25-exceed-dialog-title" className="typo-subtitle text-neutral">
+                                จังหวัดที่ค่าฝุ่น PM2.5 {activeExceedThreshold === 37 ? 'เกินค่ามาตรฐาน (37.5 มคก./ลบ.ม.)' : 'มากกว่า 75 มคก./ลบ.ม.'}
+                            </h2>
+                            <p className="typo-body-sm text-base-content/70">รวม {activeExceedData.count.toLocaleString('th-TH')} จังหวัด ในช่วงวันที่และพื้นที่ที่เลือก</p>
+                        </div>
+                        <button type="button" className="typo-label btn btn-circle btn-ghost min-h-11 min-w-11 shrink-0 cursor-pointer bg-base-200 text-neutral hover:bg-base-300" aria-label="ปิดรายละเอียดจังหวัด" onClick={() => exceedDialogRef.current?.close()}>✕</button>
+                    </header>
+                    <div className="min-h-0 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5" tabIndex={0}>
+                        {activeExceedData.tooltip?.length ? (
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {activeExceedData.tooltip.map((item) => (
+                                    <section key={item.region} className="rounded-xl border border-base-300 bg-base-200/50 p-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-1">
+                                            <h3 className="typo-section text-neutral">{item.region}</h3>
+                                            <span className={`typo-caption badge border-0 ${activeExceedThreshold === 37 ? 'bg-orange-100 text-orange-900' : 'bg-red-100 text-red-900'}`}>{item.count} จังหวัด</span>
+                                        </div>
+                                        <p className="typo-body-sm mt-1 text-base-content">{item.provinces}</p>
+                                    </section>
+                                ))}
+                            </div>
+                        ) : <p className="typo-body-sm py-8 text-center text-base-content/70">ไม่พบจังหวัดที่ค่าฝุ่นเกินเกณฑ์ในช่วงวันที่และพื้นที่ที่เลือก</p>}
+                    </div>
+                </div>
+                <form method="dialog" noValidate className="modal-backdrop"><button className="typo-label cursor-pointer" tabIndex={-1} aria-label="ปิดรายละเอียดจากพื้นหลัง">ปิด</button></form>
+            </dialog>
 
             <style dangerouslySetInnerHTML={{
                 __html: `

@@ -14,7 +14,7 @@ colors:
 typography:
   sans:
     fontFamily: "Kanit, ui-sans-serif, system-ui, sans-serif"
-    lineHeight: "1.5"
+    lineHeight: "1.7"
 rounded:
   auth-card: "2.5rem"
   dashboard-card: "2rem"
@@ -41,7 +41,7 @@ Product register is hybrid: the home page explains and routes users into the pro
 
 The memorable signature is the shared PM2.5 atmospheric image and blue-to-sky gradient language. It establishes continuity across home, login and register, while the dashboard switches to a light, high-contrast working canvas so maps, tables and charts remain readable. Preserve this identity; do not introduce a second brand palette per route.
 
-Runtime ownership is Model B: `web/src/app/globals.css` and `web/src/app/layout.tsx` are canonical for theme, font and shared utilities. `DESIGN.md` documents intent and normative roles but must not become a competing token generator.
+Runtime ownership is Model B: `web/src/app/layout.tsx` owns the single font loader; the `:root` block in `web/src/app/globals.css` owns typography values and adapts them to Tailwind, semantic elements and maps. `globals.css` remains canonical for theme and shared utilities. `DESIGN.md` documents intent and normative roles but must not become a competing token generator.
 
 ## Colors
 
@@ -53,7 +53,7 @@ Home uses a translucent white information card over the background. Login uses a
 
 ## Typography
 
-Kanit is the single shared family for Thai and Latin, loaded with weights 400–900. Use heavy 800–900 weights for product titles, route headings and section titles; 600–700 for labels and actions; 400–500 for explanatory copy and data notes. Keep Thai line-height generous enough for stacked marks and long government terminology.
+Kanit remains the single shared Thai/Latin family, loaded once by `web/src/app/layout.tsx`. Change the font loader there; edit the `:root` block in `web/src/app/globals.css` for title/subtitle/section/body sizes, weights, line heights and letter spacing. Keep the generic `--font-app` name when switching fonts. Appearance is selected explicitly with `.typo-title` (large title), `.typo-subtitle` (subtitle), `.typo-section` (small section heading) and `.typo-body` (content), independent of HTML tag. Keep semantic heading levels for accessibility; do not use tag selectors to style text roles. All four typography properties (size, weight, line height and letter spacing) come from one explicit `typo-*` role. Page-local `text-*` size, `font-*` weight, `leading-*` and `tracking-*` utilities are retired. Color/alignment/wrapping utilities remain allowed. Additional roles are `typo-hero`, `typo-metric`, `typo-body-sm`, `typo-label`, `typo-caption` and `typo-chart`; their responsive sizes and all numeric values are owned by the same `:root` block. Nested text inherits its parent role unless it explicitly selects another role. Generated Leaflet HTML, tooltips, tables, form controls and navigation participate in this policy. Use `.text-content` around consecutive `.typo-body` elements to opt into the central paragraph gap without changing card/table layout margins. Inline emphasis (`strong`, labels and actions) retains its contextual weight. All rendered application text uses this same family, including form controls, code/preformatted text, SVG labels, Leaflet controls and framework fallback pages. The global family-only override is intentional because third-party and framework inline font declarations otherwise bypass inheritance. Tailwind sans/serif/mono aliases all resolve to the same central family. All numeric typography values are owned by `globals.css`, not copied into this document.
 
 Use sentence case and direct Thai verbs: `เข้าสู่ระบบ`, `สมัครสมาชิกใหม่`, `ดูข้อมูลเพิ่มเติม`, `หมายเหตุ`. English appears only when it clarifies a known product term such as `Login`, `Patient Database`, HDC, DDS or Air4Thai. Do not truncate disease names, ICD codes or official source names.
 
@@ -81,7 +81,9 @@ The shape language is soft but institutional: pill-shaped navigation/CTA control
 
 Auth fields must use real labels, semantic autocomplete values, visible focus, preserved values on error, masked passwords by default, and an accessible show/hide control. Login errors are inline/toast-supported and actionable; registration validates identity/phone data, handles duplicate checks, confirms the approval expectation, then returns to login on success.
 
-`DashboardNavMenu` is the shared dashboard navigation owner: compact right-aligned disclosure, Thai destination labels, `aria-current`, keyboard/Escape/outside dismissal and no hover-only behavior. `DashboardNotes` is the shared notes owner with a consistent `หมายเหตุ` trigger, focus restoration, escape/backdrop close, readable body scroll and route-specific content. Maps use local GeoJSON only; do not add external raster tiles or API-key-dependent basemaps.
+`web/src/components/dashboard/` owns the shared dashboard shell components: navbar, navigation disclosure, loading state, busy alert, notes and deferred chart wrapper. `DashboardNavbar.tsx` is the single shared owner for dashboard logos, titles and the compact right-aligned navigation disclosure. It preserves Thai destination labels, `aria-current`, keyboard/Escape/outside dismissal and no hover-only behavior. `DashboardNotes` is the shared notes owner with a consistent `หมายเหตุ` trigger, focus restoration, escape/backdrop close, readable body scroll and route-specific content. Maps use local GeoJSON only; do not add external raster tiles or API-key-dependent basemaps.
+
+Dashboard province multi-selects keep `เลือกทั้งหมด` as a distinct action and provide local Thai-name search with an explicit clear button and no-results message. Searching narrows only the visible choices; it must not silently change the current selection or the meaning of selecting all provinces.
 
 Iconography uses Lucide for controls and simple inline SVG for existing informational marks. Icons support labels rather than replacing them. Motion is limited to CTA hover lift, focus transitions, card hover feedback and the existing cloud loader; all non-essential motion must respect `prefers-reduced-motion`.
 
@@ -96,3 +98,9 @@ Iconography uses Lucide for controls and simple inline SVG for existing informat
 - Don't invent new colors, fonts, radius systems or one-off auth layouts without updating this durable context and the runtime owner together.
 - Don't communicate PM2.5 risk, validation or permission state by color alone.
 - Don't manually edit runtime DuckDB/CSV outputs to support a visual change.
+
+## DaisyUI component ownership
+
+DaisyUI 5 owns standard button, input, native select, table, badge, card and inline loading appearance. Use `btn` with semantic intent (`btn-primary`, `btn-success`, `btn-error`, `btn-neutral`) and `btn-soft` for secondary row actions. Native disabled state drives DaisyUI appearance; do not duplicate it with conditional background classes. Use `input`, `select`, `table`, `badge`, `card card-border`, and `loading loading-spinner` before adding utilities. Keep responsive widths, icon offsets, calendar geometry and brand-specific glass/gradient surfaces as explicit modifiers. Native select and existing date-picker logic remain their current behavior owners. Modal backdrops remain full-screen dismissal surfaces, not `.btn` controls. The shared CloudLoader remains the branded page loader. Do not reintroduce retired DaisyUI 4 `input-bordered`, `select-bordered`, `form-control` or `label-text` aliases.
+
+This migration changes presentation only; existing confirmation, validation and API behavior is outside its scope. Semantic colors follow the winter theme, explicitly enabled in the DaisyUI plugin to match root layout’s `data-theme="winter"`. Existing `typo-*` classes and Kanit remain the typography owners.

@@ -133,15 +133,15 @@ export default function Sidebar({
                             />
                         </div>
                         <div className="min-w-0">
-                            <p className="truncate text-[15px] font-bold leading-tight tracking-tight text-slate-900">ENV-OCC</p>
-                            <p className="mt-0.5 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-sky-600">DATA PLATFORM</p>
+                            <p className="typo-label truncate text-slate-900">ENV-OCC</p>
+                            <p className="typo-chart mt-0.5 truncate uppercase text-sky-600">DATA PLATFORM</p>
                         </div>
                     </Link>
 
                     <button
                         type="button"
                         onClick={onClose}
-                        className="btn btn-circle btn-ghost btn-sm text-slate-400 hover:bg-blue-50 hover:text-blue-600 lg:hidden"
+                        className="typo-label btn btn-circle btn-ghost btn-sm text-slate-400 hover:bg-blue-50 hover:text-blue-600 lg:hidden"
                         aria-label="ปิดเมนู"
                     >
                         <X className="size-5" />
@@ -151,7 +151,7 @@ export default function Sidebar({
                 <nav className="relative flex-1 space-y-7 overflow-y-auto px-4 py-2">
                     {menuGroups.map((group) => (
                         <section key={group.label}>
-                            <p className="mb-1 px-3 text-[11px] font-medium text-slate-400">
+                            <p className="typo-caption mb-1 px-3 text-slate-400">
                                 {group.label}
                             </p>
                             <div className="space-y-0.5">
@@ -165,7 +165,7 @@ export default function Sidebar({
                                             href={item.href}
                                             onClick={onClose}
                                             aria-current={isActive ? 'page' : undefined}
-                                            className={`group relative flex min-h-10 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                                            className={`typo-label group relative flex min-h-10 items-center gap-2.5 rounded-xl px-3 py-2 transition-all duration-200 ${
                                                 isActive
                                                     ? 'border border-blue-100/50 bg-blue-50 text-blue-700'
                                                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
@@ -180,7 +180,7 @@ export default function Sidebar({
                                             >
                                                 <Icon className="size-4" strokeWidth={2} />
                                             </span>
-                                            <span className="min-w-0 flex-1 truncate text-[14px]">{item.label}</span>
+                                            <span className="typo-body-sm min-w-0 flex-1 truncate">{item.label}</span>
                                             <ChevronRight
                                                 className={`size-4 transition-all ${
                                                     isActive
@@ -197,7 +197,7 @@ export default function Sidebar({
                 </nav>
 
                 <div className="border-t border-slate-100 p-3">
-                    <button type="button" onClick={handleLogout} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600">
+                    <button type="button" onClick={handleLogout} className="typo-label btn btn-ghost btn-error min-h-11 w-full justify-start gap-3 rounded-xl">
                         <LogOut className="size-4" />
                         <span>ออกจากระบบ</span>
                     </button>

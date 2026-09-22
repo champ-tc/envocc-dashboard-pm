@@ -1,8 +1,62 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+    themes: winter --default;
+}
 
-@theme {
-    --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
+@theme inline {
+    --font-sans: var(--app-font-family);
+    --font-serif: var(--app-font-family);
+    --font-mono: var(--app-font-family);
+}
+
+/* ตั้งค่ารูปแบบข้อความทั้งระบบที่นี่; Kanit โหลดครั้งเดียวใน layout.tsx
+ * weight = ความหนา, leading = ระยะบรรทัด, tracking = ระยะตัวอักษร
+ * size = ขนาดที่ควบคุมผ่าน typo-* เท่านั้น ไม่กำหนด text-* ทับในแต่ละหน้า
+ * paragraph-gap = ระยะย่อหน้าต่อเนื่องภายใน .text-content
+ */
+:root {
+    --app-font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+    --type-title-size: clamp(1.75rem, 3vw, 2.25rem);
+    --type-title-weight: 700;
+    --type-title-leading: 1.4;
+    --type-title-tracking: 0em;
+    --type-subtitle-size: clamp(1.375rem, 2.5vw, 1.75rem);
+    --type-subtitle-weight: 600;
+    --type-subtitle-leading: 1.45;
+    --type-subtitle-tracking: 0em;
+    --type-section-size: 1.125rem;
+    --type-section-weight: 600;
+    --type-section-leading: 1.5;
+    --type-section-tracking: 0em;
+    --type-body-size: 1rem;
+    --type-body-weight: 400;
+    --type-body-leading: 1.7;
+    --type-body-tracking: 0em;
+    --type-hero-size: clamp(2rem, 5vw, 3.75rem);
+    --type-hero-weight: 700;
+    --type-hero-leading: 1.35;
+    --type-hero-tracking: 0em;
+    --type-metric-size: clamp(1.75rem, 3vw, 2.25rem);
+    --type-metric-weight: 700;
+    --type-metric-leading: 1.35;
+    --type-metric-tracking: 0em;
+    --type-body-sm-size: 0.875rem;
+    --type-body-sm-weight: 400;
+    --type-body-sm-leading: 1.6;
+    --type-body-sm-tracking: 0em;
+    --type-label-size: 0.875rem;
+    --type-label-weight: 600;
+    --type-label-leading: 1.5;
+    --type-label-tracking: 0em;
+    --type-caption-size: 0.75rem;
+    --type-caption-weight: 500;
+    --type-caption-leading: 1.5;
+    --type-caption-tracking: 0em;
+    --type-chart-size: 0.625rem;
+    --type-chart-weight: 600;
+    --type-chart-leading: 1.5;
+    --type-chart-tracking: 0em;
+    --type-paragraph-gap: 0.75em;
 }
 
 /* Named utilities replace numeric arbitrary-value classes across the application. */
@@ -52,14 +106,6 @@
 
 @utility top-chart-tooltip {
     top: -3.5rem;
-}
-
-@utility tracking-menu-label {
-    letter-spacing: 0.14em;
-}
-
-@utility tracking-stat-label {
-    letter-spacing: 0.2em;
 }
 
 @utility rounded-auth-card {
@@ -281,30 +327,6 @@
     max-height: 90vh;
 }
 
-@utility text-micro {
-    font-size: 0.4375rem;
-}
-
-@utility text-2xs {
-    font-size: 0.5rem;
-}
-
-@utility text-2xs-plus {
-    font-size: 0.5625rem;
-}
-
-@utility text-compact {
-    font-size: 0.625rem;
-}
-
-@utility text-compact-plus {
-    font-size: 0.6875rem;
-}
-
-@utility text-body-compact {
-    font-size: 0.9375rem;
-}
-
 @utility z-content {
     z-index: 10;
 }
@@ -358,23 +380,14 @@
 }
 
 .authenticated-font {
-    --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
-    font-family: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--app-font-family);
     color: #0f172a;
 }
 
 /* Leaflet renders map tooltips outside the normal component text tree. */
 .leaflet-container,
 .leaflet-tooltip {
-    font-family: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
-}
-
-.authenticated-font .font-black {
-    font-weight: 700;
-}
-
-.authenticated-font .tracking-widest {
-    letter-spacing: 0.06em;
+    font-family: var(--app-font-family);
 }
 
 .auth-main {
@@ -418,17 +431,11 @@
 
 .auth-page-title {
     color: #0f172a;
-    font-size: clamp(1.6rem, 3vw, 2.15rem);
-    font-weight: 750;
-    line-height: 1.2;
-    letter-spacing: -0.025em;
 }
 
 .auth-page-description {
     margin-top: 0.35rem;
     color: #64748b;
-    font-size: 0.95rem;
-    line-height: 1.7;
 }
 
 .auth-surface {
@@ -444,8 +451,6 @@
 
 .authenticated-font table th {
     color: #64748b;
-    font-weight: 650;
-    letter-spacing: 0.04em;
     white-space: nowrap;
 }
 
@@ -495,7 +500,7 @@
     height: 180px;
     aspect-ratio: 1.4;
     color: #269af2;
-    font-weight: 700;
+    font-weight: var(--type-label-weight);
     transition: all 0.3s ease;
     text-decoration: none;
 }
@@ -518,14 +523,100 @@
     transform: translateY(-8px) scale(1.05);
 }
 
-.kanit-thin {
-    font-family: var(--font-kanit), sans-serif;
-    font-weight: 100;
-    font-style: normal;
+/* Typography roles own size, weight and spacing on every surface.
+ * Use one typo-* class per text element; adjust values only in :root.
+ * These unlayered rules also override DaisyUI's component typography defaults.
+ */
+@layer base {
+    body {
+        font-size: var(--type-body-size);
+        font-weight: var(--type-body-weight);
+        line-height: var(--type-body-leading);
+        letter-spacing: var(--type-body-tracking);
+    }
 }
 
-.kanit-regular {
-    font-family: var(--font-kanit), sans-serif;
-    font-weight: 400;
-    font-style: normal;
+.typo-hero {
+    font-size: var(--type-hero-size);
+    font-weight: var(--type-hero-weight);
+    line-height: var(--type-hero-leading);
+    letter-spacing: var(--type-hero-tracking);
+}
+
+.typo-title {
+    font-size: var(--type-title-size);
+    font-weight: var(--type-title-weight);
+    line-height: var(--type-title-leading);
+    letter-spacing: var(--type-title-tracking);
+}
+
+.typo-subtitle {
+    font-size: var(--type-subtitle-size);
+    font-weight: var(--type-subtitle-weight);
+    line-height: var(--type-subtitle-leading);
+    letter-spacing: var(--type-subtitle-tracking);
+}
+
+.typo-section {
+    font-size: var(--type-section-size);
+    font-weight: var(--type-section-weight);
+    line-height: var(--type-section-leading);
+    letter-spacing: var(--type-section-tracking);
+}
+
+.typo-body {
+    font-size: var(--type-body-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-body-leading);
+    letter-spacing: var(--type-body-tracking);
+}
+
+.typo-body-sm {
+    font-size: var(--type-body-sm-size);
+    font-weight: var(--type-body-sm-weight);
+    line-height: var(--type-body-sm-leading);
+    letter-spacing: var(--type-body-sm-tracking);
+}
+
+.typo-label {
+    font-size: var(--type-label-size);
+    font-weight: var(--type-label-weight);
+    line-height: var(--type-label-leading);
+    letter-spacing: var(--type-label-tracking);
+}
+
+.typo-caption {
+    font-size: var(--type-caption-size);
+    font-weight: var(--type-caption-weight);
+    line-height: var(--type-caption-leading);
+    letter-spacing: var(--type-caption-tracking);
+}
+
+.typo-chart {
+    font-size: var(--type-chart-size);
+    font-weight: var(--type-chart-weight);
+    line-height: var(--type-chart-leading);
+    letter-spacing: var(--type-chart-tracking);
+}
+
+.typo-metric {
+    font-size: var(--type-metric-size);
+    font-weight: var(--type-metric-weight);
+    line-height: var(--type-metric-leading);
+    letter-spacing: var(--type-metric-tracking);
+}
+
+.text-content .typo-body + .typo-body {
+    margin-block-start: var(--type-paragraph-gap);
+}
+
+/* Product-wide single-family policy, including Leaflet controls and Next.js
+ * fallback pages with inline font styles. Only family needs !important to beat
+ * those vendor declarations; size, weight and spacing retain their own roles.
+ * Values are defined above; the Kanit loader lives in root layout.tsx.
+ */
+html,
+body,
+body * {
+    font-family: var(--app-font-family) !important;
 }

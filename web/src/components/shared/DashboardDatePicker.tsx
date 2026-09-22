@@ -81,13 +81,13 @@ export default function DashboardDatePicker({ label, options, value, onChange, m
 
     return (
         <div className="relative col-span-1 min-w-0">
-            <label className="mb-2 ml-2 block text-xs font-bold uppercase tracking-wider text-white/70">{label}</label>
+            <label className="typo-caption mb-2 ml-2 block uppercase text-white/70">{label}</label>
             <button
                 type="button"
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 onClick={() => setIsOpen((open) => !open)}
-                className={`flex min-h-12 w-full items-center gap-2 rounded-2xl border px-4 text-left text-xs font-bold text-white shadow-sm ring-1 transition-all ${isOpen ? 'border-blue-400/70 bg-white/20 ring-blue-400/30' : 'border-white/20 bg-white/10 ring-white/10 hover:bg-white/20'}`}
+                className={`typo-caption btn min-h-12 w-full justify-start gap-2 rounded-2xl text-left text-white ring-1 ${isOpen ? 'border-blue-400/70 bg-white/20 ring-blue-400/30' : 'border-white/20 bg-white/10 ring-white/10 hover:bg-white/20'}`}
             >
                 <CalendarDays className="size-4 shrink-0 text-blue-300" />
                 <span className="min-w-0 flex-1 truncate">{displayValue()}</span>
@@ -96,29 +96,29 @@ export default function DashboardDatePicker({ label, options, value, onChange, m
 
             {isOpen && (
                 <>
-                    <button type="button" aria-label="ปิดปฏิทิน" className="fixed inset-0 z-overlay cursor-default" onClick={() => setIsOpen(false)} />
+                    <button type="button" aria-label="ปิดปฏิทิน" className="typo-label fixed inset-0 z-overlay cursor-default" onClick={() => setIsOpen(false)} />
                     <div role="dialog" aria-label={label} className="absolute left-0 z-dropdown mt-3 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-3xl border border-white/15 bg-slate-900/98 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl">
                         <div className="flex items-center justify-between border-b border-white/10 px-3 py-3">
-                            <button type="button" aria-label={mode === 'day' ? 'เดือนก่อนหน้า' : 'ปีก่อนหน้า'} disabled={!canGoPrevious} onClick={() => moveView(-1)} className="btn btn-square btn-ghost btn-sm text-white disabled:opacity-20">
+                            <button type="button" aria-label={mode === 'day' ? 'เดือนก่อนหน้า' : 'ปีก่อนหน้า'} disabled={!canGoPrevious} onClick={() => moveView(-1)} className="typo-label btn btn-square btn-ghost btn-sm text-white disabled:opacity-20">
                                 <ChevronLeft className="size-4" />
                             </button>
                             <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-1">
                                 {mode === 'day' && (
-                                    <label className="min-w-0 flex-1">
+                                    <label className="typo-label min-w-0 flex-1">
                                         <span className="sr-only">เลือกเดือน</span>
-                                        <select value={viewMonth} onChange={(event) => setViewMonth(event.target.value)} className="select select-sm w-full rounded-xl border-white/15 bg-white/10 text-center font-bold text-white focus:border-blue-400 focus:outline-none">
+                                        <select value={viewMonth} onChange={(event) => setViewMonth(event.target.value)} className="typo-body-sm select select-sm w-full rounded-xl border-white/15 bg-white/10 text-center text-white focus:border-blue-400 focus:outline-none">
                                             {monthsInViewYear.map((month) => <option key={month} value={month} className="bg-slate-900">{THAI_MONTHS[Number(month.slice(5, 7)) - 1]}</option>)}
                                         </select>
                                     </label>
                                 )}
-                                <label className="min-w-0 flex-1">
+                                <label className="typo-label min-w-0 flex-1">
                                     <span className="sr-only">เลือกปี</span>
-                                    <select value={String(viewYear)} onChange={(event) => changeYear(event.target.value)} className="select select-sm w-full rounded-xl border-white/15 bg-white/10 text-center font-bold text-white focus:border-blue-400 focus:outline-none">
+                                    <select value={String(viewYear)} onChange={(event) => changeYear(event.target.value)} className="typo-body-sm select select-sm w-full rounded-xl border-white/15 bg-white/10 text-center text-white focus:border-blue-400 focus:outline-none">
                                         {availableYears.map((year) => <option key={year} value={year} className="bg-slate-900">พ.ศ. {Number(year) + 543}</option>)}
                                     </select>
                                 </label>
                             </div>
-                            <button type="button" aria-label={mode === 'day' ? 'เดือนถัดไป' : 'ปีถัดไป'} disabled={!canGoNext} onClick={() => moveView(1)} className="btn btn-square btn-ghost btn-sm text-white disabled:opacity-20">
+                            <button type="button" aria-label={mode === 'day' ? 'เดือนถัดไป' : 'ปีถัดไป'} disabled={!canGoNext} onClick={() => moveView(1)} className="typo-label btn btn-square btn-ghost btn-sm text-white disabled:opacity-20">
                                 <ChevronRight className="size-4" />
                             </button>
                         </div>
@@ -128,12 +128,12 @@ export default function DashboardDatePicker({ label, options, value, onChange, m
                                 {monthsInViewYear.map((key) => {
                                     const index = Number(key.slice(5, 7)) - 1;
                                     const selected = selectedKey === key;
-                                    return <button key={key} type="button" onClick={() => selectValue(key)} className={`rounded-xl px-2 py-3 text-sm font-bold transition ${selected ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/5 text-white/75 hover:bg-blue-500/20 hover:text-white'}`}>{THAI_MONTHS_SHORT[index]}</button>;
+                                    return <button key={key} type="button" onClick={() => selectValue(key)} className={`typo-label btn min-h-12 rounded-xl ${selected ? 'btn-primary' : 'btn-ghost bg-white/5 text-white/75 hover:bg-white/10'}`}>{THAI_MONTHS_SHORT[index]}</button>;
                                 })}
                             </div>
                         ) : (
                             <div className="p-4">
-                                <div className="mb-2 grid grid-cols-7 text-center text-compact font-bold text-white/35">
+                                <div className="typo-chart mb-2 grid grid-cols-7 text-center text-white/35">
                                     {WEEKDAYS.map((day) => <span key={day}>{day}</span>)}
                                 </div>
                                 <div className="grid grid-cols-7 gap-1">
@@ -142,12 +142,12 @@ export default function DashboardDatePicker({ label, options, value, onChange, m
                                         const key = `${viewMonth}-${String(day).padStart(2, '0')}`;
                                         const enabled = available.has(key);
                                         const selected = selectedKey === key;
-                                        return <button key={key} type="button" disabled={!enabled} onClick={() => selectValue(key)} className={`aspect-square rounded-lg text-xs font-bold transition ${selected ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : enabled ? 'bg-white/5 text-white/75 hover:bg-blue-500/20 hover:text-white' : 'cursor-not-allowed text-white/15'}`}>{day}</button>;
+                                        return <button key={key} type="button" disabled={!enabled} onClick={() => selectValue(key)} className={`typo-caption btn h-auto min-h-0 aspect-square px-0 rounded-lg ${selected ? 'btn-primary' : 'btn-ghost text-white/75 disabled:text-white/15'}`}>{day}</button>;
                                     })}
                                 </div>
                             </div>
                         )}
-                        <div className="border-t border-white/10 px-4 py-2.5 text-center text-compact text-white/35">เลือกได้เฉพาะช่วงที่มีข้อมูล</div>
+                        <div className="typo-chart border-t border-white/10 px-4 py-2.5 text-center text-white/35">เลือกได้เฉพาะช่วงที่มีข้อมูล</div>
                     </div>
                 </>
             )}

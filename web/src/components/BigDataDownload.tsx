@@ -61,7 +61,7 @@ export default function BigDataDownload({ title = 'ข้อมูล BigData (H
     const canDownload = isApproved && !isExpired;
 
     return (
-        <div className="h-full rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-indigo-200 md:p-6">
+        <div className="card card-border h-full bg-base-100 p-5 md:p-6">
             <div className="flex h-full flex-col gap-6">
                 <div className="flex items-start gap-4">
                     <div className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${
@@ -72,21 +72,21 @@ export default function BigDataDownload({ title = 'ข้อมูล BigData (H
                         </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900">{title}</h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+                        <h3 className="typo-section text-slate-900">{title}</h3>
+                        <p className="typo-body-sm mt-1 text-slate-500">{description}</p>
                     </div>
                     <div className="shrink-0 hidden md:block">
                         {!canDownload && status?.status !== 'pending' && (
                             <button 
                                 onClick={handleRequest}
                                 disabled={isSubmitting}
-                                className="rounded-xl bg-slate-800 px-5 py-3 text-sm font-bold text-white hover:bg-slate-900 disabled:opacity-50"
+                                className="typo-label btn btn-neutral min-h-12 rounded-xl"
                             >
                                 {isSubmitting ? 'กำลังส่งคำขอ...' : 'ส่งคำขอเข้าถึงข้อมูล'}
                             </button>
                         )}
                         {status?.status === 'pending' && (
-                            <div className="flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-600">
+                            <div className="typo-body alert alert-warning alert-soft gap-3 rounded-xl">
                                 <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
                                 อยู่ระหว่างการพิจารณา
                             </div>
@@ -97,17 +97,17 @@ export default function BigDataDownload({ title = 'ข้อมูล BigData (H
                 {canDownload ? (
                     <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-700">
                         <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                            <p className="text-sm font-bold text-slate-700">
+                            <p className="typo-label text-slate-700">
                                 ดาวน์โหลดไฟล์ HDC ทั้งหมดในรูปแบบ CSV
                             </p>
-                            <p className="text-xs text-slate-500 mt-2">
+                            <p className="typo-caption text-slate-500 mt-2">
                                 ไฟล์ที่ได้รับคือ hdc.csv เวอร์ชันล่าสุดจาก Airflow pipeline
                             </p>
                         </div>
                         
                         <button 
                             onClick={handleDownload}
-                            className="flex w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white transition hover:bg-indigo-700"
+                            className="typo-label btn btn-primary min-h-12 w-full gap-3 rounded-xl"
                         >
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -121,12 +121,12 @@ export default function BigDataDownload({ title = 'ข้อมูล BigData (H
                             <button 
                                 onClick={handleRequest}
                                 disabled={isSubmitting}
-                                className="w-full bg-slate-800 text-white py-4 rounded-2xl font-bold text-sm hover:bg-slate-900 transition-all shadow-lg"
+                                className="typo-label btn btn-neutral min-h-12 w-full rounded-2xl"
                             >
                                 {isSubmitting ? 'กำลังส่งคำขอ...' : 'ส่งคำขอเข้าถึงข้อมูล'}
                             </button>
                         ) : (
-                            <div className="w-full bg-amber-50 text-amber-600 py-4 rounded-2xl font-bold text-sm border border-amber-100 flex items-center justify-center gap-3">
+                            <div className="typo-body alert alert-warning alert-soft justify-center gap-3 rounded-2xl">
                                 <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
                                 อยู่ระหว่างการพิจารณา
                             </div>
@@ -135,11 +135,11 @@ export default function BigDataDownload({ title = 'ข้อมูล BigData (H
                 )}
                 
                 {status && (
-                    <div className="pt-6 border-t border-slate-50 flex items-center justify-between text-xs font-bold">
+                    <div className="typo-caption pt-6 border-t border-slate-50 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-slate-400">
-                            <span className="uppercase tracking-widest">สถานะปัจจุบัน:</span>
-                            <span className={`px-2 py-0.5 rounded-md ${
-                                status.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                            <span className="typo-body uppercase">สถานะปัจจุบัน:</span>
+                            <span className={`typo-body badge badge-soft ${
+                                status.status === 'approved' ? 'badge-success' : 'badge-warning'
                             }`}>{status.status === 'approved' ? 'อนุมัติแล้ว' : 'รอการอนุมัติ'}</span>
                         </div>
                         {isApproved && (

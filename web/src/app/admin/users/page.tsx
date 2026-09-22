@@ -92,8 +92,8 @@ export default function UserManagementPage() {
         <div className="auth-page">
             <div className="auth-page-header">
                 <div>
-                    <h1 className="auth-page-title">จัดการผู้ใช้</h1>
-                    <p className="auth-page-description">จัดการสิทธิ์การเข้าถึงและสถานะของผู้ใช้งานระบบ</p>
+                    <h1 className="typo-title auth-page-title">จัดการผู้ใช้</h1>
+                    <p className="typo-body auth-page-description">จัดการสิทธิ์การเข้าถึงและสถานะของผู้ใช้งานระบบ</p>
                 </div>
                 <div className="w-full md:w-80">
                     <div className="relative group">
@@ -105,7 +105,7 @@ export default function UserManagementPage() {
                             placeholder="ค้นหาชื่อ, อีเมล, ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white border border-slate-200 pl-12 pr-4 py-3 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-sm"
+                            className="typo-body-sm input min-h-12 w-full pl-12 pr-4"
                         />
                     </div>
                 </div>
@@ -113,38 +113,38 @@ export default function UserManagementPage() {
             
             <div className="auth-surface flex flex-col overflow-hidden">
                 <div className="overflow-x-auto scrollbar-hide">
-                    <table className="w-full text-left border-collapse min-w-data-table">
+                    <table className="typo-body table min-w-data-table">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold text-compact-plus uppercase tracking-widest">
-                                <th className="px-6 py-4">ID</th>
-                                <th className="px-6 py-4">ข้อมูลผู้ใช้งาน</th>
-                                <th className="px-6 py-4">สถานะ (Status)</th>
-                                <th className="px-6 py-4">สิทธิ์ (Role)</th>
-                                <th className="px-6 py-4 text-center">จัดการ</th>
+                            <tr className="typo-chart bg-slate-50 border-b border-slate-100 text-slate-400 uppercase">
+                                <th className="typo-label px-6 py-4">ID</th>
+                                <th className="typo-label px-6 py-4">ข้อมูลผู้ใช้งาน</th>
+                                <th className="typo-label px-6 py-4">สถานะ (Status)</th>
+                                <th className="typo-label px-6 py-4">สิทธิ์ (Role)</th>
+                                <th className="typo-label px-6 py-4 text-center">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {isLoading ? (
-                                <tr><td colSpan={5} className="text-center py-20">
+                                <tr><td colSpan={5} className="typo-body text-center py-20">
                                     <div className="flex flex-col items-center gap-3">
-                                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                        <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">กำลังโหลดข้อมูล...</span>
+                                        <div className="loading loading-spinner loading-md text-primary"></div>
+                                        <span className="typo-label text-slate-400 uppercase">กำลังโหลดข้อมูล...</span>
                                     </div>
                                 </td></tr>
                             ) : displayedUsers.length === 0 ? (
-                                <tr><td colSpan={5} className="text-center py-20 text-slate-400 font-medium">ไม่พบผู้ใช้งานที่ตรงกับเงื่อนไขการค้นหา</td></tr>
+                                <tr><td colSpan={5} className="typo-label text-center py-20 text-slate-400">ไม่พบผู้ใช้งานที่ตรงกับเงื่อนไขการค้นหา</td></tr>
                             ) : displayedUsers.map(user => (
                                 <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="px-6 py-4 text-slate-400 font-bold text-sm">#{user.id}</td>
-                                    <td className="px-6 py-4">
+                                    <td className="typo-label px-6 py-4 text-slate-400">#{user.id}</td>
+                                    <td className="typo-body px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="font-bold text-slate-800" title={user.name}>{user.name}</span>
-                                            <span className="text-xs font-medium text-slate-400" title={user.email}>{user.email}</span>
+                                            <span className="typo-label text-slate-800" title={user.name}>{user.name}</span>
+                                            <span className="typo-caption text-slate-400" title={user.email}>{user.email}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="typo-body px-6 py-4">
                                         <select 
-                                            className={`bg-slate-100 border-none rounded-xl px-3 py-2 text-xs font-bold outline-none cursor-pointer transition-all ${user.status === 'approved' ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}
+                                            className={`typo-body-sm select select-sm w-auto ${user.status === 'approved' ? 'select-success' : 'select-warning'}`}
                                             value={user.status || 'pending'}
                                             onChange={(e) => handleUpdate(user.id, 'status', e.target.value)}
                                         >
@@ -152,9 +152,9 @@ export default function UserManagementPage() {
                                             <option value="approved">Approved</option>
                                         </select>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="typo-body px-6 py-4">
                                         <select 
-                                            className="bg-slate-100 border-none rounded-xl px-3 py-2 text-xs font-bold outline-none cursor-pointer transition-all text-blue-600 bg-blue-50"
+                                            className="typo-body-sm select select-sm w-auto"
                                             value={user.role || 'user'}
                                             onChange={(e) => handleUpdate(user.id, 'role', e.target.value)}
                                         >
@@ -167,10 +167,10 @@ export default function UserManagementPage() {
                                             <option value="user">User</option>
                                         </select>
                                     </td>
-                                    <td className="px-6 py-4 text-center">
+                                    <td className="typo-body px-6 py-4 text-center">
                                         <button 
                                             onClick={() => handleDelete(user.id)}
-                                            className="text-slate-400 hover:text-rose-600 p-2 rounded-xl hover:bg-rose-50 transition-all active:scale-90"
+                                            className="typo-label btn btn-ghost btn-error btn-square btn-sm"
                                             title="ลบผู้ใช้งาน"
                                         >
                                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -187,7 +187,7 @@ export default function UserManagementPage() {
                 {/* Pagination UI */}
                 {!isLoading && filteredUsers.length > 0 && (
                     <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        <div className="typo-caption text-slate-400 uppercase">
                             แสดง {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredUsers.length)} จาก {filteredUsers.length} รายการ
                         </div>
                         <EditablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />

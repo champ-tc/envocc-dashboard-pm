@@ -38,18 +38,18 @@ export default function DatePicker({ label, options, value, onChange, thaiMonths
 
     return (
         <div className="relative min-w-0 flex-1">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">{label}</label>
+            <label className="typo-label mb-2 block text-slate-700">{label}</label>
             <button
                 type="button"
                 onClick={() => setIsOpen(true)}
-                className={`flex min-h-12 w-full items-center gap-3 rounded-xl border bg-white px-3.5 text-left transition ${
+                className={`typo-label btn min-h-12 w-full justify-start gap-3 rounded-xl bg-base-100 text-left ${
                     isOpen ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-blue-300'
                 }`}
             >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                     <CalendarDays className="size-4" />
                 </span>
-                <span className={`min-w-0 flex-1 truncate text-sm font-semibold ${value ? 'text-slate-800' : 'text-slate-400'}`}>
+                <span className={`typo-label min-w-0 flex-1 truncate ${value ? 'text-slate-800' : 'text-slate-400'}`}>
                     {formatMonth(selectedMonth)}
                 </span>
                 <ChevronDown className="size-4 text-slate-400" />
@@ -57,26 +57,26 @@ export default function DatePicker({ label, options, value, onChange, thaiMonths
 
             {isOpen && (
                 <>
-                    <button type="button" aria-label="ปิดตัวเลือกเดือน" className="fixed inset-0 z-overlay cursor-default bg-slate-950/20 backdrop-blur-subtle" onClick={() => setIsOpen(false)} />
+                    <button type="button" aria-label="ปิดตัวเลือกเดือน" className="typo-label fixed inset-0 z-overlay cursor-default bg-slate-950/20 backdrop-blur-subtle" onClick={() => setIsOpen(false)} />
                     <div className="absolute left-0 z-popover mt-2 w-date-popover overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
                         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
                             <button
                                 type="button"
                                 disabled={yearIndex === availableYears.length - 1 || yearIndex < 0}
                                 onClick={() => setViewYear(availableYears[yearIndex + 1])}
-                                className="btn btn-square btn-ghost btn-sm disabled:opacity-20"
+                                className="typo-label btn btn-square btn-ghost btn-sm disabled:opacity-20"
                             >
                                 <ChevronLeft className="size-4" />
                             </button>
                             <div className="text-center">
-                                <p className="text-xs font-medium text-slate-400">เลือกเดือน</p>
-                                <p className="font-bold text-slate-900">พ.ศ. {Number(viewYear) + 543}</p>
+                                <p className="typo-caption text-slate-400">เลือกเดือน</p>
+                                <p className="typo-body text-slate-900">พ.ศ. {Number(viewYear) + 543}</p>
                             </div>
                             <button
                                 type="button"
                                 disabled={yearIndex <= 0}
                                 onClick={() => setViewYear(availableYears[yearIndex - 1])}
-                                className="btn btn-square btn-ghost btn-sm disabled:opacity-20"
+                                className="typo-label btn btn-square btn-ghost btn-sm disabled:opacity-20"
                             >
                                 <ChevronRight className="size-4" />
                             </button>
@@ -98,12 +98,8 @@ export default function DatePicker({ label, options, value, onChange, thaiMonths
                                             onChange(sourceOption || nextValue);
                                             setIsOpen(false);
                                         }}
-                                        className={`rounded-xl px-2 py-3 text-sm font-semibold transition ${
-                                            isSelected
-                                                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                                                : isAvailable
-                                                    ? 'bg-slate-50 text-slate-700 hover:bg-blue-50 hover:text-blue-700'
-                                                    : 'cursor-not-allowed bg-transparent text-slate-300'
+                                        className={`typo-label btn min-h-12 rounded-xl ${
+                                            isSelected ? 'btn-primary' : 'btn-ghost'
                                         }`}
                                     >
                                         {monthName}
@@ -113,8 +109,8 @@ export default function DatePicker({ label, options, value, onChange, thaiMonths
                         </div>
 
                         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
-                            <span className="text-xs text-slate-400">{normalizedOptions.length} เดือนที่มีข้อมูล</span>
-                            <button type="button" onClick={() => setIsOpen(false)} className="btn btn-ghost btn-sm gap-1 text-slate-500">
+                            <span className="typo-caption text-slate-400">{normalizedOptions.length} เดือนที่มีข้อมูล</span>
+                            <button type="button" onClick={() => setIsOpen(false)} className="typo-label btn btn-ghost btn-sm gap-1 text-slate-500">
                                 <X className="size-4" /> ปิด
                             </button>
                         </div>

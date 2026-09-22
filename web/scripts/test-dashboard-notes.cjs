@@ -6,7 +6,7 @@ const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 
-const file = path.join(__dirname, '../src/app/dashboard/_components/DashboardNotes.tsx');
+const file = path.join(__dirname, '../src/components/dashboard/DashboardNotes.tsx');
 const source = fs.readFileSync(file, 'utf8');
 const code = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020,
@@ -23,7 +23,7 @@ for (const name of ['hdc', 'dds', 'pm25']) {
     const html = render(`/dashboard/${name}`);
     assert.match(html, /^<div class="fab /);
     assert.match(html, /border-black bg-black text-white/);
-    assert.match(html, /px-4 py-3 text-sm leading-5/);
+    assert.match(html, /class="typo-body-sm [^"]*overflow-y-auto[^"]*px-4 py-3/);
     assert.match(html, /max-h-\[calc\(100dvh-1\.5rem\)\]/);
     assert.match(html, /<\/button><\/div><dialog /); // Keep modal outside FAB's child visibility rules.
     assert.doesNotMatch(html, /shrink-0 border-t border-base-300 bg-base-100/);

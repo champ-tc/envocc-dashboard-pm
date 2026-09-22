@@ -1,10 +1,11 @@
 'use server';
 
 import type duckdbTypes from 'duckdb';
-import { HDC_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
+import { HDC_DISEASES } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
 import { getDashboardDataVersion, withDashboardDatabase } from '@/lib/dashboard-data-engine';
 import { cachedDashboardQuery, stableCacheKey } from '@/lib/dashboard-runtime';
+import { getPM25ProvinceAliases, getPM25RegionAliases } from './province-filter';
 
 export interface HDCFilters {
     startDate: string;
@@ -55,7 +56,6 @@ export interface ProvinceStats {
 }
 
 export interface DashboardData {
-    totalPatients: number;
     totalDiagnoses: number;
     avgPM25: string;
     provinceCount: number;
@@ -183,12 +183,16 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
             if (scope) {
                 if (scope.isProvince && scope.province) {
                     scopeHdcFilter = `AND TRIM(province_name) = '${scope.province.replace(/'/g, "''")}'`;
-                    scopePm25Filter = `AND TRIM(province) = '${scope.province.replace(/'/g, "''")}'`;
+                    scopePm25Filter = `AND TRIM(province) IN (${getPM25ProvinceAliases(scope.province)
+                        .map(name => `'${name.replace(/'/g, "''")}'`)
+                        .join(',')})`;
                 } else if (scope.isRegion && scope.region) {
                     const regionNum = scope.region.replace(/[^0-9]/g, '');
                     if (regionNum) {
                         scopeHdcFilter = `AND county = ${regionNum}`;
-                        scopePm25Filter = `AND "Regional Health" = 'เขตสุขภาพที่ ${regionNum}'`;
+                        scopePm25Filter = `AND TRIM("Regional Health") IN (${getPM25RegionAliases(`เขตสุขภาพที่ ${regionNum}`)
+                            .map(region => `'${region.replace(/'/g, "''")}'`)
+                            .join(',')})`;
                     }
                 }
             }
@@ -213,11 +217,14 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
             ].join(' ');
 
             const pm25LocFilters = [
-                mappedRegions?.length ? `AND TRIM("Regional Health") IN (${mappedRegions.map(r => `'${r.replace(/'/g, "''").trim()}'`).join(',')})` : '',
-                filters.provinces?.length ? `AND TRIM(province) IN (${filters.provinces.flatMap(p => {
-                    const enNames = Object.keys(PROVINCE_MAPPING).filter(key => PROVINCE_MAPPING[key] === p);
-                    return enNames.length > 0 ? enNames : [p];
-                }).map(en => `'${en.replace(/'/g, "''").trim()}'`).join(',')})` : '',
+                mappedRegions?.length ? `AND TRIM("Regional Health") IN (${mappedRegions
+                    .flatMap(getPM25RegionAliases)
+                    .map(region => `'${region.replace(/'/g, "''")}'`)
+                    .join(',')})` : '',
+                filters.provinces?.length ? `AND TRIM(province) IN (${filters.provinces
+                    .flatMap(getPM25ProvinceAliases)
+                    .map(name => `'${name.replace(/'/g, "''")}'`)
+                    .join(',')})` : '',
                 filters.districts?.length ? `AND TRIM(district) IN (${filters.districts.map(d => `'${d.replace(/'/g, "''").trim()}'`).join(',')})` : '',
                 filters.subdistricts?.length ? `AND TRIM(subdistrict) IN (${filters.subdistricts.map(s => `'${s.replace(/'/g, "''").trim()}'`).join(',')})` : ''
             ].join(' ');
@@ -243,7 +250,6 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                     WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters} ${scopePm25Filter}
                 )
                 SELECT 
-                    SUM(CASE WHEN diagnosis = 'การวินิจฉัยโรคทั้งหมด' THEN CAST("case" AS DOUBLE) ELSE 0 END) as total_patients,
                     SUM(CASE WHEN 1=1 ${diagnosisFilter} THEN CAST("case" AS DOUBLE) ELSE 0 END) as total_diagnoses,
                     (SELECT avg_val FROM pm25_data) as avg_pm25,
                     COUNT(DISTINCT province_name) as province_count,
@@ -326,7 +332,6 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
 
                                 const dataRow = (res1 && res1.length > 0) ? res1[0] : {};
                                 resolve({
-                                    totalPatients: Math.round(Number(dataRow.total_patients || 0)),
                                     totalDiagnoses: Math.round(Number(dataRow.total_diagnoses || 0)),
                                     avgPM25: dataRow.avg_pm25 ? Number(dataRow.avg_pm25).toFixed(1) : '0.0',
                                     provinceCount: Number(dataRow.province_count || 0),

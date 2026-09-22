@@ -63,7 +63,7 @@ export async function getFilterOptions() {
 export async function getDashboardData(filters: { startDate?: string, endDate?: string, regions?: string[], provinces?: string[], districts?: string[] } = {}) {
     try {
         const version = getDashboardDataVersion();
-        const cacheKey = `pm25:data:avg-2dp-v4:${version}:${stableCacheKey(filters)}`;
+        const cacheKey = `pm25:data:region-label-v6:${version}:${stableCacheKey(filters)}`;
         return await cachedDashboardQuery(cacheKey, () =>
             withDashboardDatabase(async (db) => {
         const mappedRegions = filters.regions?.map(r => r === 'กรุงเทพมหานคร' ? 'เขตสุขภาพที่ 13' : r);
@@ -85,6 +85,17 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
 
         const sqlBase = `FROM pm25_raw WHERE 1=1 ${dateFilter} ${locFilters}`;
         const mapLevel: AreaLevel = filters.districts?.length ? 'subdistrict' : filters.provinces?.length ? 'district' : 'province';
+        const rankingLevel: AreaLevel = filters.districts?.length ? 'subdistrict' : filters.provinces?.length ? 'district' : 'province';
+        const rankingArea = rankingLevel === 'province'
+            ? `TRIM(province)`
+            : rankingLevel === 'district'
+                ? `CONCAT(TRIM(district), ' (', TRIM(province), ')')`
+                : `CONCAT(TRIM(subdistrict), ' (', TRIM(district), ', ', TRIM(province), ')')`;
+        const rankingNotEmpty = rankingLevel === 'province'
+            ? `NULLIF(TRIM(province), '') IS NOT NULL`
+            : rankingLevel === 'district'
+                ? `NULLIF(TRIM(province), '') IS NOT NULL AND NULLIF(TRIM(district), '') IS NOT NULL`
+                : `NULLIF(TRIM(province), '') IS NOT NULL AND NULLIF(TRIM(district), '') IS NOT NULL AND NULLIF(TRIM(subdistrict), '') IS NOT NULL`;
 
         const [resStats, resRegion, resProvTrend, resDistTrend, resTop10, resProvAvg] = await Promise.all([
             runQuery(db, `SELECT AVG(pm25) as avg_pm25, MAX(pm25) as max_pm25, COUNT(*) as total_measurements, COUNT(CASE WHEN pm25 > 37.5 THEN 1 END) as exceed_count, MAX(date) as report_date ${sqlBase}`),
@@ -96,28 +107,31 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
                 AVG(pm25) as value ${sqlBase}
                 GROUP BY date, TRIM(province), TRIM(district) ORDER BY label, date ASC`),
             runQuery(db, `
-                WITH province_daily AS (
+                WITH area_daily AS (
                     SELECT
-                        TRIM(province) as province,
+                        ${rankingArea} as area,
                         CAST(date AS DATE) as report_date,
                         AVG(pm25) as avg_pm25
                     ${sqlBase}
+                      AND ${rankingNotEmpty}
                     GROUP BY 1, 2
                 )
-                SELECT province, COUNT(*) as exceed_days
-                FROM province_daily
+                SELECT area, COUNT(*) as exceed_days
+                FROM area_daily
                 WHERE avg_pm25 > 37.5
-                GROUP BY province
-                ORDER BY exceed_days DESC, province ASC
+                GROUP BY area
+                ORDER BY exceed_days DESC, area ASC
                 LIMIT 10
             `),
             runQuery(db, `SELECT TRIM(province) as province, MAX(pm25) as value ${sqlBase} GROUP BY province`)
         ]);
 
-        const groupByLabel = (data: any[]) => {
+        const groupByLabel = (data: any[], isHealthRegion = false) => {
             const groups: Record<string, {date: string, value: number}[]> = {};
             data.forEach(d => {
-                const label = d.label === 'เขตสุขภาพที่ 13' ? 'กรุงเทพมหานคร' : d.label;
+                const rawLabel = String(d.label ?? '').trim();
+                const regionNumber = isHealthRegion ? rawLabel.match(/^(?:เขตสุขภาพที่\s*)?(\d{1,2})$/) : null;
+                const label = regionNumber ? `เขตสุขภาพที่ ${Number(regionNumber[1])}` : rawLabel;
                 if (!groups[label]) groups[label] = [];
                 groups[label].push({ date: d.date, value: d.value });
             });
@@ -181,7 +195,7 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
         const mapAreas = summarizeMapAreas(areaRows, mapLevel);
 
         const top10Exceed = resTop10.map(row => ({
-            province: row.province as string,
+            area: row.area as string,
             exceed_days: Number(row.exceed_days) || 0
         }));
 
@@ -191,10 +205,11 @@ export async function getDashboardData(filters: { startDate?: string, endDate?: 
             totalMeasurements: Number(resStats[0]?.total_measurements || 0),
             exceedCount: Number(resStats[0]?.exceed_count || 0),
             reportDate: resStats[0]?.report_date ? new Date(resStats[0].report_date).toISOString().split('T')[0] : null,
-            regionTrend: groupByLabel(resRegion),
+            regionTrend: groupByLabel(resRegion, true),
             provinceTrend: provinceTrendData,
             districtTrend: groupByLabel(resDistTrend),
             top10Exceed,
+            top10Level: rankingLevel,
             provinceMaxes,
             mapAreas,
             provinceStreak37: streak37,

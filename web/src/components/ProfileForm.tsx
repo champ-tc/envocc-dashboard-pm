@@ -67,24 +67,24 @@ export default function ProfileForm({ user }: { user: any }) {
                         <UserRound className="size-5" />
                     </span>
                     <div>
-                        <h2 className="font-bold text-slate-900">รายละเอียดบัญชี</h2>
-                        <p className="text-sm text-slate-500">ข้อมูลสำหรับเข้าสู่ระบบและการติดต่อ</p>
+                        <h2 className="typo-subtitle text-slate-900">รายละเอียดบัญชี</h2>
+                        <p className="typo-body-sm text-slate-500">ข้อมูลสำหรับเข้าสู่ระบบและการติดต่อ</p>
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2 md:p-7">
                 <Field label="อีเมล" icon={<Mail className="size-4" />}>
-                    <input type="email" value={user.email} disabled className="input w-full cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500" />
+                    <input type="email" value={user.email} disabled className="typo-body-sm input w-full" />
                 </Field>
 
                 <Field label="สิทธิ์การใช้งาน" icon={<ShieldCheck className="size-4" />}>
-                    <input type="text" value={user.role} disabled className="input w-full cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500 capitalize" />
+                    <input type="text" value={user.role} disabled className="typo-body-sm input w-full capitalize" />
                 </Field>
 
                 <div className="md:col-span-2">
                     <Field label="ชื่อ-นามสกุล" icon={<UserRound className="size-4" />}>
-                        <input type="text" value={name} onChange={e => setName(e.target.value)} required className="input w-full border-slate-200 bg-white" />
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} required className="typo-body-sm input w-full" />
                     </Field>
                 </div>
 
@@ -96,15 +96,15 @@ export default function ProfileForm({ user }: { user: any }) {
                             onChange={e => setPassword(e.target.value)}
                             minLength={PASSWORD_MIN_LENGTH}
                             placeholder={`อย่างน้อย ${PASSWORD_MIN_LENGTH} ตัวอักษร`}
-                            className="input w-full border-slate-200 bg-white"
+                            className="typo-body-sm input w-full"
                         />
                     </Field>
-                    <p className="mt-2 text-xs leading-5 text-slate-500">ต้องมีอักษรพิมพ์ใหญ่ พิมพ์เล็ก และตัวเลขอย่างน้อย 1 ตัว</p>
+                    <p className="typo-caption mt-2 text-slate-500">ต้องมีอักษรพิมพ์ใหญ่ พิมพ์เล็ก และตัวเลขอย่างน้อย 1 ตัว</p>
                 </div>
             </div>
 
             <div className="flex justify-end border-t border-slate-100 bg-slate-50/70 px-5 py-4 md:px-7">
-                <button type="submit" disabled={isLoading} className="btn btn-primary gap-2 rounded-xl px-6">
+                <button type="submit" disabled={isLoading} className="typo-label btn btn-primary gap-2 rounded-xl px-6">
                     {isLoading ? <span className="loading loading-spinner loading-sm" /> : <Save className="size-4" />}
                     บันทึกข้อมูล
                 </button>
@@ -125,11 +125,11 @@ function Field({
     children: React.ReactNode;
 }) {
     return (
-        <label className="block">
-            <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <label className="typo-label block">
+            <span className="typo-label mb-2 flex items-center gap-2 text-slate-700">
                 <span className="text-slate-400">{icon}</span>
                 {label}
-                {hint && <span className="font-normal text-slate-400">({hint})</span>}
+                {hint && <span className="typo-body text-slate-400">({hint})</span>}
             </span>
             {children}
         </label>

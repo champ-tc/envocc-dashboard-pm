@@ -67,10 +67,10 @@ export default function HdcDownloadPage() {
         <div className="auth-page max-w-4xl">
             <div className="auth-page-header">
                 <div>
-                <h1 className="auth-page-title">
+                <h1 className="typo-title auth-page-title">
                     ดาวน์โหลดข้อมูล HDC
                 </h1>
-                <p className="auth-page-description">
+                <p className="typo-body auth-page-description">
                     ดาวน์โหลดไฟล์ hdc.csv ล่าสุดที่สร้างจาก Airflow pipeline
                 </p>
                 </div>
@@ -78,7 +78,7 @@ export default function HdcDownloadPage() {
 
             <div className="auth-surface p-6 md:p-8">
                 {isLoading ? (
-                    <p className="text-slate-500">กำลังตรวจสอบไฟล์จาก pipeline volume...</p>
+                    <p className="typo-body text-slate-500">กำลังตรวจสอบไฟล์จาก pipeline volume...</p>
                 ) : status?.exists ? (
                     <div className="space-y-6">
                         <div className="flex items-center gap-4">
@@ -86,40 +86,40 @@ export default function HdcDownloadPage() {
                                 <FileText className="w-7 h-7" />
                             </div>
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+                                <p className="typo-caption uppercase text-emerald-600">
                                     พร้อมดาวน์โหลด
                                 </p>
-                                <h2 className="text-xl font-black text-slate-800">{status.filename}</h2>
+                                <h2 className="typo-subtitle text-slate-800">{status.filename}</h2>
                             </div>
                         </div>
 
                         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="rounded-2xl bg-slate-50 p-4">
-                                <dt className="text-xs font-bold text-slate-400">ขนาดไฟล์</dt>
-                                <dd className="font-black text-slate-700 mt-1">{formatFileSize(status.size)}</dd>
+                                <dt className="typo-caption text-slate-400">ขนาดไฟล์</dt>
+                                <dd className="typo-label text-slate-700 mt-1">{formatFileSize(status.size)}</dd>
                             </div>
                             <div className="rounded-2xl bg-slate-50 p-4">
-                                <dt className="text-xs font-bold text-slate-400">อัปเดตล่าสุด</dt>
-                                <dd className="font-black text-slate-700 mt-1">{formatDate(status.updatedAt)}</dd>
+                                <dt className="typo-caption text-slate-400">อัปเดตล่าสุด</dt>
+                                <dd className="typo-label text-slate-700 mt-1">{formatDate(status.updatedAt)}</dd>
                             </div>
                         </dl>
 
                         <a
                             href="/api/admin/hdc-download"
-                            className="w-full rounded-2xl bg-indigo-600 px-5 py-4 font-black text-white hover:bg-indigo-700 transition-colors flex items-center justify-center gap-3"
+                            className="typo-label w-full rounded-2xl bg-indigo-600 px-5 py-4 text-white hover:bg-indigo-700 transition-colors flex items-center justify-center gap-3"
                         >
                             <Download className="w-5 h-5" />
                             ดาวน์โหลด hdc.csv ทั้งไฟล์
                         </a>
 
-                        <p className="text-xs leading-5 text-slate-500">
+                        <p className="typo-caption text-slate-500">
                             หน้า HDC Dashboard อ่านจาก hdc.parquet ส่วนไฟล์ดาวน์โหลดนี้อ่าน hdc.csv จาก shared pipeline volume โดยตรง
                         </p>
                     </div>
                 ) : (
                     <div className="rounded-2xl bg-amber-50 border border-amber-100 p-5">
-                        <p className="font-black text-amber-700">ยังไม่มีไฟล์ hdc.csv</p>
-                        <p className="text-sm text-amber-600 mt-2">
+                        <p className="typo-body text-amber-700">ยังไม่มีไฟล์ hdc.csv</p>
+                        <p className="typo-body-sm text-amber-600 mt-2">
                             กรุณารอให้ Airflow pipeline สร้างและ publish ไฟล์ก่อน
                         </p>
                     </div>

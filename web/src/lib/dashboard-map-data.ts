@@ -4,12 +4,14 @@ let tambonRequest: Promise<FeatureCollection> | undefined;
 
 export function needsTambonBoundaries(
     filters: { provinces?: string[]; districts?: string[] },
-    stationCount: number,
+    _stationCount: number,
     requireDistrictSelection = false,
 ) {
     if (requireDistrictSelection && !filters.districts?.length) return false;
-    // DDS station overlays also require tambons at national level.
-    return Boolean(filters.provinces?.length || filters.districts?.length || stationCount);
+    // Keep the national view at province level. Detailed boundaries are only
+    // useful after an area filter is selected; otherwise a loaded station
+    // overlay can leave dense tambon lines behind when filters are cleared.
+    return Boolean(filters.provinces?.length || filters.districts?.length);
 }
 
 /** Reuse both in-flight requests and parsed geometry across dashboard visits. */

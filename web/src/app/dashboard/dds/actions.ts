@@ -96,6 +96,10 @@ interface DuckDBRow {
     [key: string]: string | number | boolean | null | undefined | (string | number | boolean | null | undefined)[];
 }
 
+// Bump when dashboard-query logic changes so an in-memory cached result from a
+// previous query definition cannot keep rendering stale analytics.
+const DDS_QUERY_VERSION = '2';
+
 const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
 
 function icdCodePredicate(column: string, codes: string[]): string {
@@ -307,7 +311,7 @@ export async function getFilterOptions(): Promise<DDSOptions> {
 
 export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promise<DDSDashboardData> {
     const version = getDDSDataVersion();
-    const cacheKey = `dds:data:${version}:${stableCacheKey(filters)}`;
+    const cacheKey = `dds:data:${DDS_QUERY_VERSION}:${version}:${stableCacheKey(filters)}`;
     return cachedDashboardQuery(cacheKey, async () => {
         const db = await getDB();
         return new Promise((resolve, reject) => {
@@ -340,6 +344,17 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
             districtsStr ? `AND TRIM(district) IN (${districtsStr})` : '',
             subdistrictsStr ? `AND TRIM(subdistrict) IN (${subdistrictsStr})` : ''
         ].join(' ');
+        // PM2.5 observations are not available for every tambon and district.
+        // The trend therefore falls back from the selected area to its district,
+        // then to the highest reading in the selected province for that month.
+        const pm25DistrictFallbackLocFilters = [
+            provincesStr ? `AND TRIM(province) IN (${provincesStr})` : '',
+            districtsStr ? `AND TRIM(district) IN (${districtsStr})` : ''
+        ].join(' ');
+        const pm25ProvinceFallbackLocFilters = provincesStr
+            ? `AND TRIM(province) IN (${provincesStr})`
+            : '';
+        const usePm25TrendFallback = Boolean(filters.districts?.length || filters.subdistricts?.length);
 
         const ddsDiseaseFilter = diseasesStr ? `AND TRIM("Disease Type") IN (${diseasesStr})` : '';
         // --- Diagnosis Type Filter mapping ---
@@ -446,7 +461,9 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 COUNT(DISTINCT d.prov)::DOUBLE as province_count,
                 MAX(d.dt) as latest_date,
                 ${DDS_DISEASES.map(d => `(SELECT ${d.id} FROM disease_stats_calc) as ${d.id}`).join(', ')}
-            FROM dds_filtered d
+            -- Summary cards reflect the diagnosis-type filter directly. The
+            -- disease-card filters below are only for the grouped visuals.
+            FROM dds_base d
             LEFT JOIN pm25_monthly p ON d.prov = p.prov AND d.dt = p.dt
         `;
 
@@ -515,14 +532,28 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                         FROM pm25_raw 
                         WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters}
                         GROUP BY 1, 2
+                    ),
+                    pm25_district_fallback_monthly AS (
+                        SELECT strftime(date, '%Y-%m') as dt, MAX(pm25) as pm25_max
+                        FROM pm25_raw
+                        WHERE 1=1 ${pm25DateFilter} ${filters.subdistricts?.length ? pm25DistrictFallbackLocFilters : 'AND 1=0'}
+                        GROUP BY 1
+                    ),
+                    pm25_province_fallback_monthly AS (
+                        SELECT strftime(date, '%Y-%m') as dt, MAX(pm25) as pm25_max
+                        FROM pm25_raw
+                        WHERE 1=1 ${pm25DateFilter} ${usePm25TrendFallback ? pm25ProvinceFallbackLocFilters : 'AND 1=0'}
+                        GROUP BY 1
                     )
                     SELECT 
                         d.dt as month,
                         COUNT(*)::DOUBLE as total,
-                        AVG(p.pm25_avg)::DOUBLE as avg_pm25,
+                        COALESCE(AVG(p.pm25_avg), MAX(df.pm25_max), MAX(pf.pm25_max), 0)::DOUBLE as avg_pm25,
                         ${DDS_DISEASES.map(dis => `SUM(CASE WHEN 1=1 ${icdFilters[dis.id]} THEN 1 ELSE 0 END)::DOUBLE as ${dis.id}`).join(', ')}
                     FROM dds_filtered d
                     LEFT JOIN pm25_monthly p ON d.prov = p.prov AND d.dt = p.dt
+                    LEFT JOIN pm25_district_fallback_monthly df ON d.dt = df.dt
+                    LEFT JOIN pm25_province_fallback_monthly pf ON d.dt = pf.dt
                     GROUP BY 1 ORDER BY 1 DESC LIMIT 12
                 `;
 

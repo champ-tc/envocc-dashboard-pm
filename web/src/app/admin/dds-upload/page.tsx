@@ -113,10 +113,10 @@ export default function DdsUploadPage() {
         <div className="auth-page max-w-5xl">
             <div className="auth-page-header">
                 <div>
-                <h1 className="auth-page-title">
+                <h1 className="typo-title auth-page-title">
                     อัปโหลดข้อมูล DDS
                 </h1>
-                <p className="auth-page-description">
+                <p className="typo-body auth-page-description">
                     อัปโหลดไฟล์ Excel เพื่อส่งเข้า Airflow DDS pipeline
                 </p>
                 </div>
@@ -132,20 +132,20 @@ export default function DdsUploadPage() {
                             <UploadCloud className="w-6 h-6" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-black text-slate-800">ไฟล์ต้นทาง</h2>
-                            <p className="text-sm text-slate-500">รองรับ .xlsx ขนาดไม่เกิน 100 MB</p>
+                            <h2 className="typo-subtitle text-slate-800">ไฟล์ต้นทาง</h2>
+                            <p className="typo-body-sm text-slate-500">รองรับ .xlsx ขนาดไม่เกิน 100 MB</p>
                         </div>
                     </div>
 
                     <label
                         htmlFor="dds-file"
-                        className="block border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+                        className="typo-label block border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
                     >
                         <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-400 mb-3" />
-                        <span className="block font-bold text-slate-700">
+                        <span className="typo-label block text-slate-700">
                             {file ? file.name : 'เลือกไฟล์ original_dds.xlsx'}
                         </span>
-                        <span className="block text-xs text-slate-400 mt-2">
+                        <span className="typo-caption block text-slate-400 mt-2">
                             ระบบจะบันทึกเป็น original_dds.xlsx อัตโนมัติ
                         </span>
                     </label>
@@ -154,49 +154,49 @@ export default function DdsUploadPage() {
                         type="file"
                         accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         onChange={handleFileChange}
-                        className="hidden"
+                        className="typo-body-sm hidden"
                     />
 
                     <button
                         type="submit"
                         disabled={!file || isUploading}
-                        className="mt-5 w-full rounded-2xl bg-blue-600 px-5 py-3.5 font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                        className="typo-label btn btn-primary min-h-12 mt-5 w-full rounded-2xl"
                     >
                         {isUploading ? 'กำลังอัปโหลด...' : 'อัปโหลดและเริ่ม Pipeline'}
                     </button>
                 </form>
 
                 <div className="auth-surface p-6">
-                    <h2 className="text-lg font-black text-slate-800 mb-5">สถานะไฟล์ล่าสุด</h2>
+                    <h2 className="typo-subtitle text-slate-800 mb-5">สถานะไฟล์ล่าสุด</h2>
 
                     {isLoading ? (
-                        <p className="text-slate-500">กำลังตรวจสอบ...</p>
+                        <p className="typo-body text-slate-500">กำลังตรวจสอบ...</p>
                     ) : status?.exists ? (
                         <div className="space-y-4">
                             <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
-                                <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-1">
+                                <p className="typo-caption uppercase text-emerald-600 mb-1">
                                     พร้อมให้ Airflow ประมวลผล
                                 </p>
-                                <p className="font-black text-slate-800">{status.filename}</p>
+                                <p className="typo-body text-slate-800">{status.filename}</p>
                             </div>
-                            <dl className="grid grid-cols-1 gap-3 text-sm">
+                            <dl className="typo-body-sm grid grid-cols-1 gap-3">
                                 <div className="rounded-xl bg-slate-50 p-4">
-                                    <dt className="font-bold text-slate-400">ขนาดไฟล์</dt>
-                                    <dd className="font-black text-slate-700 mt-1">{formatFileSize(status.size)}</dd>
+                                    <dt className="typo-label text-slate-400">ขนาดไฟล์</dt>
+                                    <dd className="typo-label text-slate-700 mt-1">{formatFileSize(status.size)}</dd>
                                 </div>
                                 <div className="rounded-xl bg-slate-50 p-4">
-                                    <dt className="font-bold text-slate-400">อัปเดตล่าสุด</dt>
-                                    <dd className="font-black text-slate-700 mt-1">{formatDate(status.updatedAt)}</dd>
+                                    <dt className="typo-label text-slate-400">อัปเดตล่าสุด</dt>
+                                    <dd className="typo-label text-slate-700 mt-1">{formatDate(status.updatedAt)}</dd>
                                 </div>
                             </dl>
-                            <p className="text-xs leading-5 text-slate-500">
+                            <p className="typo-caption text-slate-500">
                                 เมื่ออัปโหลดไฟล์สำเร็จ ระบบจะ trigger Airflow DDS pipeline ทันที
                             </p>
                         </div>
                     ) : (
                         <div className="rounded-2xl bg-amber-50 border border-amber-100 p-5">
-                            <p className="font-black text-amber-700">ยังไม่มีไฟล์ original_dds.xlsx</p>
-                            <p className="text-sm text-amber-600 mt-2">
+                            <p className="typo-body text-amber-700">ยังไม่มีไฟล์ original_dds.xlsx</p>
+                            <p className="typo-body-sm text-amber-600 mt-2">
                                 Pipeline จะไม่ทำงานจนกว่าจะมีการอัปโหลดไฟล์
                             </p>
                         </div>
@@ -211,20 +211,20 @@ export default function DdsUploadPage() {
                             <FileSpreadsheet className="w-6 h-6" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-black text-slate-800">ไฟล์ CSV ที่ผ่าน ETL แล้ว</h2>
+                            <h2 className="typo-subtitle text-slate-800">ไฟล์ CSV ที่ผ่าน ETL แล้ว</h2>
                             {status?.etl?.exists ? (
-                                <p className="text-sm text-slate-500">
+                                <p className="typo-body-sm text-slate-500">
                                     {status.etl.filename} · {formatFileSize(status.etl.size)} · {formatDate(status.etl.updatedAt)}
                                 </p>
                             ) : (
-                                <p className="text-sm text-slate-500">ยังไม่มีไฟล์ผลลัพธ์จาก pipeline</p>
+                                <p className="typo-body-sm text-slate-500">ยังไม่มีไฟล์ผลลัพธ์จาก pipeline</p>
                             )}
                         </div>
                     </div>
                     <a
                         href={status?.etl?.exists ? '/api/admin/dds-upload?mode=download' : undefined}
                         aria-disabled={!status?.etl?.exists}
-                        className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 font-bold text-white transition-colors ${
+                        className={`typo-label inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-white transition-colors ${
                             status?.etl?.exists
                                 ? 'bg-emerald-600 hover:bg-emerald-700'
                                 : 'pointer-events-none bg-slate-300'

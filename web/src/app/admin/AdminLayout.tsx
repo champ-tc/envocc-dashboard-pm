@@ -12,7 +12,7 @@ export default function AdminLayout({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
-        <div className="authenticated-shell flex h-screen overflow-hidden font-sans text-slate-900">
+        <div className="typo-body authenticated-shell flex h-screen overflow-hidden text-slate-900">
             <Sidebar 
                 role={session.role} 
                 isOpen={isSidebarOpen} 

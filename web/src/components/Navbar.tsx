@@ -30,7 +30,7 @@ export default function Navbar({
                 <button
                     type="button"
                     onClick={onToggleSidebar}
-                    className="btn btn-square btn-ghost rounded-2xl text-slate-600 lg:hidden"
+                    className="typo-label btn btn-square btn-ghost rounded-2xl text-slate-600 lg:hidden"
                     aria-label="เปิดเมนู"
                 >
                     <Menu className="size-5" />
@@ -39,8 +39,8 @@ export default function Navbar({
                 {!isUser && (
                     <Link href="/admin" className="group hidden items-center gap-3 sm:flex">
                         <div>
-                            <p className="text-compact-plus font-semibold uppercase tracking-menu-label text-blue-600">ENV-OCC DATA CENTER</p>
-                            <p className="mt-0.5 text-sm font-semibold text-slate-700">ระบบฐานข้อมูลสุขภาพและสิ่งแวดล้อม</p>
+                            <p className="typo-chart uppercase text-blue-600">ENV-OCC DATA CENTER</p>
+                            <p className="typo-label mt-0.5 text-slate-700">ระบบฐานข้อมูลสุขภาพและสิ่งแวดล้อม</p>
                         </div>
                     </Link>
                 )}
@@ -48,17 +48,17 @@ export default function Navbar({
 
             <div className="flex items-center gap-2 sm:gap-3">
                 {!isUser && (
-                    <button type="button" className="btn btn-circle btn-ghost btn-sm relative text-slate-500 hover:bg-blue-50 hover:text-blue-700" aria-label="การแจ้งเตือน">
+                    <button type="button" className="typo-label btn btn-circle btn-ghost btn-sm relative text-slate-500 hover:bg-blue-50 hover:text-blue-700" aria-label="การแจ้งเตือน">
                         <Bell className="size-[18px]" />
                         <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-blue-500 ring-2 ring-white" />
                     </button>
                 )}
                 <div className="mx-1 hidden h-8 w-px bg-slate-200 sm:block" />
                 <div className="hidden text-right sm:block">
-                    <p className="max-w-48 truncate text-sm font-semibold text-slate-800">{session?.name}</p>
-                    <p className="text-xs font-medium text-blue-600">{roleLabel}</p>
+                    <p className="typo-label max-w-48 truncate text-slate-800">{session?.name}</p>
+                    <p className="typo-caption text-blue-600">{roleLabel}</p>
                 </div>
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-slate-900 text-sm font-bold text-white shadow-sm">
+                <div className="typo-label flex size-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
                     {session?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
             </div>

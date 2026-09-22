@@ -67,10 +67,10 @@ export default function GuestNavbar() {
                                 />
                             </div>
                             <div className="flex items-center gap-1.5 sm:gap-2">
-                                <div className="px-2 sm:px-3 h-7 sm:h-10 rounded-lg sm:rounded-xl bg-linear-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white font-bold text-sm sm:text-xl shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
+                                <div className="typo-subtitle px-2 sm:px-3 h-7 sm:h-10 rounded-lg sm:rounded-xl bg-linear-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
                                     <PM25Mark />
                                 </div>
-                                <span className={`font-extrabold text-base sm:text-2xl tracking-tight transition-colors whitespace-nowrap ${textColor}`}>
+                                <span className={`typo-subtitle transition-colors whitespace-nowrap ${textColor}`}>
                                     Patient Database
                                 </span>
                             </div>
@@ -81,7 +81,7 @@ export default function GuestNavbar() {
                     <div className="hidden md:flex items-center space-x-6">
                         <Link
                             href="/dashboard/pm25"
-                            className={`font-medium transition-colors ${linkColor}`}
+                            className={`typo-label transition-colors ${linkColor}`}
                         >
                             Dashboard ฝุ่น <PM25Mark />
                         </Link>
@@ -89,7 +89,7 @@ export default function GuestNavbar() {
                         {/* Dropdown Dashboard ป่วยฝุ่น */}
                         <div className="relative group" onMouseEnter={() => setIsDropdownOpen(true)} onMouseLeave={() => setIsDropdownOpen(false)}>
                             <button
-                                className={`flex items-center gap-1 font-medium transition-colors ${linkColor} outline-none cursor-default`}
+                                className={`typo-label btn btn-ghost h-auto min-h-0 gap-1 px-0 ${linkColor}`}
                             >
                                 Dashboard ผู้ป่วย
                                 <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,10 +100,10 @@ export default function GuestNavbar() {
                             {isDropdownOpen && (
                                 <div className="absolute top-full left-0 pt-2 w-48 z-60 transition-all animate-in fade-in slide-in-from-top-2 duration-200">
                                     <div className={`rounded-2xl shadow-xl border border-slate-100 overflow-hidden py-2 ${isTransparent ? 'bg-white/95 backdrop-blur-md' : 'bg-white'}`}>
-                                        <Link href="/dashboard/hdc" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all font-medium">
+                                        <Link href="/dashboard/hdc" onClick={() => setIsDropdownOpen(false)} className="typo-label block px-4 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all">
                                             Health Data Center (HDC)
                                         </Link>
-                                        <Link href="/dashboard/dds" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all font-medium">
+                                        <Link href="/dashboard/dds" onClick={() => setIsDropdownOpen(false)} className="typo-label block px-4 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all">
                                             Digital Disease Surveillance (DDS)
                                         </Link>
                                     </div>
@@ -116,14 +116,14 @@ export default function GuestNavbar() {
                         {isLogin ? (
                             <Link
                                 href="/register"
-                                className="cloud font-medium text-white transition-all text-sm h-cloud-button! aspect-cloud-button! flex items-center justify-center"
+                                className="typo-label cloud text-white transition-all h-cloud-button! aspect-cloud-button! flex items-center justify-center"
                             >
                                 ลงทะเบียน
                             </Link>
                         ) : isRegister ? (
                             <Link
                                 href="/login"
-                                className={`inline-flex items-center justify-center px-6 py-2.5 bg-white border border-slate-200 font-medium rounded-full hover:bg-slate-50 shadow-sm transition-all text-sm ${isTransparent ? 'text-slate-900 border-white' : 'text-slate-900 border-slate-200'}`}
+                                className={`typo-label inline-flex items-center justify-center px-6 py-2.5 bg-white border border-slate-200 rounded-full hover:bg-slate-50 shadow-sm transition-all ${isTransparent ? 'text-slate-900 border-white' : 'text-slate-900 border-slate-200'}`}
                             >
                                 เข้าสู่ระบบ
                             </Link>
@@ -131,13 +131,13 @@ export default function GuestNavbar() {
                             <div className="flex items-center space-x-4">
                                 <Link
                                     href="/login"
-                                    className={`font-medium transition-colors text-sm ${linkColor}`}
+                                    className={`typo-label transition-colors ${linkColor}`}
                                 >
                                     เข้าสู่ระบบ
                                 </Link>
                                 <Link
                                     href="/register"
-                                    className="cloud font-medium text-white transition-all text-sm h-cloud-button! aspect-cloud-button! flex items-center justify-center"
+                                    className="typo-label cloud text-white transition-all h-cloud-button! aspect-cloud-button! flex items-center justify-center"
                                 >
                                     ลงทะเบียน
                                 </Link>
@@ -148,7 +148,7 @@ export default function GuestNavbar() {
                     <div className="md:hidden flex items-center">
                         <button 
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className={`p-2 transition-colors ${textColor} outline-none`}
+                            className={`typo-label btn btn-ghost btn-square ${textColor}`}
                             aria-label="Toggle menu"
                         >
                             {isMobileMenuOpen ? (
@@ -171,26 +171,26 @@ export default function GuestNavbar() {
                     <div className="px-4 pt-2 pb-6 space-y-1 shadow-lg">
                         <Link
                             href="/dashboard/pm25"
-                            className="block px-3 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            className="typo-label block px-3 py-3 rounded-xl text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             Dashboard ฝุ่น <PM25Mark />
                         </Link>
                         
                         <div className="py-2">
-                            <div className="px-3 py-1 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            <div className="typo-caption px-3 py-1 text-slate-400 uppercase">
                                 Dashboard ผู้ป่วย
                             </div>
                             <Link
                                 href="/dashboard/hdc"
-                                className="block px-3 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                className="typo-label block px-3 py-3 rounded-xl text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 Health Data Center (HDC)
                             </Link>
                             <Link
                                 href="/dashboard/dds"
-                                className="block px-3 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                className="typo-label block px-3 py-3 rounded-xl text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 Digital Disease Surveillance (DDS)
@@ -200,14 +200,14 @@ export default function GuestNavbar() {
                         <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
                             <Link
                                 href="/login"
-                                className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                className="typo-label w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 เข้าสู่ระบบ
                             </Link>
                             <Link
                                 href="/register"
-                                className="w-full flex items-center justify-center px-4 py-3 bg-linear-to-r from-blue-600 to-sky-500 rounded-xl font-bold text-white shadow-lg shadow-blue-500/20"
+                                className="typo-label w-full flex items-center justify-center px-4 py-3 bg-linear-to-r from-blue-600 to-sky-500 rounded-xl text-white shadow-lg shadow-blue-500/20"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 ลงทะเบียน

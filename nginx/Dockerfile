@@ -1,6 +1,6 @@
 FROM nginx:stable-alpine
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl ca-certificates
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY validate-tls.sh /docker-entrypoint.d/05-validate-tls.sh
