@@ -59,45 +59,6 @@ services:
       postgres-etl: { condition: service_healthy }
     restart: "no"
 
-  db-seed-init:
-    image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
-    build: *web-build
-    platform: linux/amd64
-    command: ["node", "scripts/seed-users.mjs"]
-    env_file: [.env]
-    environment:
-      NODE_ENV: production
-      DB_HOST: postgres-etl
-      DB_PORT: 5432
-      DB_USER: ${ETL_POSTGRES_USER}
-      DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
-      DB_NAME: ${ETL_POSTGRES_DB}
-    depends_on:
-      db-schema-init: { condition: service_completed_successfully }
-    restart: "no"
-
-  duckdb-data-init:
-    image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
-    build: *web-build
-    platform: linux/amd64
-    user: "0:0"
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        set -eu
-        mkdir -p /data
-        for file in pm25.parquet pm25.csv hdc.parquet mid_year.csv dashboard_dds.parquet dashboard_dds.csv; do
-          if [ -f "/app/public/duckdb/$${file}" ]; then
-            cp -n "/app/public/duckdb/$${file}" "/data/$${file}"
-          fi
-        done
-        chown -R 50000:0 /data
-        chmod -R ug+rwX,o+rX /data
-    volumes:
-      - duckdb-data-volume:/data
-    restart: "no"
-
   dds-input-init:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-web:latest
     build: *web-build
@@ -145,8 +106,6 @@ services:
       - duckdb-data-volume:/app/public/duckdb
       - dds-input-volume:/app/uploads/dds
     depends_on:
-      db-seed-init: { condition: service_completed_successfully }
-      duckdb-data-init: { condition: service_completed_successfully }
       dds-input-init: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -305,7 +264,6 @@ services:
     user: "0:0"
     depends_on:
       postgres: { condition: service_healthy }
-      duckdb-data-init: { condition: service_completed_successfully }
 
   nginx:
     image: ghcr.io/champ-tc/envocc-dashboard-pm-nginx:latest

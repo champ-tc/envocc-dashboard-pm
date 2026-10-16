@@ -10,6 +10,7 @@ import DashboardLoading from '@/components/dashboard/DashboardLoading';
 import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
 import { PM25Text } from '@/components/PM25Mark';
 import CloudLoader from '@/components/CloudLoader';
+import ExportImageButton from '@/components/dashboard/ExportImageButton';
 import { Check, ChevronDown } from 'lucide-react';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
@@ -54,6 +55,170 @@ function SingleSelect({ label, options, selected, onChange }: { label?: string, 
     );
 }
 
+// Custom SearchableSingleSelect
+function SearchableSingleSelect({
+    label,
+    options,
+    value,
+    onChange,
+    placeholder = 'ทั้งหมด',
+    searchPlaceholder = 'ค้นหา',
+    disabled = false
+}: {
+    label?: string;
+    options: string[];
+    value: string;
+    onChange: (val: string) => void;
+    placeholder?: string;
+    searchPlaceholder?: string;
+    disabled?: boolean;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchText, setSearchText] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+    const safeOptions = options || [];
+
+    const normalizedSearch = searchText.trim().toLowerCase();
+    const filteredOptions = normalizedSearch
+        ? safeOptions.filter((opt: string) => opt.toLowerCase().includes(normalizedSearch))
+        : safeOptions;
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handlePointerDown = (event: PointerEvent) => {
+            if (!containerRef.current?.contains(event.target as Node)) {
+                setIsOpen(false);
+                setSearchText('');
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown, true);
+        return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+    }, [isOpen]);
+
+    const isAllSelected = !value || value === 'ทั้งหมด';
+    const displayLabel = disabled
+        ? placeholder
+        : isAllSelected
+        ? 'ทั้งหมด'
+        : value;
+
+    return (
+        <div ref={containerRef} className="relative col-span-1 w-full">
+            {label && <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>}
+            <div
+                onClick={() => {
+                    if (!disabled) setIsOpen(!isOpen);
+                }}
+                className={`typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none flex justify-between items-center min-h-12 transition-all shadow-sm ring-1 ring-white/10 ${
+                    disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/20'
+                }`}
+            >
+                <div className="truncate max-w-36">
+                    {displayLabel}
+                </div>
+                <ChevronDown
+                    aria-hidden="true"
+                    className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`}
+                    strokeWidth={2.5}
+                />
+            </div>
+            {isOpen && !disabled && (
+                <>
+                    <div
+                        className="fixed inset-0 z-overlay"
+                        onClick={() => {
+                            setIsOpen(false);
+                            setSearchText('');
+                        }}
+                    />
+                    <div className="absolute z-dropdown mt-3 w-full min-w-60 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-80 overflow-y-auto p-3 flex flex-col gap-1.5 ring-1 ring-white/20 scrollbar-hide">
+                        <div className="relative">
+                            <input
+                                type="search"
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                placeholder={searchPlaceholder}
+                                aria-label={searchPlaceholder}
+                                className="typo-caption input input-sm w-full rounded-2xl border-white/10 bg-white/10 pr-9 text-white placeholder:text-white/35 focus:border-blue-400 focus:outline-none"
+                            />
+                            {searchText && (
+                                <button
+                                    type="button"
+                                    aria-label="ล้างคำค้นหา"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSearchText('');
+                                    }}
+                                    className="typo-label btn btn-ghost btn-xs btn-circle absolute right-1.5 top-1/2 -translate-y-1/2 text-white/70 hover:bg-white/10 hover:text-white"
+                                >
+                                    ×
+                                </button>
+                            )}
+                        </div>
+
+                        {(!normalizedSearch || 'ทั้งหมด'.includes(normalizedSearch)) && (
+                            <div
+                                onClick={() => {
+                                    onChange('');
+                                    setIsOpen(false);
+                                    setSearchText('');
+                                }}
+                                className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group"
+                            >
+                                <div
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                                        isAllSelected ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/20 group-hover:border-white/40'
+                                    }`}
+                                >
+                                    {isAllSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                                </div>
+                                <span className={`typo-caption transition-colors ${isAllSelected ? 'text-blue-400' : 'text-white'}`}>
+                                    ทั้งหมด
+                                </span>
+                            </div>
+                        )}
+
+                        {filteredOptions.map((opt: string) => {
+                            const isSelected = value === opt;
+                            return (
+                                <div
+                                    key={opt}
+                                    onClick={() => {
+                                        onChange(opt);
+                                        setIsOpen(false);
+                                        setSearchText('');
+                                    }}
+                                    className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group"
+                                >
+                                    <div
+                                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                                            isSelected ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'
+                                        }`}
+                                    >
+                                        {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                                    </div>
+                                    <span className={`typo-caption transition-colors ${isSelected ? 'text-blue-400' : 'text-white/70'}`}>
+                                        {opt}
+                                    </span>
+                                </div>
+                            );
+                        })}
+
+                        {filteredOptions.length === 0 && (!normalizedSearch || !'ทั้งหมด'.includes(normalizedSearch)) && (
+                            <div className="typo-caption px-3 py-4 text-center text-white/40">
+                                ไม่พบรายการที่ค้นหา
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
 // Custom MultiSelect
 function MultiSelect({ label, options, selected, onChange, placeholder = "ทั้งหมด", renderOption, searchPlaceholder = "ค้นหา" }: { label?: string, options: string[], selected: string[], onChange: (val: string[]) => void, placeholder?: string, renderOption?: (opt: string) => string, searchPlaceholder?: string }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -84,12 +249,20 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
         return () => document.removeEventListener('pointerdown', handlePointerDown, true);
     }, [isOpen]);
 
+    const isAllSelected = safeOptions.length > 0 && (
+        safeSelected.length === safeOptions.length ||
+        safeOptions.every(opt => safeSelected.includes(opt))
+    );
+    const displayText = safeSelected.length === 0
+        ? (placeholder === 'ไม่เลือก' || safeOptions.length === 0 ? placeholder : 'ไม่เลือก')
+        : (isAllSelected ? 'ทั้งหมด' : safeSelected.map(getDisplayText).join(', '));
+
     return (
         <div ref={containerRef} className="relative col-span-1 w-full">
             {label && <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>}
             <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-36">
-                    {safeSelected.length === 0 ? placeholder : (safeSelected.length === safeOptions.length ? 'ทั้งหมด' : safeSelected.map(getDisplayText).join(', '))}
+                    {displayText}
                 </div>
                 <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
             </div>
@@ -109,20 +282,23 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                             />
                             {searchText && <button type="button" aria-label="ล้างคำค้นหา" onClick={(event) => { event.stopPropagation(); setSearchText(''); }} className="typo-label btn btn-ghost btn-xs btn-circle absolute right-1.5 top-1/2 -translate-y-1/2 text-white/70 hover:bg-white/10 hover:text-white">×</button>}
                         </div>
-                        <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); setSearchText(''); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
-                            <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
-                                {safeSelected.length === safeOptions.length && <Check aria-hidden="true" className="size-4 text-white" strokeWidth={4} />}
+                        <div onClick={() => { if (isAllSelected) onChange([]); else onChange([...safeOptions]); setIsOpen(false); setSearchText(''); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
+                            <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${isAllSelected ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
+                                {isAllSelected && <Check aria-hidden="true" className="size-4 text-white" strokeWidth={4} />}
                             </div>
                             <span className="typo-caption text-white">เลือกทั้งหมด</span>
                         </div>
-                        {filteredOptions.map((opt: string) => (
-                            <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); setSearchText(''); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
-                                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.includes(opt) ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
-                                    {safeSelected.includes(opt) && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
+                        {filteredOptions.map((opt: string) => {
+                            const isSelected = safeSelected.includes(opt);
+                            return (
+                                <div key={opt} onClick={() => { if (isSelected) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); setSearchText(''); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
+                                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
+                                        {isSelected && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
+                                    </div>
+                                    <span className={`typo-caption transition-colors ${isSelected ? 'text-blue-400' : 'text-white/70'}`}>{getDisplayText(opt)}</span>
                                 </div>
-                                <span className={`typo-caption transition-colors ${safeSelected.includes(opt) ? 'text-blue-400' : 'text-white/70'}`}>{getDisplayText(opt)}</span>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {filteredOptions.length === 0 && (
                             <div className="typo-caption px-3 py-4 text-center text-white/40">
                                 {label === 'จังหวัด' ? 'ไม่พบจังหวัดที่ค้นหา' : 'ไม่พบรายการที่ค้นหา'}
@@ -255,6 +431,8 @@ const getDiagnosisCodes = (groupId: string, diagnosisType: string) => {
 };
 
 export default function DDSDashboardPage() {
+    const chartRef = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<HTMLDivElement>(null);
     const [user, setUser] = useState<any>(null);
     const [data, setData] = useState<DDSDashboardData | null>(null);
     const [options, setOptions] = useState<DDSOptions>({
@@ -301,7 +479,13 @@ export default function DDSDashboardPage() {
                 const startYear = month >= 10 ? year : year - 1;
                 const startDate = `${startYear}-10`;
 
-                setFilters(prev => ({ ...prev, startDate: startDate, endDate: latestDateStr }));
+                setFilters(prev => ({
+                    ...prev,
+                    startDate: startDate,
+                    endDate: latestDateStr,
+                    regions: prev.regions.length === 1 ? prev.regions : [],
+                    provinces: prev.provinces.length === 1 ? prev.provinces : []
+                }));
             }
         }).catch(() => {
             setBusyMessage(DASHBOARD_ERROR_MESSAGE);
@@ -315,9 +499,87 @@ export default function DDSDashboardPage() {
             setFilters(prev => ({ ...prev, provinces: [user.scope.province] }));
         } else if (user?.scope?.isRegion && user.scope.region) {
             const regionNum = user.scope.region.replace(/[^0-9]/g, '');
-            if (regionNum) setFilters(prev => ({ ...prev, regions: [`เขตสุขภาพที่ ${regionNum}`] }));
+            if (regionNum) {
+                const regionName = `เขตสุขภาพที่ ${regionNum}`;
+                setFilters(prev => ({
+                    ...prev,
+                    regions: [regionName],
+                    provinces: []
+                }));
+            }
         }
     }, [user]);
+
+    // Selected single values (for single-select hierarchical drill-down)
+    const selectedRegion = filters.regions.length === 1 ? filters.regions[0] : '';
+    const selectedProvince = filters.provinces.length === 1 ? filters.provinces[0] : '';
+    const selectedDistrict = filters.districts.length === 1 ? filters.districts[0] : '';
+    const selectedSubdistrict = filters.subdistricts.length === 1 ? filters.subdistricts[0] : '';
+
+    // Filtering Helpers
+    const isAllRegions = filters.regions.length === 0 || ((options.regions?.length || 0) > 0 && filters.regions.length === options.regions.length);
+    const baseProvinces = useMemo(() => {
+        if (isAllRegions) return (options.provinces || []).sort((a, b) => a.localeCompare(b, 'th'));
+        return (Array.from(new Set(options.hierarchy?.filter((h) => filters.regions.includes(h.region)).map((h) => h.province))) as string[]).sort((a, b) => a.localeCompare(b, 'th'));
+    }, [filters.regions, options.provinces, options.hierarchy, options.regions, isAllRegions]);
+
+    const isAllProvinces = filters.provinces.length === 0 || (baseProvinces.length > 0 && filters.provinces.length >= baseProvinces.length);
+    const baseDistricts = useMemo(() => {
+        if (isAllProvinces || !selectedProvince) return [];
+        return (Array.from(new Set(
+            options.hierarchy
+                ?.filter((h) => h.province === selectedProvince)
+                .map((h) => h.district)
+        )) as string[]).sort((a, b) => a.localeCompare(b, 'th'));
+    }, [selectedProvince, options.hierarchy, isAllProvinces]);
+
+    const isAllDistricts = filters.districts.length === 0 || (baseDistricts.length > 0 && filters.districts.length >= baseDistricts.length);
+    const baseSubdistricts = useMemo(() => {
+        if (isAllDistricts || !selectedDistrict || !selectedProvince) return [];
+        return (Array.from(new Set(
+            options.hierarchy
+                ?.filter((h) => h.province === selectedProvince && h.district === selectedDistrict)
+                .map((h) => h.subdistrict)
+        )) as string[]).sort((a, b) => a.localeCompare(b, 'th'));
+    }, [selectedProvince, selectedDistrict, options.hierarchy, isAllDistricts]);
+
+    const handleRegionChange = useCallback((val: string) => {
+        const nextRegions = val && val !== 'ทั้งหมด' ? [val] : [];
+        setFilters(f => ({
+            ...f,
+            regions: nextRegions,
+            provinces: [],
+            districts: [],
+            subdistricts: []
+        }));
+    }, []);
+
+    const handleProvinceChange = useCallback((val: string) => {
+        const nextProvinces = val && val !== 'ทั้งหมด' ? [val] : [];
+        setFilters(f => ({
+            ...f,
+            provinces: nextProvinces,
+            districts: [],
+            subdistricts: []
+        }));
+    }, []);
+
+    const handleDistrictChange = useCallback((val: string) => {
+        const nextDistricts = val && val !== 'ทั้งหมด' ? [val] : [];
+        setFilters(f => ({
+            ...f,
+            districts: nextDistricts,
+            subdistricts: []
+        }));
+    }, []);
+
+    const handleSubdistrictChange = useCallback((val: string) => {
+        const nextSubdistricts = val && val !== 'ทั้งหมด' ? [val] : [];
+        setFilters(f => ({
+            ...f,
+            subdistricts: nextSubdistricts
+        }));
+    }, []);
 
     // Data Fetching
     useEffect(() => {
@@ -326,12 +588,16 @@ export default function DDSDashboardPage() {
         setLoading(true);
         setBusyMessage(null);
         const timeout = window.setTimeout(async () => {
+            const isAllReg = filters.regions.length === 0 || ((options.regions?.length || 0) > 0 && filters.regions.length === options.regions.length);
+            const isAllProv = filters.provinces.length === 0 || (baseProvinces.length > 0 && filters.provinces.length === baseProvinces.length);
+            const isAllDist = filters.districts.length === 0 || (baseDistricts.length > 0 && filters.districts.length === baseDistricts.length);
+            const isAllSub = filters.subdistricts.length === 0 || (baseSubdistricts.length > 0 && filters.subdistricts.length === baseSubdistricts.length);
             const apiFilters = {
                 ...filters,
-                regions: filters.regions.length ? filters.regions : undefined,
-                provinces: filters.provinces.length ? filters.provinces : undefined,
-                districts: filters.districts.length ? filters.districts : undefined,
-                subdistricts: filters.subdistricts.length ? filters.subdistricts : undefined,
+                regions: isAllReg ? undefined : filters.regions,
+                provinces: isAllProv ? undefined : filters.provinces,
+                districts: isAllDist ? undefined : filters.districts,
+                subdistricts: isAllSub ? undefined : filters.subdistricts,
                 diseases: filters.diseases.length ? filters.diseases : undefined
             };
             try {
@@ -354,44 +620,41 @@ export default function DDSDashboardPage() {
             window.clearTimeout(timeout);
             latestRequestId.current++;
         };
-    }, [filters]);
-
-    // Filtering Helpers
-    const baseProvinces = useMemo(() => {
-        if (filters.regions.length === 0) return (options.provinces || []).sort((a, b) => a.localeCompare(b, 'th'));
-        return (Array.from(new Set(options.hierarchy?.filter((h) => filters.regions.includes(h.region)).map((h) => h.province))) as string[]).sort((a, b) => a.localeCompare(b, 'th'));
-    }, [filters.regions, options.provinces, options.hierarchy]);
-
-    const baseDistricts = useMemo(() => {
-        if (filters.provinces.length === 0) return [];
-        return (Array.from(new Set(options.hierarchy?.filter((h) => filters.provinces.includes(h.province)).map((h) => h.district))) as string[]).sort((a, b) => a.localeCompare(b, 'th'));
-    }, [filters.provinces, options.hierarchy]);
-
-    const baseSubdistricts = useMemo(() => {
-        if (filters.districts.length === 0) return [];
-        return (Array.from(new Set(options.hierarchy?.filter((h) => filters.districts.includes(h.district)).map((h) => h.subdistrict))) as string[]).sort((a, b) => a.localeCompare(b, 'th'));
-    }, [filters.districts, options.hierarchy]);
+    }, [filters, baseProvinces, baseDistricts, baseSubdistricts, options.regions]);
 
     const handleGroupedIcd10Change = useCallback((groupId: string, val: string[]) => {
         setGroupedIcd10(prev => {
             const next = { ...prev, [groupId]: val };
             const allSelected = Object.values(next).flat();
-            setFilters(f => ({ ...f, icd10_codes: allSelected, groupedIcd10: next, diagnosisType: 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ' }));
+            setFilters(f => ({ ...f, icd10_codes: allSelected, groupedIcd10: next }));
             return next;
         });
     }, []);
 
     const showSubdistricts = filters.districts.length > 0;
-    const isAllProvinces = filters.provinces.length >= 70 && filters.districts.length === 0;
-    const isAreaBreakdownView = (filters.provinces.length > 0 || filters.districts.length > 0) && !isAllProvinces;
+    const isAllProvincesView = isAllProvinces && filters.districts.length === 0;
+    const isAreaBreakdownView = (filters.provinces.length > 0 || filters.districts.length > 0) && !isAllProvincesView;
     const isDetailedView = isAreaBreakdownView;
     const mapData = isAreaBreakdownView
         ? (showSubdistricts ? (data?.subdistrictAverages || {}) : (data?.districtAverages || {}))
         : (data?.provinceAverages || {});
-    const mapAreaCount = isAreaBreakdownView
+    const mapAreaCount = selectedSubdistrict
+        ? 1
+        : isAreaBreakdownView
         ? Object.keys(mapData).length
+        : selectedRegion
+        ? baseProvinces.length
         : Object.keys(data?.provinceAverages || {}).length;
     const mapFilters = filters;
+    const mapTitle = selectedSubdistrict
+        ? `จำนวนผู้ป่วยตำบล${selectedSubdistrict}`
+        : selectedDistrict
+        ? `จำนวนผู้ป่วยอำเภอ${selectedDistrict} รายตำบล`
+        : selectedProvince
+        ? `จำนวนผู้ป่วยจังหวัด${selectedProvince} รายอำเภอ`
+        : selectedRegion
+        ? `จำนวนผู้ป่วยรายจังหวัด (${selectedRegion})`
+        : 'จำนวนผู้ป่วยรายภูมิภาค';
     const ddcLegend = {
         title: 'จำนวนผู้ป่วย',
         unit: '',
@@ -413,8 +676,22 @@ export default function DDSDashboardPage() {
             <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
                 <DashboardNavbar
                     logos={[
-                        { src: '/img/ddc-logo-optimized.png', alt: 'DDC Logo' },
-                        { src: '/img/logo_doe.jpg', alt: 'DOE Logo' },
+                        {
+                            src: '/img/ddc-logo-optimized.png',
+                            alt: 'DDC Logo',
+                            fill: true,
+                            sizes: '(min-width: 640px) 56px, 40px',
+                            wrapperClassName: 'h-13 w-10 sm:h-18 sm:w-14',
+                            imageClassName: 'p-0',
+                        },
+                        {
+                            src: '/img/logo_doe.jpg',
+                            alt: 'DOE Logo',
+                            fill: true,
+                            sizes: '(min-width: 640px) 208px, 144px',
+                            wrapperClassName: 'h-13 w-36 sm:h-18 sm:w-52',
+                            imageClassName: 'p-0',
+                        },
                     ]}
                     title={<PM25Text>การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 ประเทศไทย</PM25Text>}
                     subtitle={
@@ -432,15 +709,43 @@ export default function DDSDashboardPage() {
                     <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/10">
                         <DashboardDatePicker label="จากเดือน" options={options.dates} value={filters.startDate} onChange={(v) => setFilters(f => ({ ...f, startDate: v }))} />
                         <DashboardDatePicker label="ถึงเดือน" options={options.dates} value={filters.endDate} onChange={(v) => setFilters(f => ({ ...f, endDate: v }))} />
-                        <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val) => setFilters(f => ({ ...f, regions: val, provinces: [], districts: [], subdistricts: [] }))} />
-                        <MultiSelect label="จังหวัด" options={baseProvinces} selected={filters.provinces} onChange={(val) => setFilters(f => ({ ...f, provinces: val, districts: [], subdistricts: [] }))} />
-                        <MultiSelect label="อำเภอ/เขต" options={baseDistricts} selected={filters.districts} onChange={(val) => setFilters(f => ({ ...f, districts: val, subdistricts: [] }))} />
-                        <MultiSelect label="ตำบล/แขวง" options={baseSubdistricts} selected={filters.subdistricts} onChange={(val) => setFilters(f => ({ ...f, subdistricts: val }))} />
+                        <SearchableSingleSelect
+                            label="เขตสุขภาพ"
+                            options={options.regions}
+                            value={selectedRegion}
+                            onChange={handleRegionChange}
+                            placeholder="ทั้งหมด"
+                            searchPlaceholder="ค้นหาเขตสุขภาพ"
+                        />
+                        <SearchableSingleSelect
+                            label="จังหวัด"
+                            options={baseProvinces}
+                            value={selectedProvince}
+                            onChange={handleProvinceChange}
+                            placeholder="ทั้งหมด"
+                            searchPlaceholder="ค้นหาจังหวัด"
+                        />
+                        <SearchableSingleSelect
+                            label="อำเภอ/เขต"
+                            options={baseDistricts}
+                            value={selectedDistrict}
+                            onChange={handleDistrictChange}
+                            placeholder={selectedProvince ? 'ทั้งหมด' : 'เลือกจังหวัดก่อน'}
+                            searchPlaceholder="ค้นหาอำเภอ/เขต"
+                            disabled={!selectedProvince || baseDistricts.length === 0}
+                        />
+                        <SearchableSingleSelect
+                            label="ตำบล/แขวง"
+                            options={baseSubdistricts}
+                            value={selectedSubdistrict}
+                            onChange={handleSubdistrictChange}
+                            placeholder={selectedDistrict ? 'ทั้งหมด' : 'เลือกอำเภอก่อน'}
+                            searchPlaceholder="ค้นหาตำบล/แขวง"
+                            disabled={!selectedDistrict || baseSubdistricts.length === 0}
+                        />
                         <SingleSelect label="ประเภทวินิจฉัย" options={options.diagnosisTypes} selected={filters.diagnosisType} onChange={(val) => {
                             const nextGrouped = DISEASE_CARDS.reduce((acc, card) => {
-                                acc[card.id] = val === CUSTOM_Z581_TYPE
-                                    ? [...(options.icd10_by_disease?.[card.dbValue] || [])]
-                                    : getDiagnosisCodes(card.id, val);
+                                acc[card.id] = getDiagnosisCodes(card.id, val);
                                 return acc;
                             }, {} as Record<string, string[]>);
                             setGroupedIcd10(nextGrouped);
@@ -482,16 +787,7 @@ export default function DDSDashboardPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 shrink-0">
                         {DISEASE_CARDS.map((card, i) => {
                             const stat = data?.top5DiseaseStats?.find((s) => s.id === card.id) || { value: 0 };
-
-                            // Determine options based on diagnosisType
-                            let cardOptions: string[] = [];
-                            if (filters.diagnosisType === CUSTOM_Z581_TYPE) {
-                                // Show all available codes from DB for this disease type
-                                cardOptions = options.icd10_by_disease?.[card.dbValue] || [];
-                            } else {
-                                // Show only allowed codes for this disease group
-                                cardOptions = getDiagnosisCodes(card.id, filters.diagnosisType);
-                            }
+                            const cardOptions = getDiagnosisCodes(card.id, filters.diagnosisType);
 
                             return (
                                 <div key={i} className="bg-white/10 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/20 min-h-32 flex flex-col justify-between relative hover:z-header group ring-1 ring-white/5 transition-all hover:bg-white/15">
@@ -505,7 +801,7 @@ export default function DDSDashboardPage() {
                                             options={cardOptions}
                                             selected={groupedIcd10[card.id] || []}
                                             onChange={(val) => handleGroupedIcd10Change(card.id, val)}
-                                            placeholder={filters.diagnosisType === CUSTOM_Z581_TYPE ? 'เลือกทั้งหมด' : 'แสดงทั้งหมด'}
+                                            placeholder="ไม่เลือก"
                                             searchPlaceholder="ค้นหารหัสโรค"
                                         />
                                     </div>
@@ -518,7 +814,8 @@ export default function DDSDashboardPage() {
                 {/* Visualizations */}
                 <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     {/* Monthly Trend Chart */}
-                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
+                    <div ref={chartRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
+                        <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename="dds-monthly-trend" /></div>
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-8 shrink-0">
                             <h4 className="typo-section text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div><PM25Text>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text></h4>
                             {options.dates[0] && (
@@ -592,10 +889,10 @@ export default function DDSDashboardPage() {
                     </div>
 
                     {/* Thailand Map Section */}
-                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+                    <div ref={mapRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
-                            <h4 className="typo-section text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>จำนวนผู้ป่วยรายภูมิภาค</h4>
-                            <div className="typo-caption bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full border border-blue-500/20 uppercase">{mapAreaCount} พื้นที่</div>
+                            <h4 className="typo-section text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>{mapTitle}</h4>
+                            <div className="flex items-center gap-3"><div className="typo-caption bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full border border-blue-500/20 uppercase">{mapAreaCount} พื้นที่</div><ExportImageButton targetRef={mapRef} filename="dds-map" /></div>
                         </div>
                         <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 bg-slate-800/50">
                             <ThailandMap
@@ -603,7 +900,7 @@ export default function DDSDashboardPage() {
                                 stations={data?.stations || []}
                                 filters={mapFilters}
                                 focusSelectedSubdistricts
-                                visibleProvinces={!isAreaBreakdownView && filters.regions.length > 0 ? baseProvinces : undefined}
+                                visibleProvinces={!isAreaBreakdownView && filters.regions.length === 1 ? baseProvinces : undefined}
                                 getColor={ddcColorScale}
                                 legendConfig={ddcLegend}
                                 popupUnit="ราย"

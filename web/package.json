@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "node scripts/dev-with-server-db.mjs",
     "db:push:server": "node scripts/push-server-schema.mjs",
-    "db:seed": "node scripts/seed-users.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
@@ -15,6 +14,7 @@
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
     "duckdb": "^1.4.4",
+    "html-to-image": "^1.11.13",
     "jose": "^6.2.2",
     "js-cookie": "^3.0.5",
     "leaflet": "^1.9.4",

@@ -46,7 +46,7 @@ const cleanThaiName = (name: string) => {
     return name
         .toString()
         .trim()
-        .replace(/^(อำเภอเมือง|อำเภอ|เขต|จังหวัด|ต\.|อ\.|จ\.|เมือง)/, '')
+        .replace(/^(อำเภอเมือง|อำเภอ|เขต|จังหวัด|ตำบล|แขวง|ต\.|อ\.|จ\.|เมือง)/, '')
         .replace(/\s+/g, '')
         .replace(/เเ/g, 'แ')
         .trim();
@@ -86,15 +86,15 @@ interface ThailandMapProps {
 
 function Legend({ config }: { config: ThailandMapProps['legendConfig'] }) {
     return (
-        <div className="absolute bottom-6 left-6 z-map-legend flex flex-col gap-3 pointer-events-none sm:pointer-events-auto">
-            <div className="bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-100 min-w-map-legend sm:min-w-map-legend-wide flex flex-col gap-1.5 scale-90 sm:scale-100 origin-bottom-left transition-transform">
+        <div className="map-export-legend shrink-0 w-full pt-4 pointer-events-none sm:pointer-events-auto" data-export-legend="true" data-legend-title={config.title}>
+            <div className="bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl shadow-xl border border-slate-100 w-full flex flex-col gap-2">
                 <div className="flex flex-col items-center text-center mb-1">
                     <h4 className="typo-section text-slate-800 uppercase"><PM25Text>{config.title}</PM25Text></h4>
                     {config.unit && <div className="typo-chart uppercase text-slate-400">({config.unit})</div>}
                 </div>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap justify-center gap-x-5 gap-y-2">
                     {config.items.map((item) => (
-                        <div key={item.range} className="flex items-center gap-2 px-1">
+                        <div key={item.range} className="map-export-legend-item flex items-center gap-2 px-1" data-range={item.range} data-color={item.color}>
                             <div className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: item.color }}></div>
                             <span className="typo-chart text-slate-600 whitespace-nowrap">{item.range}</span>
                         </div>
@@ -113,9 +113,10 @@ function MapResizer({ geoData, tambonGeoData, filters }: { geoData: any, tambonG
         if (!geoData || !map) return;
         const selectedProvinces = filters.provinces || [];
         const selectedDistricts = filters.districts || [];
+        const selectedSubdistricts = filters.subdistricts || [];
         let targetBounds: L.LatLngBounds | null = null;
 
-        if (selectedDistricts.length > 0 && tambonGeoData && tambonGeoData.features.length > 0) {
+        if ((selectedDistricts.length > 0 || selectedSubdistricts.length > 0) && tambonGeoData && tambonGeoData.features.length > 0) {
             const bounds = L.geoJSON(tambonGeoData).getBounds();
             if (bounds.isValid()) targetBounds = bounds;
         } 
@@ -138,10 +139,10 @@ function MapResizer({ geoData, tambonGeoData, filters }: { geoData: any, tambonG
 
         const boundsKey = targetBounds.toBBoxString();
         if (boundsKey !== lastBoundsRef.current) {
-            map.fitBounds(targetBounds, { padding: [40, 40], duration: 1.2 });
+            map.fitBounds(targetBounds, { padding: [40, 40], maxZoom: 13, duration: 1.2 });
             lastBoundsRef.current = boundsKey;
         }
-    }, [filters.provinces, filters.districts, geoData, tambonGeoData, map]);
+    }, [filters.provinces, filters.districts, filters.subdistricts, geoData, tambonGeoData, map]);
     return null;
 }
 
@@ -161,14 +162,30 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         const m: Record<string, any> = {};
         Object.entries(data || {}).forEach(([k, v]) => {
             m[cleanThaiName(k)] = v;
+            const parts = k.split('-');
+            if (parts.length === 3) {
+                m[`${cleanThaiName(parts[0])}-${cleanThaiName(parts[1])}-${cleanThaiName(parts[2])}`] = v;
+            } else if (parts.length === 2) {
+                m[`${cleanThaiName(parts[0])}-${cleanThaiName(parts[1])}`] = v;
+            }
         });
         return m;
     }, [data]);
 
     const dataRef = useRef(normalizedData);
+    dataRef.current = normalizedData;
     useEffect(() => {
         dataRef.current = normalizedData;
     }, [normalizedData]);
+
+    const dataSignature = useMemo(() => {
+        if (!data) return '';
+        const entries = Object.entries(data);
+        if (entries.length === 0) return 'empty';
+        return entries
+            .map(([k, v]) => `${k}:${typeof v === 'object' ? (v?.value ?? 0) : v}`)
+            .join(';');
+    }, [data]);
 
     const stationMap = useMemo(() => {
         const m = new Map();
@@ -259,6 +276,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         if (!needsTambons || isAllProvincesSelected || !boundaryData) return null;
         const selectedProvinces = (filters.provinces || []).map((p: string) => cleanThaiName(p));
         const selectedDistricts = (filters.districts || []).map((d: string) => cleanThaiName(d));
+        const selectedSubdistricts = (filters.subdistricts || []).map((s: string) => cleanThaiName(s));
         const filteredFeatures = boundaryData.features.filter((f: any) => {
             const pNameRaw = f.properties.ADM1_TH || '';
             const dNameRaw = f.properties.ADM2_TH || '';
@@ -273,6 +291,19 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             
             const cleanP = cleanThaiName(provinceTh);
             const cleanD = cleanThaiName(districtTh);
+            const cleanT = cleanThaiName(subdistrictTh);
+
+            if (!effectiveShowDistrictBoundaries && selectedSubdistricts.length > 0) {
+                const matchSubdistrict = selectedSubdistricts.includes(cleanT);
+                if (selectedDistricts.length > 0) {
+                    const matchDistrict = selectedDistricts.includes(cleanD);
+                    if (selectedProvinces.length > 0) {
+                        return matchSubdistrict && matchDistrict && selectedProvinces.includes(cleanP);
+                    }
+                    return matchSubdistrict && matchDistrict;
+                }
+                return matchSubdistrict;
+            }
 
             if (selectedDistricts.length > 0) {
                 const matchDistrict = selectedDistricts.includes(cleanD);
@@ -300,7 +331,8 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         const selectedProvinces = (filters.provinces || []).map((p: string) => cleanThaiName(p));
         const isSelected = selectedProvinces.length > 0 ? selectedProvinces.includes(cleanP) : true;
 
-        const rawValue = resolveAreaData ? resolveAreaData({ province: provinceTh }, 'province') : normalizedData[cleanP] || { value: 0, rate: 0 };
+        const currentData = dataRef.current || normalizedData;
+        const rawValue = resolveAreaData ? resolveAreaData({ province: provinceTh }, 'province') : currentData[cleanP] || { value: 0, rate: 0 };
         const value = typeof rawValue === 'object' ? (rawValue.value || 0) : (rawValue || 0);
         return {
             fillColor: getColor(value),
@@ -310,6 +342,9 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             fillOpacity: isSelected ? 0.7 : 0.2
         };
     };
+
+    const styleRef = useRef(style);
+    styleRef.current = style;
 
     const pm25ColorScale = (val: number) => {
         if (val === 0) return 'transparent';
@@ -350,9 +385,9 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
     };
 
     const tambonStyle = (feature: any) => {
-        const pNameRaw = feature.properties.ADM1_TH || '';
-        const dNameRaw = feature.properties.ADM2_TH || '';
-        const tNameRaw = feature.properties.ADM3_TH || '';
+        const pNameRaw = feature?.properties?.ADM1_TH || '';
+        const dNameRaw = feature?.properties?.ADM2_TH || '';
+        const tNameRaw = feature?.properties?.ADM3_TH || '';
 
         const provinceTh = normalizeProvinceName(pNameRaw);
         const districtTh = fixThaiMojibake(dNameRaw);
@@ -369,10 +404,14 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         const key = `${provinceTh}-${districtTh.trim()}-${subdistrictTh}`;
         const subdistrictKey = `${provinceTh}-${districtTh.trim()}-${subdistrictTh}`;
         const districtKey = `${provinceTh}-${districtTh.trim()}`;
+        const cleanT = cleanThaiName(subdistrictTh);
+        const normalizedSubdistrictKey = `${cleanP}-${cleanD}-${cleanT}`;
+        const normalizedDistrictKey = `${cleanP}-${cleanD}`;
         const station = stationMap.get(key);
+        const currentData = dataRef.current || normalizedData;
         const rawAreaValue = resolveAreaData
             ? resolveAreaData({ province: provinceTh, district: districtTh.trim(), subdistrict: subdistrictTh }, showDistrictBoundaries ? 'district' : 'subdistrict')
-            : normalizedData[cleanThaiName(subdistrictKey)] || normalizedData[cleanThaiName(districtKey)] || normalizedData[cleanD] || normalizedData[cleanP];
+            : currentData[normalizedSubdistrictKey] || currentData[cleanThaiName(subdistrictKey)] || currentData[normalizedDistrictKey] || currentData[cleanThaiName(districtKey)] || currentData[cleanD] || currentData[cleanP];
 
         let fillColor = 'transparent';
         let fillOpacity = 0;
@@ -396,6 +435,9 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         };
     };
 
+    const tambonStyleRef = useRef(tambonStyle);
+    tambonStyleRef.current = tambonStyle;
+
     const onEachFeature = (feature: any, layer: any) => {
         const provinceEn = feature.properties.name;
         const provinceTh = normalizeProvinceName(PROVINCE_MAPPING[provinceEn] || provinceEn);
@@ -404,17 +446,21 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             mouseover: (e: any) => {
                 const l = e.target;
                 l.setStyle({ weight: 2.5, color: '#1e293b', fillOpacity: 0.8 });
-                l.bringToFront();
+                if (typeof l.bringToFront === 'function') {
+                    l.bringToFront();
+                }
                 
                 const cleanP = cleanThaiName(provinceTh);
-                const latestRawValue = resolveAreaData ? resolveAreaData({ province: provinceTh }, 'province') : dataRef.current[cleanP];
+                const currentData = dataRef.current || normalizedData;
+                const latestRawValue = resolveAreaData ? resolveAreaData({ province: provinceTh }, 'province') : currentData[cleanP];
                 const popupContent = renderPopup ? renderPopup(provinceTh, latestRawValue, popupUnit) : `<div class="typo-body p-2 min-w-map-popup"><div class="typo-label text-slate-800">${provinceTh}</div></div>`;
 
                 l.bindTooltip(popupContent, getAdaptiveTooltipOptions(e)).openTooltip(e.latlng);
             },
             mouseout: (e: any) => {
                 const l = e.target;
-                l.setStyle(style(l.feature));
+                const currentStyle = (styleRef.current || style)(l.feature || feature);
+                l.setStyle(currentStyle);
                 l.unbindTooltip();
             }
         });
@@ -451,25 +497,33 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         
         layer.on({
             mouseover: (e: any) => {
+                const l = e.target;
                 if (station) {
-                    const l = e.target;
                     l.setStyle({ weight: 1, color: '#000', fillOpacity: 0.9 });
+                } else {
+                    l.setStyle({ weight: 2.5, color: '#1e293b' });
+                    if (typeof l.bringToFront === 'function') {
+                        l.bringToFront();
+                    }
                 }
                 
                 const cleanP = cleanThaiName(provinceTh);
                 const cleanD = cleanThaiName(districtTh);
+                const cleanT = cleanThaiName(subdistrictTh);
+                const normalizedSubdistrictKey = `${cleanP}-${cleanD}-${cleanT}`;
+                const normalizedDistrictKey = `${cleanP}-${cleanD}`;
+                const currentData = dataRef.current || normalizedData;
                 const latestRawValue = resolveAreaData
                     ? resolveAreaData({ province: provinceTh, district: districtTh.trim(), subdistrict: subdistrictTh }, showDistrictBoundaries ? 'district' : 'subdistrict')
-                    : dataRef.current[cleanThaiName(subdistrictKey)] || dataRef.current[cleanThaiName(districtKey)] || dataRef.current[cleanD] || dataRef.current[cleanP];
+                    : currentData[normalizedSubdistrictKey] || currentData[cleanThaiName(subdistrictKey)] || currentData[normalizedDistrictKey] || currentData[cleanThaiName(districtKey)] || currentData[cleanD] || currentData[cleanP];
                 const areaName = resolveAreaData
                     ? (showDistrictBoundaries ? `${districtTh.trim()}, ${provinceTh}` : `${subdistrictTh}, ${districtTh.trim()}, ${provinceTh}`)
-                    : showDistrictBoundaries ? `${districtTh.trim()}, ${provinceTh}` : latestRawValue === dataRef.current[cleanThaiName(subdistrictKey)]
+                    : showDistrictBoundaries ? `${districtTh.trim()}, ${provinceTh}` : (latestRawValue === currentData[normalizedSubdistrictKey] || latestRawValue === currentData[cleanThaiName(subdistrictKey)])
                     ? `${subdistrictTh}, ${districtTh.trim()}, ${provinceTh}`
-                    : latestRawValue === dataRef.current[cleanP] ? provinceTh : `${districtTh.trim()}, ${provinceTh}`;
+                    : latestRawValue === currentData[cleanP] ? provinceTh : `${districtTh.trim()}, ${provinceTh}`;
 
                 const popupContent = renderPopup ? renderPopup(areaName, latestRawValue, popupUnit) : `<div class="typo-body p-2 min-w-map-popup"><div class="typo-label text-slate-800">${areaName}</div></div>`;
                 
-                const l = e.target;
                 // Only bind province tooltip if we don't already have a station tooltip
                 if (!station) {
                     l.bindTooltip(popupContent, getAdaptiveTooltipOptions(e)).openTooltip(e.latlng);
@@ -477,14 +531,15 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
             },
             mouseout: (e: any) => {
                 const l = e.target;
-                l.setStyle(tambonStyle(l.feature));
+                const currentStyle = (tambonStyleRef.current || tambonStyle)(l.feature || feature);
+                l.setStyle(currentStyle);
                 if (!station) l.unbindTooltip();
             }
         });
     };
 
     return (
-        <div className="w-full h-full relative group">
+        <div className="w-full h-full min-h-0 relative group flex flex-col">
             {resolveAreaData && geoData && !(showDistrictBoundaries ? loadingDistricts : loadingTambon)
                 && (showDistrictBoundaries || filters.districts?.length ? displayTambonData?.features.length === 0 : displayGeoData?.features.length === 0) && (
                 <div role="status" className="typo-body-sm absolute top-6 inset-x-6 z-map-loading rounded-xl bg-white/95 p-3 text-center text-slate-700">
@@ -497,14 +552,15 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     <span className="typo-chart text-slate-700 uppercase">Loading Map Data...</span>
                 </div>
             )}
-            <MapContainer
-                center={center} zoom={4.5} minZoom={4} maxBounds={bounds}
-                zoomSnap={0.1} zoomDelta={0.5}
-                style={{ height: '100%', width: '100%', borderRadius: '0.75rem', zIndex: 0, backgroundColor: '#dbeafe' }}
-                zoomControl={interactive} dragging={interactive} scrollWheelZoom={interactive} doubleClickZoom={interactive}
-                maxBoundsViscosity={1.0}
-                attributionControl={false}
-            >
+            <div className="flex-1 min-h-0 relative">
+                <MapContainer
+                    center={center} zoom={4.5} minZoom={4} maxBounds={bounds}
+                    zoomSnap={0.1} zoomDelta={0.5}
+                    style={{ height: '100%', width: '100%', borderRadius: '0.75rem', zIndex: 0, backgroundColor: '#dbeafe' }}
+                    zoomControl={interactive} dragging={interactive} scrollWheelZoom={interactive} doubleClickZoom={interactive}
+                    maxBoundsViscosity={1.0}
+                    attributionControl={false}
+                >
                 {/* Local geography backdrop: no external basemap tiles or API key dependency. */}
                 <Pane name="geography" style={{ zIndex: 300 }}>
                     {geoData && <GeoJSON data={geoData} interactive={false} style={() => ({ fillColor: '#cbd5e1', fillOpacity: 0.7, color: '#94a3b8', weight: 0.8 })} />}
@@ -513,7 +569,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     {displayGeoData && (
                         <GeoJSON 
                             ref={geoJsonRef} 
-                            key={`provinces-${visibleProvinces?.join('-')}-${filters.provinces?.join('-')}-${filters.districts?.length}-${Object.keys(data).length}-${showDistrictBoundaries}-${resolveAreaData ? JSON.stringify(data) : ''}`}
+                            key={`provinces-${visibleProvinces?.join('-')}-${filters.provinces?.join('-')}-${filters.districts?.length}-${dataSignature}-${showDistrictBoundaries}`}
                             data={displayGeoData} 
                             style={style} 
                             onEachFeature={onEachFeature} 
@@ -524,7 +580,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     {displayTambonData && (
                         <GeoJSON 
                             ref={tambonGeoJsonRef}
-                            key={`${showDistrictBoundaries ? 'district' : 'tambon'}-${filters.provinces?.join('-')}-${filters.districts?.join('-')}-${focusSelectedSubdistricts ? filters.subdistricts?.join('-') : ''}-${stations.length}-${Object.keys(data).length}-${resolveAreaData ? JSON.stringify(data) : ''}`}
+                            key={`${showDistrictBoundaries ? 'district' : 'tambon'}-${filters.provinces?.join('-')}-${filters.districts?.join('-')}-${focusSelectedSubdistricts ? filters.subdistricts?.join('-') : ''}-${stations.length}-${dataSignature}`}
                             data={displayTambonData} 
                             style={tambonStyle} 
                             onEachFeature={onEachTambon} 
@@ -532,7 +588,8 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     )}
                 </Pane>
                 <MapResizer geoData={geoData} tambonGeoData={displayTambonData} filters={isAllProvincesSelected ? { ...filters, provinces: [], districts: [] } : (visibleProvinces ? { ...filters, provinces: visibleProvinces } : filters)} />
-            </MapContainer>
+                </MapContainer>
+            </div>
             <Legend config={legendConfig} />
             <style jsx global>{`
                 .custom-tooltip {

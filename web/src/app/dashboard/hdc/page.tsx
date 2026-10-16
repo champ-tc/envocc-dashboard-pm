@@ -11,6 +11,7 @@ import DashboardLoading from '@/components/dashboard/DashboardLoading';
 import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
 import { PM25Text } from '@/components/PM25Mark';
 import CloudLoader from '@/components/CloudLoader';
+import ExportImageButton from '@/components/dashboard/ExportImageButton';
 import { Check, ChevronDown, ClipboardList } from 'lucide-react';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
@@ -57,12 +58,20 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     const filteredOptions = normalizedSearch
         ? safeOptions.filter((option) => option.toLocaleLowerCase('th').includes(normalizedSearch))
         : safeOptions;
+    const isAllSelected = safeOptions.length > 0 && (
+        safeSelected.length === safeOptions.length ||
+        safeOptions.every((opt) => safeSelected.includes(opt))
+    );
+    const displayText = safeSelected.length === 0
+        ? (safeOptions.length === 0 ? placeholder : 'ไม่เลือก')
+        : (isAllSelected ? 'ทั้งหมด' : safeSelected.join(', '));
+
     return (
         <div className="relative col-span-1">
             <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>
             <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-36">
-                    {safeSelected.length === 0 ? placeholder : (safeSelected.length === safeOptions.length ? 'ทั้งหมด' : safeSelected.join(', '))}
+                    {displayText}
                 </div>
                 <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
             </div>
@@ -76,20 +85,23 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                                 {searchText && <button type="button" aria-label="ล้างคำค้นหาจังหวัด" onClick={(event) => { event.stopPropagation(); setSearchText(''); }} className="typo-label btn btn-ghost btn-xs btn-circle absolute right-1.5 top-1/2 -translate-y-1/2 text-white/70 hover:bg-white/10 hover:text-white">×</button>}
                             </div>
                         )}
-                        <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
-                            <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
-                                {safeSelected.length === safeOptions.length && <Check aria-hidden="true" className="size-4 text-white" strokeWidth={4} />}
+                        <div onClick={() => { if (isAllSelected) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
+                            <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${isAllSelected ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
+                                {isAllSelected && <Check aria-hidden="true" className="size-4 text-white" strokeWidth={4} />}
                             </div>
                             <span className="typo-caption text-white">เลือกทั้งหมด</span>
                         </div>
-                        {filteredOptions.map((opt: string) => (
-                            <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
-                                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.includes(opt) ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
-                                    {safeSelected.includes(opt) && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
+                        {filteredOptions.map((opt: string) => {
+                            const isSelected = safeSelected.includes(opt);
+                            return (
+                                <div key={opt} onClick={() => { if (isSelected) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
+                                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
+                                        {isSelected && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
+                                    </div>
+                                    <span className={`typo-caption transition-colors ${isSelected ? 'text-blue-400' : 'text-white/70'}`}>{opt}</span>
                                 </div>
-                                <span className={`typo-caption transition-colors ${safeSelected.includes(opt) ? 'text-blue-400' : 'text-white/70'}`}>{opt}</span>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {searchable && filteredOptions.length === 0 && <div className="typo-caption px-3 py-4 text-center text-white/50">ไม่พบจังหวัดที่ค้นหา</div>}
                     </div>
                 </>
@@ -291,10 +303,12 @@ interface MonthlyTrendChartProps {
 
 function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: MonthlyTrendChartProps) {
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+    const chartRef = useRef<HTMLDivElement>(null);
     const monthLabelStep = Math.max(1, Math.ceil(data.length / 8));
 
     return (
-        <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-chart lg:min-h-0">
+        <div ref={chartRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-chart lg:min-h-0">
+            <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename="hdc-monthly-trend" /></div>
             <div className="flex items-center justify-between mb-8 shrink-0">
                 <h4 className="typo-section text-white flex items-center gap-4 uppercase">
                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
@@ -478,6 +492,7 @@ const THAI_MONTHS_FULL = ["มกราคม", "กุมภาพันธ์"
 const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
 export default function DashboardHDC() {
+    const mapRef = useRef<HTMLDivElement>(null);
     const [user, setUser] = useState<any>(null);
     const [data, setData] = useState<DashboardData | null>(null);
     const [options, setOptions] = useState<HDCOptions>({ 
@@ -506,27 +521,39 @@ export default function DashboardHDC() {
             const regionNum = user.scope.region.replace(/[^0-9]/g, '');
             if (regionNum) {
                 const regionName = regionNum === '13' ? 'กรุงเทพมหานคร' : `เขตสุขภาพที่ ${regionNum}`;
-                setFilters(prev => ({ ...prev, regions: [regionName] }));
+                const matchingProvinces = (options.hierarchy || [])
+                    .filter(h => h.region === regionName)
+                    .map(h => h.province);
+                setFilters(prev => ({
+                    ...prev,
+                    regions: [regionName],
+                    provinces: matchingProvinces.length ? matchingProvinces : prev.provinces
+                }));
             }
         }
-    }, [user]);
+    }, [user, options.hierarchy]);
 
+    const isAllRegions = filters.regions.length === 0 || ((options.regions?.length || 0) > 0 && filters.regions.length === options.regions.length);
     const baseProvinces = useMemo(() => {
         if (!options.hierarchy) return [];
-        const provs = filters.regions.length === 0 
+        const provs = isAllRegions 
             ? options.provinces 
             : Array.from(new Set(options.hierarchy.filter(h => filters.regions.includes(h.region)).map(h => h.province)));
         return provs.sort((a, b) => a.localeCompare(b, 'th'));
-    }, [filters.regions, options.provinces, options.hierarchy]);
+    }, [filters.regions, options.provinces, options.hierarchy, options.regions, isAllRegions]);
 
+    const isAllProvinces = filters.provinces.length === 0 || (baseProvinces.length > 0 && filters.provinces.length === baseProvinces.length);
     const provinceMapFilters = useMemo(() => ({
-        provinces: filters.provinces,
+        provinces: isAllProvinces ? [] : filters.provinces,
         districts: [] as string[]
-    }), [filters.provinces]);
+    }), [filters.provinces, isAllProvinces]);
 
     const handleRegionChange = useCallback((val: string[]) => {
-        setFilters(prev => ({ ...prev, regions: val, provinces: [], districts: [], subdistricts: [] }));
-    }, []);
+        const matchingProvinces = (val.length === 0 || val.length === (options.regions || []).length)
+            ? (options.provinces || [])
+            : Array.from(new Set((options.hierarchy || []).filter(h => val.includes(h.region)).map(h => h.province))).sort((a, b) => a.localeCompare(b, 'th'));
+        setFilters(prev => ({ ...prev, regions: val, provinces: matchingProvinces, districts: [], subdistricts: [] }));
+    }, [options.regions, options.provinces, options.hierarchy]);
 
     const handleProvinceChange = useCallback((val: string[]) => {
         setFilters(prev => ({ ...prev, provinces: val, districts: [], subdistricts: [] }));
@@ -551,7 +578,14 @@ export default function DashboardHDC() {
                 const year = latestDate.getFullYear();
                 const month = latestDate.getMonth() + 1;
                 const startYear = month >= 10 ? year : year - 1;
-                setFilters(prev => ({ ...prev, startDate: `${startYear}-10-01`, endDate: filteredDates[0] }));
+                setFilters(prev => ({
+                    ...prev,
+                    startDate: `${startYear}-10-01`,
+                    endDate: filteredDates[0],
+                    regions: prev.regions.length ? prev.regions : (opts.regions || []),
+                    provinces: prev.provinces.length ? prev.provinces : (opts.provinces || []),
+                    diseases: prev.diseases.length ? prev.diseases : (opts.diseases || [])
+                }));
             } else {
                 setBusyMessage('ไม่พบช่วงวันที่ที่มีข้อมูลสำหรับแสดงผล');
                 setLoading(false);
@@ -565,7 +599,16 @@ export default function DashboardHDC() {
     const fetchData = useCallback(async (currentFilters: HDCFilters, scope: any, requestId: number) => {
         if (!currentFilters.startDate || !currentFilters.endDate) return;
         try {
-            const res = await getDashboardData(currentFilters, scope);
+            const isAllReg = currentFilters.regions.length === 0 || ((options.regions?.length || 0) > 0 && currentFilters.regions.length === options.regions.length);
+            const isAllProv = currentFilters.provinces.length === 0 || (baseProvinces.length > 0 && currentFilters.provinces.length === baseProvinces.length);
+            const isAllDis = currentFilters.diseases.length === 0 || ((options.diseases?.length || 0) > 0 && currentFilters.diseases.length === options.diseases.length);
+            const apiFilters: HDCFilters = {
+                ...currentFilters,
+                regions: isAllReg ? [] : currentFilters.regions,
+                provinces: isAllProv ? [] : currentFilters.provinces,
+                diseases: isAllDis ? [] : currentFilters.diseases
+            };
+            const res = await getDashboardData(apiFilters, scope);
             if (requestId === latestRequestId.current) {
                 if (res) {
                     setData(res);
@@ -584,7 +627,7 @@ export default function DashboardHDC() {
                 setLoading(false);
             }
         }
-    }, []);
+    }, [options.regions, options.diseases, baseProvinces]);
 
     useEffect(() => {
         if (!filters.startDate || !filters.endDate) return;
@@ -608,8 +651,22 @@ export default function DashboardHDC() {
             <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
                 <DashboardNavbar
                     logos={[
-                        { src: '/img/ddc-logo-optimized.png', alt: 'DDC Logo' },
-                        { src: '/img/logo_hdc.jpg', alt: 'HDC Logo' },
+                        {
+                            src: '/img/ddc-logo-optimized.png',
+                            alt: 'DDC Logo',
+                            fill: true,
+                            sizes: '(min-width: 640px) 56px, 40px',
+                            wrapperClassName: 'h-13 w-10 sm:h-18 sm:w-14',
+                            imageClassName: 'p-0',
+                        },
+                        {
+                            src: '/img/logo_hdc.jpg',
+                            alt: 'HDC Logo',
+                            fill: true,
+                            sizes: '(min-width: 640px) 144px, 104px',
+                            wrapperClassName: 'h-13 w-28 sm:h-18 sm:w-36',
+                            imageClassName: 'p-0',
+                        },
                     ]}
                     title={<PM25Text>การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 ประเทศไทย</PM25Text>}
                     subtitle={
@@ -640,12 +697,13 @@ export default function DashboardHDC() {
                 <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     <MonthlyTrendChart data={data?.monthlyTrend || []} loading={loading} thaiMonthsFull={THAI_MONTHS_FULL} thaiMonthsShort={THAI_MONTHS_SHORT} />
 
-                    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 relative">
+                    <div ref={mapRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
                             <h4 className="typo-section text-white flex items-center gap-4 uppercase">
                                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                                 จำนวนผู้ป่วยรายจังหวัด
                             </h4>
+                            <ExportImageButton targetRef={mapRef} filename="hdc-map" />
                         </div>
                         <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 bg-slate-800/50">
                             <ThailandMap
@@ -653,7 +711,7 @@ export default function DashboardHDC() {
                                 filters={provinceMapFilters}
                                 visibleProvinces={filters.provinces.length ? filters.provinces : filters.regions.length ? baseProvinces : undefined}
                                 resolveAreaData={(area, level) => level === 'province' ? data?.provinceAverages[area.province] : undefined}
-                                requireDistrictForTambons={false}
+                                requireDistrictForTambons
                                 interactive={false}
                                 getColor={ddcColorScale} 
                                 legendConfig={ddcLegend} 

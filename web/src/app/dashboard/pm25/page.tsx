@@ -9,6 +9,7 @@ import DashboardDatePicker from '@/components/shared/DashboardDatePicker';
 import { PM25Text } from '@/components/PM25Mark';
 import CloudLoader from '@/components/CloudLoader';
 import DeferredChart from '@/components/dashboard/DeferredChart';
+import ExportImageButton from '@/components/dashboard/ExportImageButton';
 import { nearestChartPoint, prepareChartSeries } from '@/lib/dashboard-chart';
 import { areaKey, type MapAreas } from './map-area-data';
 import { CalendarDays, Check, ChevronDown } from 'lucide-react';
@@ -147,12 +148,20 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     const filteredOptions = normalizedSearch
         ? safeOptions.filter((option: string) => option.toLocaleLowerCase('th').includes(normalizedSearch))
         : safeOptions;
+    const isAllSelected = safeOptions.length > 0 && (
+        safeSelected.length === safeOptions.length ||
+        safeOptions.every((opt: string) => safeSelected.includes(opt))
+    );
+    const displayText = safeSelected.length === 0
+        ? (safeOptions.length === 0 ? placeholder : 'ไม่เลือก')
+        : (isAllSelected ? 'ทั้งหมด' : safeSelected.join(', '));
+
     return (
         <div className="relative col-span-1">
             <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>
             <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-filter-label">
-                    {safeSelected.length === 0 ? placeholder : (safeSelected.length === safeOptions.length ? 'ทั้งหมด' : safeSelected.join(', '))}
+                    {displayText}
                 </div>
                 <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
             </div>
@@ -166,20 +175,23 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                                 {searchText && <button type="button" aria-label="ล้างคำค้นหาจังหวัด" onClick={(event) => { event.stopPropagation(); setSearchText(''); }} className="typo-label btn btn-ghost btn-xs btn-circle absolute right-1.5 top-1/2 -translate-y-1/2 text-white/70 hover:bg-white/10 hover:text-white">×</button>}
                             </div>
                         )}
-                        <div onClick={() => { if (safeSelected.length === safeOptions.length) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
-                            <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.length === safeOptions.length ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
-                                {safeSelected.length === safeOptions.length && <Check aria-hidden="true" className="size-4 text-white" strokeWidth={4} />}
+                        <div onClick={() => { if (isAllSelected) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
+                            <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${isAllSelected ? 'bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50' : 'border-white/20 group-hover:border-white/40'}`}>
+                                {isAllSelected && <Check aria-hidden="true" className="size-4 text-white" strokeWidth={4} />}
                             </div>
                             <span className="typo-caption text-white">เลือกทั้งหมด</span>
                         </div>
-                        {filteredOptions.map((opt: string) => (
-                            <div key={opt} onClick={() => { if (safeSelected.includes(opt)) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
-                                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${safeSelected.includes(opt) ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
-                                    {safeSelected.includes(opt) && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
+                        {filteredOptions.map((opt: string) => {
+                            const isSelected = safeSelected.includes(opt);
+                            return (
+                                <div key={opt} onClick={() => { if (isSelected) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
+                                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
+                                        {isSelected && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
+                                    </div>
+                                    <span className={`typo-caption transition-colors ${isSelected ? 'text-blue-400' : 'text-white/70'}`}>{opt}</span>
                                 </div>
-                                <span className={`typo-caption transition-colors ${safeSelected.includes(opt) ? 'text-blue-400' : 'text-white/70'}`}>{opt}</span>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {searchable && filteredOptions.length === 0 && <div className="typo-caption px-3 py-4 text-center text-white/50">ไม่พบจังหวัดที่ค้นหา</div>}
                     </div>
                 </>
@@ -189,6 +201,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
 }
 
 const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading }: any) {
+    const chartRef = useRef<HTMLDivElement>(null);
     const [hiddenLabels, setHiddenLabels] = useState<Set<string>>(new Set());
     const [hoveredPoint, setHoveredPoint] = useState<{
         label: string;
@@ -254,7 +267,8 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
     useEffect(() => { setHoveredPoint(null); }, [dataGroup, hiddenLabels]);
 
     return (
-        <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
+        <div ref={chartRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
+            <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename={`pm25-trend-${title.includes('เขต') ? 'region' : title.includes('จังหวัด') ? 'province' : 'district'}`} /></div>
             <h4 className="typo-section text-white flex items-center gap-4 uppercase mb-8 shrink-0">
                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                 <PM25Text>{title}</PM25Text>
@@ -516,7 +530,13 @@ function useDashboard() {
                 );
                 const startDate = datesInFiscalYear.at(-1) || latestDate;
 
-                setFilters(f => ({ ...f, startDate, endDate: latestDate }));
+                setFilters(f => ({
+                    ...f,
+                    startDate,
+                    endDate: latestDate,
+                    regions: f.regions?.length ? f.regions : (opts.regions || []),
+                    provinces: f.provinces?.length ? f.provinces : (opts.provinces || [])
+                }));
             } else {
                 setBusyMessage('ไม่พบช่วงวันที่ที่มีข้อมูลสำหรับแสดงผล');
                 setLoading(false);
@@ -527,17 +547,25 @@ function useDashboard() {
         });
     }, []);
 
+    const isAllRegions = filters.regions?.length === 0 || ((options.regions?.length || 0) > 0 && filters.regions?.length === options.regions?.length);
+    const baseProvinces = useMemo(() => (isAllRegions ? (options.provinces || []) : Array.from(new Set(options.hierarchy?.filter((h: any) => filters.regions.includes(h.region)).map((h: any) => h.province)))).sort((a: string, b: string) => a.localeCompare(b, 'th')), [filters.regions, options.provinces, options.hierarchy, options.regions, isAllRegions]);
+    const isAllProvinces = filters.provinces?.length === 0 || (baseProvinces?.length > 0 && filters.provinces?.length === baseProvinces?.length);
+    const baseDistricts = useMemo(() => (isAllProvinces ? [] : Array.from(new Set(options.hierarchy?.filter((h: any) => filters.provinces.includes(h.province)).map((h: any) => h.district)))).sort((a: string, b: string) => a.localeCompare(b, 'th')), [filters.provinces, options.hierarchy, baseProvinces, isAllProvinces]);
+
     useEffect(() => {
         if (!filters.startDate || !filters.endDate) return;
         const requestId = ++latestRequestId.current;
         setLoading(true);
         setBusyMessage(null);
         const timeout = window.setTimeout(async () => {
+            const isAllReg = filters.regions?.length === 0 || ((options.regions?.length || 0) > 0 && filters.regions?.length === options.regions?.length);
+            const isAllProv = filters.provinces?.length === 0 || (baseProvinces?.length > 0 && filters.provinces?.length === baseProvinces?.length);
+            const isAllDist = filters.districts?.length === 0 || (baseDistricts?.length > 0 && filters.districts?.length === baseDistricts?.length);
             const apiFilters = {
                 ...filters,
-                regions: filters.regions?.length ? filters.regions : undefined,
-                provinces: filters.provinces?.length ? filters.provinces : undefined,
-                districts: filters.districts?.length ? filters.districts : undefined,
+                regions: isAllReg ? undefined : filters.regions,
+                provinces: isAllProv ? undefined : filters.provinces,
+                districts: isAllDist ? undefined : filters.districts,
             };
             try {
                 const res: any = await getDashboardData(apiFilters);
@@ -556,10 +584,7 @@ function useDashboard() {
             window.clearTimeout(timeout);
             latestRequestId.current++;
         };
-    }, [filters]);
-
-    const baseProvinces = useMemo(() => (filters.regions.length === 0 ? options.provinces : Array.from(new Set(options.hierarchy?.filter(h => filters.regions.includes(h.region)).map(h => h.province)))).sort((a: string, b: string) => a.localeCompare(b, 'th')), [filters.regions, options.provinces, options.hierarchy]);
-    const baseDistricts = useMemo(() => (filters.provinces.length === 0 ? [] : Array.from(new Set(options.hierarchy?.filter(h => filters.provinces.includes(h.province)).map(h => h.district)))).sort((a: string, b: string) => a.localeCompare(b, 'th')), [filters.provinces, options.hierarchy]);
+    }, [filters, baseProvinces, baseDistricts, options.regions]);
 
     const provinceMaxes = useMemo(() => {
         return data?.provinceMaxes || {};
@@ -676,6 +701,7 @@ export default function DashboardPM25() {
         exceedDialogRef.current?.showModal();
     };
     const renderMap = (activeMap: 'avg' | 'streak37' | 'streak75') => {
+    const mapRef = useRef<HTMLDivElement>(null);
     const isAllProvinces = filters.districts.length === 0 && filters.provinces.length > 0 && (
         filters.provinces.length === options.provinces.length || filters.provinces.length >= 70
     );
@@ -688,13 +714,16 @@ export default function DashboardPM25() {
         return [key, { value: period ? period.days : summary.max, name: summary.name, period }];
     }));
     return (
-    <div className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+    <div ref={mapRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
         <div className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                 <h4 className="typo-section text-white flex items-center gap-4 uppercase">
                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40 shrink-0"></div>
                     <PM25Text>{activeMap === 'avg' ? 'แผนที่ค่าฝุ่น PM2.5 เฉลี่ย 24 ชั่วโมง สูงสุด' : activeMap === 'streak37' ? 'ค่าฝุ่น PM2.5 มากกว่า 37.5 มคก./ลบ.ม.' : 'ค่าฝุ่น PM2.5 มากกว่า 75 มคก./ลบ.ม.'}</PM25Text>
                 </h4>
+                <ExportImageButton targetRef={mapRef} filename={`pm25-map-${activeMap}`} />
+                </div>
                 {filters.startDate && filters.endDate && (
                     <div className="typo-chart text-blue-200/70 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 flex items-center gap-2 w-fit">
                         <CalendarDays aria-hidden="true" className="size-3.5" strokeWidth={2} />
@@ -727,7 +756,7 @@ export default function DashboardPM25() {
                         : `จำนวนวันที่ PM2.5 > ${threshold} มคก./ลบ.ม. ต่อเนื่อง`;
                     const period = rawValue && typeof rawValue === 'object' ? rawValue.period : undefined;
                     const dates = period?.start && period?.end
-                        ? `<div class="typo-subtitle mt-3 text-purple-400">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br /><span class="typo-section text-white">${formatDateShort(period.start)} - ${formatDateShort(period.end)}</span></div>`
+                        ? `<div class="typo-section mt-3 text-purple-400">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br /><span class="typo-section text-white">${formatDateShort(period.start)} - ${formatDateShort(period.end)}</span></div>`
                         : '';
                     const name = rawValue && typeof rawValue === 'object' ? rawValue.name : areaName;
                     const value = rawValue && typeof rawValue === 'object'
@@ -788,8 +817,19 @@ export default function DashboardPM25() {
                 <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-overlay">
                     <DashboardDatePicker mode="day" label="จากวันที่" options={options.dates} value={filters.startDate} onChange={(v) => setFilters({ ...filters, startDate: v })} />
                     <DashboardDatePicker mode="day" label="ถึงวันที่" options={options.dates} value={filters.endDate} onChange={(v) => setFilters({ ...filters, endDate: v })} />
-                    <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val: string[]) => setFilters({ ...filters, regions: val, provinces: [], districts: [] })} />
-                    <MultiSelect label="จังหวัด" options={baseProvinces} selected={filters.provinces} onChange={(val: string[]) => setFilters({ ...filters, provinces: val, districts: [] })} />
+                    <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val: string[]) => {
+                        const matchingProvinces = (val.length === 0 || val.length === (options.regions?.length || 0))
+                            ? (options.provinces || [])
+                            : Array.from(new Set((options.hierarchy || []).filter((h: any) => val.includes(h.region)).map((h: any) => h.province))).sort((a: string, b: string) => a.localeCompare(b, 'th'));
+                        setFilters({ ...filters, regions: val, provinces: matchingProvinces, districts: [] });
+                    }} />
+                    <MultiSelect label="จังหวัด" options={baseProvinces} selected={filters.provinces} onChange={(val: string[]) => {
+                        const isAllProvSelected = val.length === 0 || val.length === baseProvinces.length;
+                        const matchingDistricts = isAllProvSelected
+                            ? []
+                            : Array.from(new Set((options.hierarchy || []).filter((h: any) => val.includes(h.province)).map((h: any) => h.district))).sort((a: string, b: string) => a.localeCompare(b, 'th'));
+                        setFilters({ ...filters, provinces: val, districts: matchingDistricts });
+                    }} />
                     <MultiSelect label="อำเภอ/เขต" options={baseDistricts} selected={filters.districts} onChange={(val: string[]) => setFilters({ ...filters, districts: val })} />
                 </div>
 

@@ -98,7 +98,7 @@ interface DuckDBRow {
 
 // Bump when dashboard-query logic changes so an in-memory cached result from a
 // previous query definition cannot keep rendering stale analytics.
-const DDS_QUERY_VERSION = '2';
+const DDS_QUERY_VERSION = '3';
 
 const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
 
@@ -364,11 +364,24 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         const diagType1Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50"];
         const diagType2Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50", "Y97"];
 
+        const hasGroupedFilter = Boolean(filters.groupedIcd10 && typeof filters.groupedIcd10 === 'object');
+        const allSelectedCodes = hasGroupedFilter
+            ? Object.values(filters.groupedIcd10!).flat()
+            : (filters.icd10_codes || []);
+
         if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1') {
-            ddsDiagnosisFilter = `AND (${icdCodePredicate('icd10_code', diagType1Codes)})`;
+            const activeCodes = hasGroupedFilter
+                ? allSelectedCodes.filter(c => diagType1Codes.includes(c))
+                : diagType1Codes;
+            ddsDiagnosisFilter = activeCodes.length > 0
+                ? `AND (${icdCodePredicate('icd10_code', activeCodes)})`
+                : 'AND 1=0';
         } else if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97') {
+            const activeCodes = hasGroupedFilter
+                ? allSelectedCodes.filter(c => diagType2Codes.includes(c))
+                : diagType2Codes;
             ddsDiagnosisFilter = `
-                AND (${icdCodePredicate('icd10_code', diagType2Codes)})
+                AND (${activeCodes.length > 0 ? icdCodePredicate('icd10_code', activeCodes) : '1=0'})
                 AND person_id IN (
                     SELECT person_id
                     FROM dds_raw
@@ -383,38 +396,32 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 )
             `;
         } else if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
-            const allowedCodes = ["Z581"];
-            if (filters.icd10_codes && filters.icd10_codes.length > 0) {
-                allowedCodes.push(...filters.icd10_codes);
-            }
-            ddsDiagnosisFilter = `AND (${icdCodePredicate('icd10_code', allowedCodes)})`;
+            ddsDiagnosisFilter = allSelectedCodes.length > 0
+                ? `AND (${icdCodePredicate('icd10_code', allSelectedCodes)})`
+                : 'AND 1=0';
         }
 
         // --- Build individual ICD10 filters for each disease group ---
         const icdFilters: Record<string, string> = {};
         DDS_DISEASES.forEach(d => {
             const groupCodes = d.codes || [];
-            if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
-                const selectedCodes = filters.groupedIcd10?.[d.id] || [];
-                if (selectedCodes.length > 0) {
-                    icdFilters[d.id] = `AND (${icdCodePredicate('icd', selectedCodes)})`;
-                } else {
-                    // "แสดงทุกรหัส" (Show all codes, no default filter)
-                    // If health_status, still limit to its group codes if we want to distinguish from 'other'
-                    if (d.id === 'health_status') {
-                         icdFilters[d.id] = `AND (diag = '${d.dbValue}' OR TRIM(icd) IN (${groupCodes.map(c => `'${c}'`).join(',')}))`;
-                    } else {
-                         icdFilters[d.id] = `AND diag = '${d.dbValue}'`;
-                    }
-                }
+            let allowedGroupCodes = groupCodes;
+            if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1') {
+                allowedGroupCodes = groupCodes.filter(c => diagType1Codes.includes(c));
+            } else if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97') {
+                allowedGroupCodes = groupCodes.filter(c => diagType2Codes.includes(c));
+            }
+
+            if (hasGroupedFilter && d.id in filters.groupedIcd10!) {
+                const selectedCodes = filters.groupedIcd10![d.id] || [];
+                const activeCodes = selectedCodes.filter(c => allowedGroupCodes.includes(c));
+                icdFilters[d.id] = activeCodes.length > 0
+                    ? `AND (${icdCodePredicate('icd', activeCodes)})`
+                    : 'AND 1=0';
             } else {
-                // For the other two diagnosis types, only count if it matches the group's codes
-                const allowed = groupCodes.filter(c => {
-                    if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1') return diagType1Codes.includes(c);
-                    if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97') return diagType2Codes.includes(c);
-                    return true;
-                });
-                icdFilters[d.id] = allowed.length > 0 ? `AND (${icdCodePredicate('icd', allowed)})` : `AND 1=0`;
+                icdFilters[d.id] = allowedGroupCodes.length > 0
+                    ? `AND (${icdCodePredicate('icd', allowedGroupCodes)})`
+                    : 'AND 1=0';
             }
         });
 
@@ -461,9 +468,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 COUNT(DISTINCT d.prov)::DOUBLE as province_count,
                 MAX(d.dt) as latest_date,
                 ${DDS_DISEASES.map(d => `(SELECT ${d.id} FROM disease_stats_calc) as ${d.id}`).join(', ')}
-            -- Summary cards reflect the diagnosis-type filter directly. The
-            -- disease-card filters below are only for the grouped visuals.
-            FROM dds_base d
+            FROM dds_filtered d
             LEFT JOIN pm25_monthly p ON d.prov = p.prov AND d.dt = p.dt
         `;
 

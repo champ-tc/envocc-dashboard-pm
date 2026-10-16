@@ -109,21 +109,21 @@ export default function DashboardNavbar({
     return (
         <header className={`flex shrink-0 flex-col justify-between gap-4 md:flex-row md:items-center has-[details[open]]:z-dashboard-nav ${className}`}>
             <div className="flex items-center gap-4">
-                <div className={`flex items-center ${logos.length > 1 ? 'h-12 gap-2 rounded-2xl border border-white/60 bg-white px-2 py-1.5 shadow-2xl ring-4 ring-white/10 sm:h-14 sm:gap-3 sm:px-3' : 'gap-4'}`}>
+                <div className={`flex items-center ${logos.length > 1 ? 'h-16 gap-2 rounded-2xl border border-white/60 bg-white px-2.5 py-1.5 shadow-2xl ring-4 ring-white/10 sm:h-20 sm:gap-3.5 sm:px-3.5' : 'gap-4'}`}>
                     {logos.map((logo, index) => (
                         <Fragment key={logo.src}>
                             {index > 0 && logos.length > 1 && (
-                                <span aria-hidden="true" className="h-8 w-px shrink-0 bg-slate-300 sm:h-10" />
+                                <span aria-hidden="true" className="h-9 w-px shrink-0 bg-slate-300 sm:h-12" />
                             )}
                             <div
                                 className={logos.length > 1
-                                    ? 'relative h-9 w-16 shrink-0 overflow-hidden sm:h-11 sm:w-20'
+                                    ? `relative shrink-0 overflow-hidden ${logo.wrapperClassName || 'h-13 w-16 sm:h-18 sm:w-24'}`
                                     : `relative z-20 h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/50 bg-white p-1.5 shadow-2xl ring-4 ring-white/10 sm:h-14 sm:w-14 ${logo.wrapperClassName || ''}`}
                             >
                                 {logo.fill ? (
-                                    <Image src={logo.src} alt={logo.alt} fill sizes={logo.sizes || '(min-width: 640px) 56px, 48px'} className={`rounded-xl object-contain p-1 ${logo.imageClassName || ''}`} priority />
+                                    <Image src={logo.src} alt={logo.alt} fill sizes={logo.sizes || '(min-width: 640px) 120px, 80px'} className={`rounded-xl object-contain ${logo.imageClassName || 'p-0.5'}`} priority />
                                 ) : (
-                                    <Image src={logo.src} alt={logo.alt} width={56} height={56} className={`h-full w-full rounded-xl object-contain p-1 ${logo.imageClassName || ''}`} priority />
+                                    <Image src={logo.src} alt={logo.alt} width={72} height={72} className={`h-full w-full rounded-xl object-contain ${logo.imageClassName || 'p-1'}`} priority />
                                 )}
                             </div>
                         </Fragment>

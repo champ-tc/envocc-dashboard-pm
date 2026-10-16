@@ -60,7 +60,8 @@ function PMNotes() {
     return (
         <div className="space-y-2">
             <p className="typo-body">1. ฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน (PM2.5) เป็นฝุ่นที่มีเส้นผ่านศูนย์กลางไม่เกิน 2.5 ไมครอน เกิดจากการเผาไหม้ทั้งจากยานพาหนะ การเผาวัสดุการเกษตร ไฟป่า และกระบวนการอุตสาหกรรม สามารถเข้าไปถึงถุงลมในปอดได้ เป็นผลทำให้เกิดโรคในระบบทางเดินหายใจ และโรคปอดต่างๆ หากได้รับในปริมาณมากหรือเป็นเวลานานจะสะสมในเนื้อเยื่อปอด ทำให้การทำงานของปอดเสื่อมประสิทธิภาพลง ทำให้หลอดลมอักเสบ มีอาการหอบหืด</p>
-            <h3 className="typo-section">2. ระดับของค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5</h3>
+            <p className="typo-body">2. ค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 เป็นค่าเฉลี่ยของเวลา 00.00 - 23.00 น. ของวันนั้น ๆ</p>
+            <p className="typo-body">3. ระดับของค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5</p>
             <div className="space-y-2 md:hidden">{airLevels.map(level => <section key={level.range} className="overflow-hidden rounded-2xl border border-base-300">
                 <div className="flex items-start gap-2 bg-base-200 px-3 py-2">
                     <span className={`mt-1 h-5 w-5 shrink-0 rounded-full ${level.color}`} aria-hidden="true" />
@@ -70,7 +71,7 @@ function PMNotes() {
             </section>)}</div>
             <div className="hidden overflow-x-auto rounded-2xl border border-base-300 focus-visible:outline-2 focus-visible:outline-neutral md:block" tabIndex={0} role="region" aria-label="ตารางระดับคุณภาพอากาศ เลื่อนแนวนอนเพื่ออ่านทุกคอลัมน์">
                 <table className="typo-body-sm table w-full min-w-2xl [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1">
-                    <caption className="sr-only">ระดับค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 สี ความหมาย และข้อควรปฏิบัติ</caption>
+                    <caption className="sr-only">ระดับของค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5 สี ความหมาย และข้อควรปฏิบัติ</caption>
                     <thead className="bg-base-200 text-base-content"><tr>
                         <th scope="col" className="typo-label w-28 whitespace-normal">ระดับของค่าเฉลี่ย 24 ชั่วโมงของฝุ่น PM2.5</th>
                         <th className="typo-label" scope="col">สีที่ใช้</th>

@@ -96,7 +96,7 @@ export default function RegisterPage() {
 
     // UI State
     const [ui, setUi] = useState({
-        loading: false, checking: false, modal: false, pdpa: true,
+        loading: false, checking: false, modal: false, pdpa: false,
         showPass: false, otherPrefix: false, otherPos: false
     });
 
