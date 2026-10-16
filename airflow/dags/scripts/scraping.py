@@ -34,6 +34,8 @@ FAIL_ON_PROVINCE_ERROR = os.getenv("HDC_FAIL_ON_PROVINCE_ERROR", "true").lower()
     "no",
 }
 MAX_FAILED_PROVINCES = int(os.getenv("HDC_MAX_FAILED_PROVINCES", "1"))
+PAGE_SIZE = int(os.getenv("HDC_PAGE_SIZE", "1000"))
+MAX_PAGES_PER_PROVINCE = int(os.getenv("HDC_MAX_PAGES_PER_PROVINCE", "100"))
 
 
 PROVINCE_ID_MAPPING = {
@@ -154,29 +156,13 @@ def post_json(url, body):
         return json.loads(raw)
 
 
-def fetch_province(province_name, province_id, year):
-    body = {
-        "tableName": TABLE_NAME,
-        "year": str(year),
-        "province": str(province_id),
-        "type": "json",
-    }
-
+def fetch_page(body):
+    """Fetch a single page payload with retries."""
     last_error = None
     for attempt in range(1, RETRY_COUNT + 2):
         try:
             payload = post_json(API_URL, body)
-            records = normalize_api_response(payload)
-            df = pd.DataFrame(records)
-            logger.info(
-                "API OK | year=%s province=%s(%s) rows=%s columns=%s",
-                year,
-                province_name,
-                province_id,
-                len(df),
-                len(df.columns),
-            )
-            return df, None
+            return payload, None
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[:500]
             last_error = f"HTTPError {exc.code}: {detail}"
@@ -186,16 +172,122 @@ def fetch_province(province_name, province_id, year):
         if attempt <= RETRY_COUNT:
             sleep_sec = min(30, attempt * 2)
             logger.warning(
-                "API retry %s/%s | year=%s province=%s | %s",
+                "API retry %s/%s | offset=%s limit=%s | %s",
                 attempt,
                 RETRY_COUNT,
-                year,
-                province_name,
+                body.get("offset"),
+                body.get("limit"),
                 last_error,
             )
             time.sleep(sleep_sec)
 
-    return pd.DataFrame(), last_error
+    return None, last_error
+
+
+def fetch_province(province_name, province_id, year):
+    all_records = []
+    offset = 0
+    total_expected = None
+    page_num = 1
+
+    while True:
+        body = {
+            "tableName": TABLE_NAME,
+            "year": str(year),
+            "province": str(province_id),
+            "type": "json",
+            "limit": PAGE_SIZE,
+            "offset": offset,
+        }
+
+        payload, error = fetch_page(body)
+        if error is not None:
+            logger.error(
+                "API FAIL | year=%s province=%s(%s) page=%s offset=%s | %s",
+                year,
+                province_name,
+                province_id,
+                page_num,
+                offset,
+                error,
+            )
+            return pd.DataFrame(), error
+
+        records = normalize_api_response(payload)
+
+        # Parse total count from response if available
+        if total_expected is None and isinstance(payload, dict) and "total" in payload:
+            try:
+                total_expected = int(str(payload["total"]).strip())
+            except (ValueError, TypeError):
+                total_expected = None
+
+        if records:
+            all_records.extend(records)
+            offset += len(records)
+
+        logger.info(
+            "API page %s | year=%s province=%s(%s) page_rows=%s total_fetched=%s total_expected=%s",
+            page_num,
+            year,
+            province_name,
+            province_id,
+            len(records),
+            len(all_records),
+            total_expected if total_expected is not None else "unknown",
+        )
+
+        # Stop conditions:
+        # 1. No records returned on this page
+        if not records:
+            break
+
+        # 2. Reached or exceeded total expected records reported by API
+        if total_expected is not None and len(all_records) >= total_expected:
+            break
+
+        # 3. Fetched fewer records than requested page size (last page reached)
+        if len(records) < PAGE_SIZE:
+            break
+
+        # 4. Safety guard against unexpected infinite loops
+        if page_num >= MAX_PAGES_PER_PROVINCE:
+            logger.warning(
+                "Reached max pages limit (%s) | year=%s province=%s(%s) fetched=%s expected=%s",
+                MAX_PAGES_PER_PROVINCE,
+                year,
+                province_name,
+                province_id,
+                len(all_records),
+                total_expected,
+            )
+            break
+
+        page_num += 1
+        time.sleep(SLEEP_BETWEEN_REQUESTS_SEC)
+
+    if total_expected is not None and len(all_records) < total_expected:
+        logger.warning(
+            "API returned fewer rows than expected | year=%s province=%s(%s) fetched=%s expected=%s",
+            year,
+            province_name,
+            province_id,
+            len(all_records),
+            total_expected,
+        )
+
+    df = pd.DataFrame(all_records)
+    logger.info(
+        "API OK | year=%s province=%s(%s) rows=%s columns=%s (expected=%s)",
+        year,
+        province_name,
+        province_id,
+        len(df),
+        len(df.columns),
+        total_expected if total_expected is not None else "unknown",
+    )
+    return df, None
+
 
 
 def add_metadata_columns(df, province_name, province_id, year):
@@ -303,7 +395,14 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("START HDC API raw export")
-    logger.info("API_URL=%s TABLE_NAME=%s YEARS=%s OUTPUT_DIR=%s", API_URL, TABLE_NAME, ",".join(target_years), output_dir)
+    logger.info(
+        "API_URL=%s TABLE_NAME=%s YEARS=%s PAGE_SIZE=%s OUTPUT_DIR=%s",
+        API_URL,
+        TABLE_NAME,
+        ",".join(target_years),
+        PAGE_SIZE,
+        output_dir,
+    )
 
     all_year_frames = []
     all_summary_frames = []
