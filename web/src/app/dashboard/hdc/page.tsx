@@ -350,12 +350,12 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                     const pm25Max = Math.max(...data.map(x => x.avg_pm25 || 0), 50) * 1.1;
                     return (
                         <>
-                            <div className="typo-chart absolute left-4 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-white/20 tabular-nums pointer-events-none z-30">
+                            <div className="typo-chart absolute left-4 top-0 bottom-0 flex flex-col justify-between items-end py-1 text-white/75 tabular-nums pointer-events-none z-30">
                                 {[...Array(5)].map((_, i) => (
                                     <span key={i}>{Math.round(maxVal * (1 - i / 4)).toLocaleString()}</span>
                                 ))}
                             </div>
-                            <div className="typo-chart absolute right-4 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-rose-500/30 tabular-nums pointer-events-none z-30">
+                            <div className="typo-chart absolute right-4 top-0 bottom-0 flex flex-col justify-between items-start py-1 text-rose-300/90 tabular-nums pointer-events-none z-30">
                                 {[...Array(5)].map((_, i) => (
                                     <span key={i}>{Math.round(pm25Max * (1 - i / 4)).toLocaleString()}</span>
                                 ))}
@@ -364,8 +364,8 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                     );
                 })()}
 
-                <div className="absolute inset-x-12 inset-y-0 flex flex-col justify-between pointer-events-none opacity-10">
-                    {[...Array(5)].map((_, i) => <div key={i} className="w-full h-px bg-white/10"></div>)}
+                <div className="absolute inset-x-12 inset-y-0 flex flex-col justify-between pointer-events-none opacity-30">
+                    {[...Array(5)].map((_, i) => <div key={i} className="w-full h-px bg-white/25"></div>)}
                 </div>
 
                 <div className="flex-1 overflow-visible relative">
@@ -375,12 +375,12 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                             <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 bottom-0 w-full h-full z-30 pointer-events-none overflow-visible">
                                 <polyline points={data.map((m, i) => {
                                     return `${(i + 0.5) * (100 / data.length)},${100 - (pm25Max > 0 ? (m.avg_pm25 / pm25Max) * 100 : 0)}`;
-                                }).join(' ')} fill="none" stroke="#f43f5e" strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                                }).join(' ')} fill="none" stroke="#fb7185" strokeWidth="3.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
                                 {data.map((m, i) => {
                                     const y = 100 - (pm25Max > 0 ? (m.avg_pm25 / pm25Max) * 100 : 0);
                                     const x = (i + 0.5) * (100 / data.length);
                                     return (
-                                        <circle key={i} cx={x} cy={y} r="1" fill="#f43f5e" vectorEffect="non-scaling-stroke" className={`transition-all duration-300 ${hoveredIdx === i ? 'chart-point-active fill-white' : ''}`} />
+                                        <circle key={i} cx={x} cy={y} r="1.5" fill="#fb7185" stroke="#fff" strokeWidth="0.5" vectorEffect="non-scaling-stroke" className={`transition-all duration-300 ${hoveredIdx === i ? 'chart-point-active fill-white' : ''}`} />
                                     );
                                 })}
                             </svg>
@@ -469,8 +469,8 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
                         </div>
                     ))}
                     <div className="flex items-center gap-2 group cursor-default">
-                        <div className="w-6 h-0.5 bg-rose-500 rounded-full shadow-lg"></div>
-                        <span className="typo-chart text-rose-500/80 uppercase group-hover:text-rose-400 transition-colors"><PM25Text>ฝุ่น PM2.5</PM25Text></span>
+                        <div className="w-6 h-1 bg-rose-400 rounded-full shadow-lg shadow-rose-400/50"></div>
+                        <span className="typo-chart text-rose-300 uppercase group-hover:text-rose-200 transition-colors"><PM25Text>ฝุ่น PM2.5</PM25Text></span>
                     </div>
                 </div>
             </div>
