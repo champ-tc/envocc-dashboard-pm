@@ -45,7 +45,7 @@
     --type-body-sm-weight: 400;
     --type-body-sm-leading: 1.6;
     --type-body-sm-tracking: 0em;
-    --type-label-size: calc(0.875rem);
+    --type-label-size: calc(0.875rem + 2px);
     --type-label-weight: 600;
     --type-label-leading: 1.5;
     --type-label-tracking: 0em;
