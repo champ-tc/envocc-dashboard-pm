@@ -307,7 +307,11 @@ def main() -> None:
             "วันที่ Update",
             "complication",
             "รหัสจังหวัดที่รับรักษา",
-        ]
+        ],
+        # Source workbooks can omit optional personal-detail columns.  The
+        # ETL output does not use them, so their absence must not fail the
+        # whole pipeline.
+        errors="ignore",
     )
     dds = dds.rename(
         columns={
