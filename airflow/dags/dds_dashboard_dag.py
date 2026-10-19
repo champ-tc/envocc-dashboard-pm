@@ -76,7 +76,11 @@ def publish_dashboard_file(source_signature: Dict[str, int]) -> None:
     try:
         for generated_file, published_file in outputs:
             temporary_file = published_file.with_suffix(f"{published_file.suffix}.tmp")
-            shutil.copy2(generated_file, temporary_file)
+            # Do not preserve the generated file's mtime here.  The Web admin
+            # reports the mtime of the published file, so copy2() made a
+            # successful ETL publish look stale when the generated artifact
+            # carried an older timestamp.
+            shutil.copyfile(generated_file, temporary_file)
             temporary_files.append(temporary_file)
 
         for temporary_file, (_, published_file) in zip(temporary_files, outputs):
