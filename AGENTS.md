@@ -23,5 +23,5 @@
 ## Data Workflow Safety
 1. **Source Data**: Scripts in `airflow/dags/scripts/` are the "Source of Truth" for data processing.
 2. **Runtime Output Files**: Airflow writes CSV/Parquet files to the shared `duckdb-data-volume` at `/opt/airflow/data`; Web reads the same volume at `/app/public/duckdb`. Do not edit runtime outputs manually; update the Airflow pipeline.
-3. **Image Seed Files**: Files committed under `web/public/duckdb/` and `airflow/dags/scripts/` seed a new volume during initialization. Keep seed schemas compatible with runtime outputs.
+3. **Airflow Seed Files**: Files committed under `airflow/dags/scripts/` seed the shared volume during initialization. Keep seed schemas compatible with runtime outputs.
 4. **DuckDB**: Reflect schema changes in every affected query under `web/src/app/dashboard/`, not only the HDC dashboard.

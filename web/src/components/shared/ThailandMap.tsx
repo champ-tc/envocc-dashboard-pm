@@ -7,62 +7,12 @@ import { PROVINCE_MAPPING } from '@/lib/constants';
 import { PM25Text } from '@/components/PM25Mark';
 import { loadTambonBoundaries, needsTambonBoundaries } from '@/lib/dashboard-map-data';
 
-// Helper to fix broken Thai characters (Mojibake)
-const fixThaiMojibake = (str: string) => {
-    if (!str) return '';
-    
-    // ตรวจสอบว่ามีภาษาไทยอยู่แล้วหรือไม่ (\u0E00-\u0E7F) 
-    // ถ้ามีอยู่แล้วไม่ต้อง Decode ซ้ำ (ช่วยป้องกันกรณีมีอักขระพิเศษปนแต่เป็นไทยที่อ่านออกแล้ว)
-    const hasThai = /[ก-ฮะ-์]/.test(str);
-    if (hasThai && !str.includes('à')) return str;
-
-    try {
-        const win1252Map: Record<number, number> = {
-            8364: 0x80, 8218: 0x82, 402: 0x83, 8222: 0x84, 8230: 0x85, 8224: 0x86, 8225: 0x87,
-            710: 0x88, 8240: 0x89, 352: 0x8A, 8249: 0x8B, 338: 0x8C, 381: 0x8E, 8216: 0x91,
-            8217: 0x92, 8220: 0x93, 8221: 0x94, 8226: 0x95, 8211: 0x96, 8212: 0x97, 732: 0x98,
-            8482: 0x99, 353: 0x9A, 8250: 0x9B, 339: 0x9C, 382: 0x9E, 376: 0x9F,
-            // Add missing common characters that might appear in Thai Mojibake
-            129: 0x81, 141: 0x8D, 143: 0x8F, 144: 0x90, 157: 0x9D
-        };
-
-        const bytes = new Uint8Array(str.split('').map(c => {
-            const code = c.charCodeAt(0);
-            return win1252Map[code] || (code < 256 ? code : 63);
-        }));
-        
-        const decoded = new TextDecoder('utf-8').decode(bytes);
-        // ถ้าผลลัพธ์มีภาษาไทย ให้ใช้ผลลัพธ์นั้น
-        if (/[ก-ฮะ-์]/.test(decoded)) return decoded;
-        return str;
-    } catch (e) {
-        return str;
-    }
-};
-
-// Helper สำหรับทำความสะอาดชื่อเพื่อการจับคู่
-const cleanThaiName = (name: string) => {
-    if (!name) return '';
-    return name
-        .toString()
-        .trim()
-        .replace(/^(อำเภอเมือง|อำเภอ|เขต|จังหวัด|ตำบล|แขวง|ต\.|อ\.|จ\.|เมือง)/, '')
-        .replace(/\s+/g, '')
-        .replace(/เเ/g, 'แ')
-        .trim();
-};
-
-const normalizeProvinceName = (pName: string) => {
-    if (!pName) return '';
-    const fixed = fixThaiMojibake(pName).trim();
-    if (fixed === 'กรุงเทพมหานคร' || fixed === 'Bangkok' || fixed === 'Bangkok Metropolis') {
-        return 'กรุงเทพมหานคร';
-    }
-    for (const [en, th] of Object.entries(PROVINCE_MAPPING)) {
-        if (fixed.toLowerCase() === en.toLowerCase()) return th;
-    }
-    return fixed;
-};
+import {
+    fixThaiMojibake,
+    cleanThaiName,
+    normalizeProvinceName,
+    getProvinceFeatureStyle
+} from './thailand-map-utils';
 
 interface ThailandMapProps {
     data: Record<string, any>;
@@ -80,7 +30,7 @@ interface ThailandMapProps {
     focusSelectedSubdistricts?: boolean;
     requireDistrictForTambons?: boolean;
     visibleProvinces?: string[];
-    /** Opt-in exact geographic lookup: undefined hides the area; value 0 remains valid. */
+    /** Opt-in exact geographic lookup: undefined indicates no data; area remains visible with boundary lines. */
     resolveAreaData?: (area: { province: string; district?: string; subdistrict?: string }, level: 'province' | 'district' | 'subdistrict') => { value: number; [key: string]: any } | undefined;
 }
 
@@ -258,18 +208,17 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         const selectedDistricts = (filters.districts || []).map((d: string) => cleanThaiName(d));
 
         if (selectedDistricts.length > 0 || effectiveShowDistrictBoundaries) return { ...geoData, features: [] };
-        if (selectedProvinces.length === 0 && visibleProvinces === undefined && !resolveAreaData) return geoData;
+        if (selectedProvinces.length === 0 && visibleProvinces === undefined) return geoData;
 
         return {
             ...geoData,
             features: geoData.features.filter((f: any) => {
                 const provinceEn = f.properties.name;
                 const provinceTh = normalizeProvinceName(PROVINCE_MAPPING[provinceEn] || provinceEn);
-                const selected = selectedProvinces.length === 0 && visibleProvinces === undefined || selectedProvinces.includes(cleanThaiName(provinceTh));
-                return selected && (!resolveAreaData || resolveAreaData({ province: provinceTh }, 'province') !== undefined);
+                return selectedProvinces.length === 0 && visibleProvinces === undefined || selectedProvinces.includes(cleanThaiName(provinceTh));
             })
         };
-    }, [geoData, filters.provinces, filters.districts, effectiveShowDistrictBoundaries, visibleProvinces, resolveAreaData]);
+    }, [geoData, filters.provinces, filters.districts, effectiveShowDistrictBoundaries, visibleProvinces]);
 
     const displayTambonData = useMemo(() => {
         const boundaryData = effectiveShowDistrictBoundaries ? allDistrictData : allTambonData;
@@ -332,15 +281,14 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         const isSelected = selectedProvinces.length > 0 ? selectedProvinces.includes(cleanP) : true;
 
         const currentData = dataRef.current || normalizedData;
-        const rawValue = resolveAreaData ? resolveAreaData({ province: provinceTh }, 'province') : currentData[cleanP] || { value: 0, rate: 0 };
-        const value = typeof rawValue === 'object' ? (rawValue.value || 0) : (rawValue || 0);
-        return {
-            fillColor: getColor(value),
-            weight: focusSelectedSubdistricts ? 2.2 : (isSelected ? 1.5 : 0.8),
-            opacity: 1,
-            color: focusSelectedSubdistricts ? '#1e293b' : (isSelected ? '#475569' : '#cbd5e1'),
-            fillOpacity: isSelected ? 0.7 : 0.2
-        };
+        const rawValue = resolveAreaData ? (resolveAreaData({ province: provinceTh }, 'province') ?? currentData[cleanP]) : currentData[cleanP];
+
+        return getProvinceFeatureStyle({
+            isSelected,
+            focusSelectedSubdistricts,
+            rawValue,
+            getColor
+        });
     };
 
     const styleRef = useRef(style);
@@ -452,7 +400,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                 
                 const cleanP = cleanThaiName(provinceTh);
                 const currentData = dataRef.current || normalizedData;
-                const latestRawValue = resolveAreaData ? resolveAreaData({ province: provinceTh }, 'province') : currentData[cleanP];
+                const latestRawValue = resolveAreaData ? (resolveAreaData({ province: provinceTh }, 'province') ?? currentData[cleanP]) : currentData[cleanP];
                 const popupContent = renderPopup ? renderPopup(provinceTh, latestRawValue, popupUnit) : `<div class="typo-body p-2 min-w-map-popup"><div class="typo-label text-slate-800">${provinceTh}</div></div>`;
 
                 l.bindTooltip(popupContent, getAdaptiveTooltipOptions(e)).openTooltip(e.latlng);
@@ -538,10 +486,23 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
         });
     };
 
+    const hasAnyProvinceData = useMemo(() => {
+        if (!resolveAreaData || !displayGeoData?.features?.length) return true;
+        return displayGeoData.features.some((f: any) => {
+            const provinceEn = f.properties.name;
+            const provinceTh = normalizeProvinceName(PROVINCE_MAPPING[provinceEn] || provinceEn);
+            const cleanP = cleanThaiName(provinceTh);
+            const currentData = dataRef.current || normalizedData;
+            const rawVal = resolveAreaData ? (resolveAreaData({ province: provinceTh }, 'province') ?? currentData[cleanP]) : currentData[cleanP];
+            return rawVal !== undefined && rawVal !== null && (typeof rawVal === 'object' ? rawVal.value !== undefined && rawVal.value !== null : true);
+        });
+    }, [resolveAreaData, displayGeoData, normalizedData]);
+
     return (
         <div className="w-full h-full min-h-0 relative group flex flex-col">
             {resolveAreaData && geoData && !(showDistrictBoundaries ? loadingDistricts : loadingTambon)
-                && (showDistrictBoundaries || filters.districts?.length ? displayTambonData?.features.length === 0 : displayGeoData?.features.length === 0) && (
+                && popupUnit !== 'ราย'
+                && (showDistrictBoundaries || filters.districts?.length ? displayTambonData?.features.length === 0 : !hasAnyProvinceData) && (
                 <div role="status" className="typo-body-sm absolute top-6 inset-x-6 z-map-loading rounded-xl bg-white/95 p-3 text-center text-slate-700">
                     ไม่พบข้อมูลฝุ่นในพื้นที่และช่วงวันที่ที่เลือก
                 </div>
@@ -563,7 +524,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                 >
                 {/* Local geography backdrop: no external basemap tiles or API key dependency. */}
                 <Pane name="geography" style={{ zIndex: 300 }}>
-                    {geoData && <GeoJSON data={geoData} interactive={false} style={() => ({ fillColor: '#cbd5e1', fillOpacity: 0.7, color: '#94a3b8', weight: 0.8 })} />}
+                    {geoData && <GeoJSON data={geoData} interactive={false} style={() => ({ fillColor: '#cbd5e1', fillOpacity: 0.7, color: focusSelectedSubdistricts ? '#1e293b' : '#475569', weight: 1.2 })} />}
                 </Pane>
                 <Pane name="provinces" style={{ zIndex: 400 }}>
                     {displayGeoData && (

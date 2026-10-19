@@ -336,16 +336,15 @@ export async function getDashboardData(filters: Partial<HDCFilters> = {}, scope?
                                     avgPM25: dataRow.avg_pm25 ? Number(dataRow.avg_pm25).toFixed(1) : '0.0',
                                     provinceCount: Number(dataRow.province_count || 0),
                                     reportDate: dataRow.latest_date ? new Date(dataRow.latest_date as string).toISOString().split('T')[0] : null,
-                                    top5DiseaseStats: (res2 || []).map(r => {
-                                        const diseaseName = r.name as string;
-                                        const found = HDC_DISEASES.find(d => d.dbValues.includes(diseaseName));
+                                    top5DiseaseStats: HDC_DISEASES.map(d => {
+                                        const found = (res2 || []).find(r => d.dbValues.includes(r.name as string) || d.label === r.name || d.id === r.name);
                                         return {
-                                            id: diseaseName,
-                                            label: diseaseName,
-                                            value: Math.round(Number(r.value || 0)),
-                                            color: found ? found.color : 'blue'
+                                            id: d.dbValue,
+                                            label: d.label,
+                                            value: found ? Math.round(Number(found.value || 0)) : 0,
+                                            color: d.color
                                         };
-                                    }),
+                                    }).sort((a, b) => b.value - a.value),
                                     monthlyTrend: (res3 || []).map((m) => {
                                         const trends: MonthlyTrendData = { 
                                             month: m.month_year as string, 

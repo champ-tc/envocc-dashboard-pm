@@ -906,12 +906,13 @@ export default function DDSDashboardPage() {
                                 popupUnit="ราย"
                                 renderPopup={(area, rawValue, popupUnit) => {
                                     const valObj = typeof rawValue === 'object' ? rawValue : { value: 0, rate: 0, pm25: 0 };
+                                    const hasData = rawValue !== undefined && rawValue !== null && (typeof rawValue === 'object' ? rawValue.value !== undefined && rawValue.value !== null : true);
                                     return `
                                         <div class="typo-body p-6 min-w-60 bg-slate-900 text-white rounded-3xl border border-white/10 shadow-2xl">
                                             <div class="typo-label text-blue-400 uppercase mb-4 border-b border-white/10 pb-2">${area}</div>
                                             <div class="space-y-3">
-                                                <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl"><span>จำนวนผู้ป่วย</span><span class="typo-section ">${Math.round(valObj.value).toLocaleString()} ${popupUnit}</span></div>
-                                                ${!isAreaBreakdownView ? `<div class="flex items-center justify-between bg-blue-500/10 p-4 rounded-2xl"><span>อัตราป่วย</span><span class="typo-section text-blue-400">${valObj.rate.toFixed(2)} ต่อแสน</span></div>` : ''}
+                                                <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl"><span>จำนวนผู้ป่วย</span><span class="typo-section ">${hasData ? `${Math.round(valObj.value).toLocaleString()} ${popupUnit}` : 'ไม่มีข้อมูล'}</span></div>
+                                                ${!isAreaBreakdownView && hasData ? `<div class="flex items-center justify-between bg-blue-500/10 p-4 rounded-2xl"><span>อัตราป่วย</span><span class="typo-section text-blue-400">${valObj.rate.toFixed(2)} ต่อแสน</span></div>` : ''}
                                                 ${area.includes('-') && valObj.pm25 ? `<div class="flex items-center justify-between bg-rose-500/10 p-4 rounded-2xl"><span>PM<span class="pm25-subscript">2.5</span></span><span class="typo-section text-rose-400">${valObj.pm25.toFixed(1)} มคก./ลบ.ม.</span></div>` : ''}
                                             </div>
                                         </div>

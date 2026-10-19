@@ -45,9 +45,9 @@ def clean_code(value):
 
 
 def merge_diagnosis_codes(primary, code_list):
-    """Merge the primary/list diagnoses for group 201 without duplicate codes."""
+    """Merge the primary/list diagnoses without duplicate codes."""
     merged = []
-    for value in [primary, code_list, "Z581"]:
+    for value in [primary, code_list]:
         if pd.isna(value):
             continue
         for item in re.split(r"[,\s]+", str(value)):
@@ -239,9 +239,14 @@ def main() -> None:
     icd = pd.read_excel(ICD10_PATH)
 
     before = len(dds)
-    dds = dds[
-        ~dds["ชื่อ"].astype(str).str.contains("ทดสอบ", case=False, na=False)
-    ]
+    test_pattern = r"ทดสอบ|test"
+    is_test_row = (
+        dds["ชื่อ"].fillna("").astype(str).str.contains(test_pattern, case=False, na=False)
+        | dds["หมายเหตุ"].fillna("").astype(str).str.contains(
+            test_pattern, case=False, na=False
+        )
+    )
+    dds = dds[~is_test_row]
     print(f"Removed test rows: {before - len(dds)}")
 
     before = len(dds)
@@ -315,6 +320,14 @@ def main() -> None:
 
     dds["icd10"] = dds["icd10"].apply(clean_icd)
     dds["icd10_list"] = dds["icd10_list"].apply(clean_icd_list)
+
+    before = len(dds)
+    has_z581 = dds["icd10"].fillna("").str.contains("Z581", regex=False) | dds[
+        "icd10_list"
+    ].fillna("").str.contains("Z581", regex=False)
+    dds = dds[has_z581].copy()
+    print(f"Rows with Z581 in ICD10 fields: {len(dds)} (removed {before - len(dds)})")
+
     dds["icd10_list"] = [
         merge_diagnosis_codes(primary, code_list)
         for primary, code_list in zip(dds["icd10"], dds["icd10_list"])

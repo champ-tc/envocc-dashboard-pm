@@ -129,7 +129,7 @@ openssl s_client -connect pm25-patients.ddc.moph.go.th:443 -servername pm25-pati
 
 ต้องได้ `Verify return code: 0 (ok)` และได้รับทั้ง leaf กับ intermediate certificate
 
-Compose จะรัน service สำหรับเตรียม schema, seed ผู้ใช้ และเตรียม shared volumes ก่อนเริ่ม Web และ Airflow
+Compose จะรัน service สำหรับเตรียม schema และเตรียม shared volumes ก่อนเริ่ม Web และ Airflow
 
 ## Path สำคัญ
 

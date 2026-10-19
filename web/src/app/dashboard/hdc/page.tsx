@@ -240,7 +240,23 @@ interface StatCardsProps {
 }
 
 function StatCards({ data, loading }: StatCardsProps) {
-    const top5Sorted = [...(data?.top5DiseaseStats || [])]
+    const allDiseaseStats = HDC_DISEASES.map(d => {
+        const found = (data?.top5DiseaseStats || []).find(s => 
+            s.id === d.id || 
+            s.id === d.dbValue || 
+            s.label === d.label || 
+            d.dbValues.includes(s.label) || 
+            d.dbValues.includes(s.id)
+        );
+        return {
+            id: d.id,
+            label: d.label,
+            value: found ? (found.value ?? 0) : 0,
+            color: d.color
+        };
+    });
+
+    const top5Sorted = [...allDiseaseStats]
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
 
@@ -278,12 +294,12 @@ function StatCards({ data, loading }: StatCardsProps) {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 {top5Sorted.map((stat, i) => (
-                    <div key={i} className="bg-white/5 backdrop-blur-lg p-4 rounded-3xl shadow-xl border border-white/10 transition-all group ring-1 ring-white/5 min-h-24 flex flex-col justify-between hover:bg-white/10">
+                    <div key={stat.id || i} className="bg-white/5 backdrop-blur-lg p-4 rounded-3xl shadow-xl border border-white/10 transition-all group ring-1 ring-white/5 min-h-24 flex flex-col justify-between hover:bg-white/10">
                         <div className="typo-chart text-white/50 uppercase mb-1 line-clamp-2" title={stat.label}>
                             {stat.label}
                         </div>
                         <div className="typo-subtitle text-white tabular-nums flex items-end gap-2">
-                            {loading ? <div className="h-7 w-20 bg-white/10 animate-pulse rounded-lg"></div> : stat.value?.toLocaleString()}
+                            {loading ? <div className="h-7 w-20 bg-white/10 animate-pulse rounded-lg"></div> : (stat.value ?? 0).toLocaleString()}
                             <div className="w-1 h-5 rounded-full mb-0.5 shadow-sm" style={{ backgroundColor: getHexColor(stat.color) }}></div>
                         </div>
                     </div>
@@ -710,7 +726,7 @@ export default function DashboardHDC() {
                                 data={data?.provinceAverages || {}} 
                                 filters={provinceMapFilters}
                                 visibleProvinces={filters.provinces.length ? filters.provinces : filters.regions.length ? baseProvinces : undefined}
-                                resolveAreaData={(area, level) => level === 'province' ? data?.provinceAverages[area.province] : undefined}
+                                resolveAreaData={(area, level) => level === 'province' ? data?.provinceAverages?.[area.province] : undefined}
                                 requireDistrictForTambons
                                 interactive={false}
                                 getColor={ddcColorScale} 
@@ -719,18 +735,20 @@ export default function DashboardHDC() {
                                 renderPopup={(province, rawValue, popupUnit) => {
                                     const value = typeof rawValue === 'object' ? rawValue.value : 0;
                                     const rate = typeof rawValue === 'object' ? rawValue.rate : 0;
+                                    const hasData = rawValue !== undefined && rawValue !== null && (typeof rawValue === 'object' ? rawValue.value !== undefined && rawValue.value !== null : true);
                                     return `
                                         <div class="typo-body p-6 min-w-60 bg-slate-900 text-white rounded-3xl border border-white/10 shadow-2xl">
                                             <div class="typo-label text-blue-400 uppercase mb-4 border-b border-white/10 pb-2">${province}</div>
                                             <div class="space-y-3">
                                                 <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
                                                     <span class="typo-caption text-white/50 uppercase">จำนวนผู้ป่วย</span>
-                                                    <span class="typo-section text-white tabular-nums">${Math.round(value).toLocaleString()} <small class="typo-caption opacity-40">${popupUnit}</small></span>
+                                                    <span class="typo-section text-white tabular-nums">${hasData ? `${Math.round(value).toLocaleString()} <small class="typo-caption opacity-40">${popupUnit}</small>` : 'ไม่มีข้อมูล'}</span>
                                                 </div>
+                                                ${hasData ? `
                                                 <div class="flex items-center justify-between bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
                                                     <span class="typo-caption text-blue-400 uppercase">อัตราป่วย</span>
                                                     <span class="typo-section text-blue-400 tabular-nums">${rate.toFixed(2)} <small class="typo-caption opacity-60">ต่อแสน</small></span>
-                                                </div>
+                                                </div>` : ''}
                                             </div>
                                         </div>
                                     `;

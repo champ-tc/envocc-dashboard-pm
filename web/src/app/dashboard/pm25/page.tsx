@@ -758,10 +758,11 @@ export default function DashboardPM25() {
                     const dates = period?.start && period?.end
                         ? `<div class="typo-section mt-3 text-purple-400">วันที่ PM2.5 &gt; ${threshold} มคก./ลบ.ม. ติดต่อกันล่าสุด<br /><span class="typo-section text-white">${formatDateShort(period.start)} - ${formatDateShort(period.end)}</span></div>`
                         : '';
-                    const name = rawValue && typeof rawValue === 'object' ? rawValue.name : areaName;
-                    const value = rawValue && typeof rawValue === 'object'
+                    const name = rawValue && typeof rawValue === 'object' && rawValue.name ? rawValue.name : areaName;
+                    const hasData = rawValue && typeof rawValue === 'object' && rawValue.value !== undefined && rawValue.value !== null;
+                    const value = hasData
                         ? `<div class="typo-section text-white mt-2">${rawValue.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${popupUnit}</div>`
-                        : '';
+                        : `<div class="typo-section text-white/50 mt-2">ไม่มีข้อมูล</div>`;
                     return `<div class="typo-body p-4 min-w-60 max-w-xs bg-slate-900 text-white rounded-2xl border border-white/10">
                         <div class="typo-subtitle text-blue-400 mb-3">${escape(name)}</div>
                         <div class="typo-section text-purple-400">${escape(title)}</div>
