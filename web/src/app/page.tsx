@@ -144,7 +144,7 @@ export default function HomePage() {
             <div className="z-10 text-center space-y-8 md:space-y-12 px-4 max-w-5xl mx-auto mt-24 md:mt-32">
                 {/* Hero Section */}
                 <header className="space-y-4">
-                    <h1 className="text-6xl text-white drop-shadow-lg uppercase">
+                    <h1 className="typo-hero text-white drop-shadow-lg uppercase">
                         <PM25Mark /> Patient Database <br className="hidden sm:block" />
                         <span className="typo-title block mt-2 opacity-90 capitalize">
                             ระบบฐานข้อมูลผู้ป่วยจากฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน (<PM25Mark />)

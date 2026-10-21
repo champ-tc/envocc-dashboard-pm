@@ -49,7 +49,7 @@
 ## 3. โครงสร้างเลเยอร์และการจัดตำแหน่ง (Layout & Positioning)
 
 ### 3.1 Global Structure
-- **พื้นหลัง**: รูปภาพ `background.jpg` (Fixed & Cover) ซ้อนทับด้วย Overlay สีเข้ม `bg-slate-900/40`
+- **พื้นหลัง**: รูปภาพ `background.jpg` (Fixed & Cover) ซ้อนทับด้วย Overlay `bg-slate-900/15` เพื่อให้พื้นหลังสว่างและโปร่งใสขึ้น
 - **Container**: `max-w-screen-2xl` จัดวางแบบ `flex flex-col gap-4`
 
 ### 3.2 Positioning Layers (z-index)

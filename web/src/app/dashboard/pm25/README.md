@@ -89,7 +89,7 @@
 
 ### 4.1 Global Layout (`<div className="min-h-screen...">`)
 - **พื้นหลัง (Background)**: ใช้ภาพ `/img/background-optimized.jpg` แบบ `background-size: cover` จัดกึ่งกลางและเต็มหน้าจอโดยรักษาสัดส่วน อาจตัดขอบภาพบางส่วน ไม่ทำซ้ำ และฟิกซ์ตามหน้าจอเพื่อไม่ขยายภาพตามความยาวเนื้อหา
-- **เลเยอร์ซ้อนทับ (Overlay)**: ใช้ `bg-slate-900/40` เพื่อคงความชัดของข้อความ ทั้งสองชั้นไม่รับ pointer events และซ่อนจาก accessibility tree
+- **เลเยอร์ซ้อนทับ (Overlay)**: ใช้ `bg-slate-900/15` เพื่อให้พื้นหลังสว่างโปร่งใสและยังคงความชัดของข้อความ ทั้งสองชั้นไม่รับ pointer events และซ่อนจาก accessibility tree
 - **คอนเทนเนอร์หลัก (`<main>`)**: กำหนดความกว้างสูงสุดที่ `max-w-screen-2xl` ความสูงขั้นต่ำ `min-h-screen` และบังคับการจัดเรียงเป็นแนวตั้ง `flex flex-col gap-4`
 
 ### 4.2 ส่วนหัว (Header Layer - `z-[60]`)

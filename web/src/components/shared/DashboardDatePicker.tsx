@@ -81,7 +81,7 @@ export default function DashboardDatePicker({ label, options, value, onChange, m
 
     return (
         <div className="relative col-span-1 min-w-0">
-            <label className="typo-caption mb-2 ml-2 block uppercase text-white/70">{label}</label>
+            <label className="typo-label filter-label mb-2 ml-2 block uppercase text-white">{label}</label>
             <button
                 type="button"
                 aria-haspopup="dialog"
@@ -128,12 +128,12 @@ export default function DashboardDatePicker({ label, options, value, onChange, m
                                 {monthsInViewYear.map((key) => {
                                     const index = Number(key.slice(5, 7)) - 1;
                                     const selected = selectedKey === key;
-                                    return <button key={key} type="button" onClick={() => selectValue(key)} className={`typo-label btn min-h-12 rounded-xl ${selected ? 'btn-primary' : 'btn-ghost bg-white/5 text-white/75 hover:bg-white/10'}`}>{THAI_MONTHS_SHORT[index]}</button>;
+                                    return <button key={key} type="button" onClick={() => selectValue(key)} className={`typo-label btn min-h-12 rounded-xl ${selected ? 'btn-primary' : 'btn-ghost bg-white/5 text-white hover:bg-white/10'}`}>{THAI_MONTHS_SHORT[index]}</button>;
                                 })}
                             </div>
                         ) : (
                             <div className="p-4">
-                                <div className="typo-chart mb-2 grid grid-cols-7 text-center text-white/35">
+                                <div className="typo-chart mb-2 grid grid-cols-7 text-center text-white">
                                     {WEEKDAYS.map((day) => <span key={day}>{day}</span>)}
                                 </div>
                                 <div className="grid grid-cols-7 gap-1">
@@ -142,12 +142,12 @@ export default function DashboardDatePicker({ label, options, value, onChange, m
                                         const key = `${viewMonth}-${String(day).padStart(2, '0')}`;
                                         const enabled = available.has(key);
                                         const selected = selectedKey === key;
-                                        return <button key={key} type="button" disabled={!enabled} onClick={() => selectValue(key)} className={`typo-caption btn h-auto min-h-0 aspect-square px-0 rounded-lg ${selected ? 'btn-primary' : 'btn-ghost text-white/75 disabled:text-white/15'}`}>{day}</button>;
+                                        return <button key={key} type="button" disabled={!enabled} onClick={() => selectValue(key)} className={`typo-caption btn h-auto min-h-0 aspect-square px-0 rounded-lg ${selected ? 'btn-primary' : 'btn-ghost text-white disabled:text-white/30'}`}>{day}</button>;
                                     })}
                                 </div>
                             </div>
                         )}
-                        <div className="typo-chart border-t border-white/10 px-4 py-2.5 text-center text-white/35">เลือกได้เฉพาะช่วงที่มีข้อมูล</div>
+                        <div className="typo-chart border-t border-white/10 px-4 py-2.5 text-center text-white">เลือกได้เฉพาะช่วงที่มีข้อมูล</div>
                     </div>
                 </>
             )}

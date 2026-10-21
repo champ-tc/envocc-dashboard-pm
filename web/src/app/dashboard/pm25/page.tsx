@@ -158,7 +158,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
 
     return (
         <div className="relative col-span-1">
-            <label className="typo-caption block uppercase text-white/70 mb-2 ml-2">{label}</label>
+            <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
             <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
                 <div className="truncate max-w-filter-label">
                     {displayText}
@@ -172,7 +172,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                         {searchable && (
                             <div className="relative mb-1">
                                 <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} onClick={(event) => event.stopPropagation()} placeholder="ค้นหาจังหวัด" aria-label="ค้นหาจังหวัด" className="typo-caption input input-sm w-full rounded-2xl border-white/15 bg-white/10 pr-9 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none" />
-                                {searchText && <button type="button" aria-label="ล้างคำค้นหาจังหวัด" onClick={(event) => { event.stopPropagation(); setSearchText(''); }} className="typo-label btn btn-ghost btn-xs btn-circle absolute right-1.5 top-1/2 -translate-y-1/2 text-white/70 hover:bg-white/10 hover:text-white">×</button>}
+                                {searchText && <button type="button" aria-label="ล้างคำค้นหาจังหวัด" onClick={(event) => { event.stopPropagation(); setSearchText(''); }} className="typo-label btn btn-ghost btn-xs btn-circle absolute right-1.5 top-1/2 -translate-y-1/2 text-white hover:bg-white/10">×</button>}
                             </div>
                         )}
                         <div onClick={() => { if (isAllSelected) onChange([]); else onChange([...safeOptions]); setIsOpen(false); }} className="flex items-center gap-3 p-3.5 hover:bg-white/10 rounded-2xl cursor-pointer transition-all border-b border-white/5 mb-1 group">
@@ -188,11 +188,11 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                                     <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
                                         {isSelected && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
                                     </div>
-                                    <span className={`typo-caption transition-colors ${isSelected ? 'text-blue-400' : 'text-white/70'}`}>{opt}</span>
+                                    <span className={`typo-caption transition-colors ${isSelected ? 'text-blue-400' : 'text-white'}`}>{opt}</span>
                                 </div>
                             );
                         })}
-                        {searchable && filteredOptions.length === 0 && <div className="typo-caption px-3 py-4 text-center text-white/50">ไม่พบจังหวัดที่ค้นหา</div>}
+                        {searchable && filteredOptions.length === 0 && <div className="typo-caption px-3 py-4 text-center text-white">ไม่พบจังหวัดที่ค้นหา</div>}
                     </div>
                 </>
             )}
@@ -269,7 +269,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
     return (
         <div ref={chartRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
             <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename={`pm25-trend-${title.includes('เขต') ? 'region' : title.includes('จังหวัด') ? 'province' : 'district'}`} /></div>
-            <h4 className="typo-section text-white flex items-center gap-4 uppercase mb-8 shrink-0">
+            <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase mb-8 shrink-0">
                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                 <PM25Text>{title}</PM25Text>
                 {!loading && labels.length > 0 && (
@@ -281,14 +281,14 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
             <div className="flex-1 flex gap-4 min-h-0 relative">
                 <div className="flex-1 relative border-r border-white/5 pr-4 flex min-w-0">
                     <div className="w-5 shrink-0 flex items-center justify-center">
-                        <span className="typo-chart text-white/80 whitespace-nowrap writing-mode-vertical rotate-180">
+                        <span className="typo-chart chart-label text-white whitespace-nowrap writing-mode-vertical rotate-180">
                             <PM25Text>ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</PM25Text>
                         </span>
                     </div>
                     {loading ? <div className="w-full h-full bg-white/5 animate-pulse rounded-2xl"></div> : (
                         <div className="flex-1 min-w-0 h-full flex flex-col">
                             <div className="flex-1 min-h-0 flex">
-                                <div className="typo-chart w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-white/80 tabular-nums">
+                                <div className="typo-chart chart-label w-9 shrink-0 flex flex-col justify-between items-end pr-2 text-white tabular-nums">
                                     {yAxisTicks.map((tick, index) => (
                                         <span key={index}>{Math.round(tick)}</span>
                                     ))}
@@ -365,7 +365,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                                         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hoveredPoint.color }} />
                                                         {hoveredPoint.label}
                                                     </div>
-                                                    <div className="grid grid-cols-metric gap-x-3 gap-y-1 text-white/70">
+                                                    <div className="grid grid-cols-metric gap-x-3 gap-y-1 text-white">
                                                         <span>วันที่</span>
                                                         <span className="typo-label text-right text-white">{formatDateShort(hoveredPoint.date)}</span>
                                                         <span>พื้นที่</span>
@@ -380,7 +380,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                 </div>
                             </div>
                             <div
-                                className="typo-chart ml-9 mt-1 grid text-white/80 tabular-nums"
+                                className="typo-chart chart-label ml-9 mt-1 grid text-white tabular-nums"
                                 style={{ gridTemplateColumns: `repeat(${Math.max(xAxisLabels.length, 1)}, minmax(0, 1fr))` }}
                             >
                                 {xAxisLabels.map((date, index) => (
@@ -400,7 +400,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                     </span>
                                 ))}
                             </div>
-                            <div className="typo-chart ml-9 text-center text-white/80">วันที่</div>
+                            <div className="typo-chart chart-label ml-9 text-center text-white">วันที่</div>
                         </div>
                     )}
                 </div>
@@ -419,7 +419,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
                                 }}
                                 className={`flex items-center gap-2 min-w-0 cursor-pointer transition-all ${isHidden ? 'opacity-40 grayscale' : 'hover:opacity-80'}`}>
                                 <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isHidden ? '#475569' : colors[idx % colors.length] }}></div>
-                                <span className={`typo-chart truncate transition-colors ${isHidden ? 'text-white/30' : 'text-white/80'}`} title={label}>{label}</span>
+                                <span className={`typo-chart chart-label truncate transition-colors ${isHidden ? 'text-white/30' : 'text-white'}`} title={label}>{label}</span>
                             </div>
                         );
                     })}
@@ -437,7 +437,7 @@ function TopExceedRanking({ data, level = 'province', loading }: { data?: { area
     return (
         <div className="bg-slate-700 p-4 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
-                <h4 className="typo-section text-white flex items-center gap-3 uppercase">
+                <h4 className="typo-section section-title text-white flex items-center gap-3 uppercase">
                     <div className="w-2 h-6 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
                     10 อันดับ{areaLabel}ที่มีจำนวนวันเกินมาตรฐานมากที่สุด
                 </h4>
@@ -454,7 +454,7 @@ function TopExceedRanking({ data, level = 'province', loading }: { data?: { area
                         ))}
                     </div>
                 ) : rows.length === 0 ? (
-                    <div className="typo-label h-full min-h-40 flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/80">
+                    <div className="typo-label h-full min-h-40 flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white">
                         ไม่พบ{areaLabel}ที่เกินค่ามาตรฐานในช่วงวันที่เลือก
                     </div>
                 ) : (
@@ -478,7 +478,7 @@ function TopExceedRanking({ data, level = 'province', loading }: { data?: { area
                                         </div>
                                         <div className="text-right shrink-0 flex items-baseline gap-1">
                                             <div className="typo-label text-white tabular-nums">{days.toLocaleString()}</div>
-                                            <div className="typo-chart text-white/80">วัน</div>
+                                            <div className="typo-chart text-white">วัน</div>
                                         </div>
                                     </div>
                                 </div>
@@ -718,7 +718,7 @@ export default function DashboardPM25() {
         <div className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
                 <div className="flex items-center justify-between gap-3">
-                <h4 className="typo-section text-white flex items-center gap-4 uppercase">
+                <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase">
                     <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40 shrink-0"></div>
                     <PM25Text>{activeMap === 'avg' ? 'แผนที่ค่าฝุ่น PM2.5 เฉลี่ย 24 ชั่วโมง สูงสุด' : activeMap === 'streak37' ? 'ค่าฝุ่น PM2.5 มากกว่า 37.5 มคก./ลบ.ม.' : 'ค่าฝุ่น PM2.5 มากกว่า 75 มคก./ลบ.ม.'}</PM25Text>
                 </h4>
@@ -762,7 +762,7 @@ export default function DashboardPM25() {
                     const hasData = rawValue && typeof rawValue === 'object' && rawValue.value !== undefined && rawValue.value !== null;
                     const value = hasData
                         ? `<div class="typo-section text-white mt-2">${rawValue.value.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${popupUnit}</div>`
-                        : `<div class="typo-section text-white/50 mt-2">ไม่มีข้อมูล</div>`;
+                        : `<div class="typo-section text-white mt-2">ไม่มีข้อมูล</div>`;
                     return `<div class="typo-body p-4 min-w-60 max-w-xs bg-slate-900 text-white rounded-2xl border border-white/10">
                         <div class="typo-section text-blue-400 mb-3">${escape(name)}</div>
                         <div class="typo-section text-purple-400">${escape(title)}</div>
@@ -777,7 +777,7 @@ export default function DashboardPM25() {
     };
 
     return (
-        <div className="typo-body min-h-screen bg-slate-900 relative selection:bg-blue-500/30 overflow-x-hidden">
+        <div className="typo-body min-h-screen bg-slate-800 relative selection:bg-blue-500/30 overflow-x-hidden">
             <div
                 aria-hidden="true"
                 className="pointer-events-none fixed inset-0 z-0"
@@ -790,7 +790,7 @@ export default function DashboardPM25() {
             />
             <div
                 aria-hidden="true"
-                className="pointer-events-none fixed inset-0 z-0 bg-slate-900/40"
+                className="pointer-events-none fixed inset-0 z-0 bg-slate-900/15"
             />
             {loading && <DashboardLoading />}
 
@@ -808,8 +808,8 @@ export default function DashboardPM25() {
                     ]}
                     title={<>การเฝ้าระวังสถานการณ์ฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน <span className="text-blue-400"><PM25Text>(PM2.5) ประเทศไทย</PM25Text></span></>}
                     subtitle="กรมควบคุมโรค | กลุ่มเฝ้าระวังและตอบโต้ภาวะฉุกเฉิน กองโรคจากการประกอบอาชีพและสิ่งแวดล้อม"
-                    className="relative z-header mb-2"
-                    titleClassName="uppercase drop-shadow-md"
+                    className="relative z-header mb-2 head head-pm25"
+                    titleClassName="head head-pm25 uppercase drop-shadow-md"
                     navClassName=""
                 />
                 <DashboardBusyAlert message={busyMessage} />
@@ -844,7 +844,7 @@ export default function DashboardPM25() {
                         <div key={i} className={`relative ${stat.isPrimary
                             ? "bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-5 rounded-3xl shadow-2xl border border-white/30 transition-all group min-h-32 flex flex-col justify-between"
                             : 'bg-white/10 backdrop-blur-xl p-5 rounded-3xl shadow-xl border border-white/20 transition-all group ring-1 ring-white/5 min-h-32 flex flex-col justify-between'}`}>
-                            <div className={`typo-caption mb-2 ${stat.isPrimary ? 'text-blue-100/90' : 'text-white/70'}`}>
+                            <div className={`typo-caption mb-2 ${stat.isPrimary ? 'text-blue-100/90' : 'text-white'}`}>
                                 {i === 2 ? <><PM25Text>จำนวนจังหวัดที่ค่าฝุ่น PM2.5 </PM25Text><span className="text-orange-300">เกินค่ามาตรฐาน (37.5 มคก./ลบ.ม.)</span></> : i === 3 ? <><PM25Text>จำนวนจังหวัดที่ค่าฝุ่น PM2.5 </PM25Text><span className="text-red-300">มากกว่า 75 มคก./ลบ.ม.</span></> : <PM25Text>{stat.label}</PM25Text>}
                             </div>
                             <div className="typo-metric text-white tabular-nums flex items-end gap-2 drop-shadow-md">
@@ -855,7 +855,7 @@ export default function DashboardPM25() {
                                 ) : stat.value?.toLocaleString()}
                                 {!stat.isPrimary && <div className="w-1.5 h-6 rounded-full mb-1" style={{ backgroundColor: stat.color }}></div>}
                             </div>
-                            {i < 2 ? <div className={`typo-chart uppercase mt-1 ${stat.isPrimary ? 'text-white/50' : 'text-white/30'}`}>{stat.unit}</div> : (
+                            {i < 2 ? <div className="typo-chart uppercase mt-1 text-white">{stat.unit}</div> : (
                                 <button type="button" disabled={loading} onClick={(event) => openExceedDetails(i === 2 ? 37 : 75, event.currentTarget)} className={`typo-label mt-2 min-h-9 self-start rounded-lg px-3 text-white cursor-pointer border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${i === 2 ? 'border-orange-400/40 bg-orange-500/25 hover:bg-orange-500/40 focus-visible:outline-orange-300' : 'border-red-400/40 bg-red-500/25 hover:bg-red-500/40 focus-visible:outline-red-300'}`}>
                                     ดูรายละเอียด
                                 </button>

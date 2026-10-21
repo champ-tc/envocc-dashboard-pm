@@ -6,12 +6,13 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 
 function testGeographicHierarchicalDrillDown() {
-    // Read ThailandMap.tsx and DDS page.tsx source to verify logic structure
+    // Read ThailandMap.tsx, thailand-map-utils.ts and DDS page.tsx source to verify logic structure
     const mapSrc = fs.readFileSync(path.join(root, 'src/components/shared/ThailandMap.tsx'), 'utf8');
+    const utilsSrc = fs.readFileSync(path.join(root, 'src/components/shared/thailand-map-utils.ts'), 'utf8');
     const ddsSrc = fs.readFileSync(path.join(root, 'src/app/dashboard/dds/page.tsx'), 'utf8');
 
     // 1. Verify cleanThaiName handles 'ตำบล' and 'แขวง'
-    assert.match(mapSrc, /ตำบล\|แขวง/, 'cleanThaiName must strip ตำบล and แขวง');
+    assert.match(utilsSrc + mapSrc, /ตำบล\|แขวง/, 'cleanThaiName must strip ตำบล and แขวง');
 
     // 2. Verify MapResizer checks selectedSubdistricts and fits bounds
     assert.match(mapSrc, /selectedSubdistricts\.length > 0/, 'MapResizer must check selectedSubdistricts');

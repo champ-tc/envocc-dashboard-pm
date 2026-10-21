@@ -76,7 +76,7 @@ function DashboardNavMenu({ className = '' }: { className?: string }) {
                                 href={href}
                                 aria-current={pathname === href ? 'page' : undefined}
                                 onClick={() => { if (menu.current) menu.current.open = false; }}
-                                className={`typo-label min-h-12 cursor-pointer gap-3 rounded-xl text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-white ${pathname === href ? 'bg-blue-500/20 text-white ring-1 ring-blue-300/25' : ''}`}
+                                className={`typo-label min-h-12 cursor-pointer gap-3 rounded-xl text-white hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-white ${pathname === href ? 'bg-blue-500/20 text-white ring-1 ring-blue-300/25' : ''}`}
                             >
                                 <Image src={icon} alt="" width={20} height={20} className="size-5 shrink-0 object-contain brightness-0 invert opacity-90" aria-hidden="true" />
                                 <span>{label}</span>
@@ -107,7 +107,7 @@ export default function DashboardNavbar({
     navClassName?: string;
 }) {
     return (
-        <header className={`flex shrink-0 flex-col justify-between gap-4 md:flex-row md:items-center has-[details[open]]:z-dashboard-nav ${className}`}>
+        <header className={`head flex shrink-0 flex-col justify-between gap-4 md:flex-row md:items-center has-[details[open]]:z-dashboard-nav ${className}`}>
             <div className="flex items-center gap-4">
                 <div className={`flex items-center ${logos.length > 1 ? 'h-16 gap-2 rounded-2xl border border-white/60 bg-white px-2.5 py-1.5 shadow-2xl ring-4 ring-white/10 sm:h-20 sm:gap-3.5 sm:px-3.5' : 'gap-4'}`}>
                     {logos.map((logo, index) => (
@@ -131,7 +131,7 @@ export default function DashboardNavbar({
                 </div>
 
                 <div className="flex flex-col">
-                    <h5 className={`typo-section text-white ${titleClassName}`}>{title}</h5>
+                    <h5 className={`typo-head head text-white ${titleClassName}`}>{title}</h5>
                     <p className={`typo-caption uppercase text-blue-200 opacity-80 ${subtitleClassName}`}>{subtitle}</p>
                 </div>
             </div>
