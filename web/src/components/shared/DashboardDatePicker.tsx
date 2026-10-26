@@ -87,7 +87,7 @@ export default function DashboardDatePicker({ label, options, value, onChange, m
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 onClick={() => setIsOpen((open) => !open)}
-                className={`typo-caption btn min-h-12 w-full justify-start gap-2 rounded-2xl text-left text-white ring-1 ${isOpen ? 'border-blue-400/70 bg-white/20 ring-blue-400/30' : 'border-white/20 bg-white/10 ring-white/10 hover:bg-white/20'}`}
+                className={`typo-caption btn min-h-12 w-full justify-start gap-2 rounded-2xl text-left text-white ring-1 ${isOpen ? 'border-blue-400/70 bg-white/30 ring-blue-400/30' : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'}`}
             >
                 <CalendarDays className="size-4 shrink-0 text-blue-300" />
                 <span className="min-w-0 flex-1 truncate">{displayValue()}</span>

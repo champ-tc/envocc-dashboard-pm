@@ -159,7 +159,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
                 <div className="truncate max-w-filter-label">
                     {displayText}
                 </div>
@@ -267,7 +267,7 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
     useEffect(() => { setHoveredPoint(null); }, [dataGroup, hiddenLabels]);
 
     return (
-        <div ref={chartRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
+        <div ref={chartRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
             <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename={`pm25-trend-${title.includes('เขต') ? 'region' : title.includes('จังหวัด') ? 'province' : 'district'}`} /></div>
             <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase mb-8 shrink-0">
                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
@@ -435,7 +435,7 @@ function TopExceedRanking({ data, level = 'province', loading }: { data?: { area
     const areaLabel = level === 'subdistrict' ? 'ตำบล' : level === 'district' ? 'อำเภอ/เขต' : 'จังหวัด';
 
     return (
-        <div className="bg-slate-700 p-4 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
+        <div className="bg-[#3b3b3b] p-4 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
                 <h4 className="typo-section section-title text-white flex items-center gap-3 uppercase">
                     <div className="w-2 h-6 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
@@ -714,7 +714,7 @@ export default function DashboardPM25() {
         return [key, { value: period ? period.days : summary.max, name: summary.name, period }];
     }));
     return (
-    <div ref={mapRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+    <div ref={mapRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
         <div className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
                 <div className="flex items-center justify-between gap-3">
@@ -815,7 +815,7 @@ export default function DashboardPM25() {
                 <DashboardBusyAlert message={busyMessage} />
 
                 {/* Filters Section - Exactly like HDC */}
-                <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-overlay">
+                <div className="bg-white/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/20 relative z-overlay">
                     <DashboardDatePicker mode="day" label="จากวันที่" options={options.dates} value={filters.startDate} onChange={(v) => setFilters({ ...filters, startDate: v })} />
                     <DashboardDatePicker mode="day" label="ถึงวันที่" options={options.dates} value={filters.endDate} onChange={(v) => setFilters({ ...filters, endDate: v })} />
                     <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val: string[]) => {
@@ -843,7 +843,7 @@ export default function DashboardPM25() {
                     ].map((stat, i) => (
                         <div key={i} className={`relative ${stat.isPrimary
                             ? "bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-5 rounded-3xl shadow-2xl border border-white/30 transition-all group min-h-32 flex flex-col justify-between"
-                            : 'bg-white/10 backdrop-blur-xl p-5 rounded-3xl shadow-xl border border-white/20 transition-all group ring-1 ring-white/5 min-h-32 flex flex-col justify-between'}`}>
+                            : 'bg-white/20 backdrop-blur-xl p-5 rounded-3xl shadow-xl border border-white/25 transition-all group ring-1 ring-white/15 min-h-32 flex flex-col justify-between hover:bg-white/25'}`}>
                             <div className={`typo-caption mb-2 ${stat.isPrimary ? 'text-blue-100/90' : 'text-white'}`}>
                                 {i === 2 ? <><PM25Text>จำนวนจังหวัดที่ค่าฝุ่น PM2.5 </PM25Text><span className="text-orange-300">เกินค่ามาตรฐาน (37.5 มคก./ลบ.ม.)</span></> : i === 3 ? <><PM25Text>จำนวนจังหวัดที่ค่าฝุ่น PM2.5 </PM25Text><span className="text-red-300">มากกว่า 75 มคก./ลบ.ม.</span></> : <PM25Text>{stat.label}</PM25Text>}
                             </div>

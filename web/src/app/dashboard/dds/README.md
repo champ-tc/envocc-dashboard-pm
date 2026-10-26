@@ -54,8 +54,8 @@
 - **Visualization Layer (`z-[20]`)**: พื้นที่แสดงผลกราฟ (1.6fr) และแผนที่ (1.1fr)
 
 ### 3.2 UI Design (Glassmorphism)
-- ใช้พื้นหลังโปร่งแสง `bg-white/10` ร่วมกับ `backdrop-blur-2xl`
-- เส้นขอบสีขาวจาง `border-white/20` และเงา `shadow-2xl`
+- ใช้พื้นหลังโปร่งแสงสีขาวขุ่น `bg-white/25` (แผงตัวกรอง) และ `bg-white/20` (การ์ดสถิติ) ร่วมกับ `backdrop-blur-2xl`
+- เส้นขอบสีขาวจาง `border-white/30` และเงา `shadow-2xl`
 - ปุ่ม Login/Home และตัวเน้นใช้ Gradient `bg-linear-to-br from-blue-600 to-sky-500`
 
 ### 3.3 การจัดการพื้นที่ (Responsive)

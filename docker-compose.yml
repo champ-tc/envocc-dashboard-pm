@@ -120,6 +120,10 @@ services:
     env_file: [.env]
     environment: &airflow-common-env
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      # Ensure Celery task instances persist a resolvable worker hostname.
+      # Without this, served-log URLs can be rendered as http://:8793/...
+      # when the container runtime reports an empty hostname.
+      AIRFLOW__CORE__HOSTNAME_CALLABLE: airflow.utils.net.getfqdn
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
       AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
@@ -199,6 +203,11 @@ services:
 
   airflow-worker:
     <<: *airflow-common
+    # Airflow stores the worker hostname with each task instance and the
+    # webserver uses it to build the served-log URL.  Keep it stable and
+    # resolvable on the Compose network instead of relying on the container
+    # runtime hostname.
+    hostname: airflow-worker
     command: celery worker
     user: "${AIRFLOW_UID:-1000}:0"
     restart: always

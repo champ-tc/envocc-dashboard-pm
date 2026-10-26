@@ -25,7 +25,7 @@ export default function DeferredChart({ children }: { children: ReactNode }) {
 
     return (
         <div ref={ref} className="h-chart-standard shrink-0">
-            {visible ? children : <div className="h-full rounded-3xl bg-slate-700" aria-hidden="true" />}
+            {visible ? children : <div className="h-full rounded-3xl bg-[#3b3b3b]" aria-hidden="true" />}
         </div>
     );
 }

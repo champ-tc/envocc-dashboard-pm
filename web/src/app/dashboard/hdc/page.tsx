@@ -23,7 +23,7 @@ function SingleSelect({ label, options, selected, onChange }: { label: string, o
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
                 <div className="truncate max-w-36">
                     {selected || 'กรุณาเลือก'}
                 </div>
@@ -69,7 +69,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
                 <div className="truncate max-w-36">
                     {displayText}
                 </div>
@@ -134,7 +134,7 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
                 <div className="truncate max-w-36">
                     {formatDate(value)}
                 </div>
@@ -192,7 +192,7 @@ function FilterSection({
     thaiMonthsShort 
 }: FilterProps) {
     return (
-        <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-40">
+        <div className="bg-white/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/20 relative z-40">
             <DashboardDatePicker
                 label="จากเดือน" 
                 options={options?.dates || []} 
@@ -294,7 +294,7 @@ function StatCards({ data, loading }: StatCardsProps) {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 {top5Sorted.map((stat, i) => (
-                    <div key={stat.id || i} className="bg-white/5 backdrop-blur-lg p-4 rounded-3xl shadow-xl border border-white/10 transition-all group ring-1 ring-white/5 min-h-24 flex flex-col justify-between hover:bg-white/10">
+                    <div key={stat.id || i} className="bg-white/20 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/25 transition-all group ring-1 ring-white/15 min-h-24 flex flex-col justify-between hover:bg-white/30">
                         <div className="typo-chart text-white uppercase mb-1 line-clamp-2" title={stat.label}>
                             {stat.label}
                         </div>
@@ -323,7 +323,7 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
     const monthLabelStep = Math.max(1, Math.ceil(data.length / 8));
 
     return (
-        <div ref={chartRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-chart lg:min-h-0">
+        <div ref={chartRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-chart lg:min-h-0">
             <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename="hdc-monthly-trend" /></div>
             <div className="flex items-center justify-between mb-8 shrink-0">
                 <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase">
@@ -725,7 +725,7 @@ export default function DashboardHDC() {
                 <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     <MonthlyTrendChart data={data?.monthlyTrend || []} loading={loading} thaiMonthsFull={THAI_MONTHS_FULL} thaiMonthsShort={THAI_MONTHS_SHORT} />
 
-                    <div ref={mapRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 relative">
+                    <div ref={mapRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
                             <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase">
                                 <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>

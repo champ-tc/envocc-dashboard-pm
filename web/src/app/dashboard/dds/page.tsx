@@ -30,7 +30,7 @@ function SingleSelect({ label, options, selected, onChange }: { label?: string, 
     return (
         <div className="relative col-span-1">
             {label && <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>}
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
                 <div className="truncate max-w-36">
                     {selected || 'กรุณาเลือก'}
                 </div>
@@ -111,8 +111,8 @@ function SearchableSingleSelect({
                 onClick={() => {
                     if (!disabled) setIsOpen(!isOpen);
                 }}
-                className={`typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none flex justify-between items-center min-h-12 transition-all shadow-sm ring-1 ring-white/10 ${
-                    disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/20'
+                className={`typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none flex justify-between items-center min-h-12 transition-all shadow-sm ring-1 ring-white/20 ${
+                    disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/30'
                 }`}
             >
                 <div className="truncate max-w-36">
@@ -260,7 +260,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     return (
         <div ref={containerRef} className="relative col-span-1 w-full">
             {label && <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>}
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
                 <div className="truncate max-w-36">
                     {displayText}
                 </div>
@@ -336,7 +336,7 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/20 transition-all shadow-sm ring-1 ring-white/10">
+            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
                 <div className="truncate max-w-36">
                     {formatDate(value)}
                 </div>
@@ -718,7 +718,7 @@ export default function DDSDashboardPage() {
 
                 {/* Filters */}
                 <div className="relative z-toolbar">
-                    <div className="bg-white/10 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/10">
+                    <div className="bg-white/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/20">
                         <DashboardDatePicker label="จากเดือน" options={options.dates} value={filters.startDate} onChange={(v) => setFilters(f => ({ ...f, startDate: v }))} />
                         <DashboardDatePicker label="ถึงเดือน" options={options.dates} value={filters.endDate} onChange={(v) => setFilters(f => ({ ...f, endDate: v }))} />
                         <SearchableSingleSelect
@@ -777,19 +777,19 @@ export default function DDSDashboardPage() {
                                 {loading ? <div className="h-10 w-32 bg-white/20 animate-pulse rounded-xl"></div> : data?.totalPatients?.toLocaleString()}
                                 <div className="typo-label text-white uppercase mb-1.5">ราย</div>
                             </div>
-                            <div className="typo-chart text-white uppercase mt-auto bg-white/10 p-2.5 rounded-2xl border border-white/20 backdrop-blur-sm line-clamp-2">
+                            <div className="typo-chart text-white uppercase mt-auto bg-white/20 p-2.5 rounded-2xl border border-white/30 backdrop-blur-sm line-clamp-2">
                                 นับตามรายบุคคลที่ตรงตามตัวกรองการวินิจฉัย (Unique Patients)
                             </div>
                         </div>
 
-                        <div className="bg-white/10 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/10 min-h-32 flex flex-col justify-between group overflow-hidden relative ring-1 ring-white/5">
+                        <div className="bg-white/20 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/25 min-h-32 flex flex-col justify-between group overflow-hidden relative ring-1 ring-white/15">
                             <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                             <div className="typo-section section-title text-white uppercase mb-1">จำนวนการวินิจฉัยทั้งหมด</div>
                             <div className="typo-metric text-blue-400 tabular-nums my-2 flex items-end gap-3">
                                 {loading ? <div className="h-10 w-32 bg-white/10 animate-pulse rounded-xl"></div> : data?.totalVisits?.toLocaleString()}
                                 <div className="typo-label text-white uppercase mb-1.5">ครั้ง</div>
                             </div>
-                            <div className="typo-chart text-white uppercase mt-auto bg-white/5 p-2.5 rounded-2xl border border-white/5 line-clamp-2">
+                            <div className="typo-chart text-white uppercase mt-auto bg-white/15 p-2.5 rounded-2xl border border-white/20 line-clamp-2">
                                 รวมทุกรายการที่ตรงตามตัวกรองการวินิจฉัย
                             </div>
                         </div>
@@ -802,7 +802,7 @@ export default function DDSDashboardPage() {
                             const cardOptions = getDiagnosisCodes(card.id, filters.diagnosisType);
 
                             return (
-                                <div key={i} className="bg-white/10 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/20 min-h-32 flex flex-col justify-between relative hover:z-header group ring-1 ring-white/5 transition-all hover:bg-white/15">
+                                <div key={i} className="bg-white/20 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/25 min-h-32 flex flex-col justify-between relative hover:z-header group ring-1 ring-white/15 transition-all hover:bg-white/30">
                                     <div className="typo-chart text-white uppercase mb-2" title={card.label}>{card.label}</div>
                                     <div className="typo-metric text-white tabular-nums flex items-end gap-2 mb-3">
                                         {loading ? <div className="h-8 w-20 bg-white/10 animate-pulse rounded-lg"></div> : stat.value?.toLocaleString()}
@@ -826,7 +826,7 @@ export default function DDSDashboardPage() {
                 {/* Visualizations */}
                 <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     {/* Monthly Trend Chart */}
-                    <div ref={chartRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
+                    <div ref={chartRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
                         <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename="dds-monthly-trend" /></div>
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-8 shrink-0">
                             <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div><PM25Text>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text></h4>
@@ -901,7 +901,7 @@ export default function DDSDashboardPage() {
                     </div>
 
                     {/* Thailand Map Section */}
-                    <div ref={mapRef} className="bg-slate-700 p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+                    <div ref={mapRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
                             <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>{mapTitle}</h4>
                             <div className="flex items-center gap-3"><div className="typo-caption bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full border border-blue-500/20 uppercase">{mapAreaCount} พื้นที่</div><ExportImageButton targetRef={mapRef} filename="dds-map" /></div>
