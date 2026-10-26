@@ -98,7 +98,7 @@ interface DuckDBRow {
 
 // Bump when dashboard-query logic changes so an in-memory cached result from a
 // previous query definition cannot keep rendering stale analytics.
-const DDS_QUERY_VERSION = '4';
+const DDS_QUERY_VERSION = '5';
 
 const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
 
@@ -396,12 +396,8 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 )
             `;
         } else if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
-            const selectedDiseaseCodes = allSelectedCodes.filter(
-                code => code.replace(/\./g, '').toUpperCase() !== 'Z581',
-            );
-            ddsDiagnosisFilter = allSelectedCodes.length > 0
-                ? `
-                    AND (${icdCodePredicate('icd10_code', allSelectedCodes)})
+            ddsDiagnosisFilter = `
+                    -- Select people with Z58.1, then keep every ICD-10 row for them.
                     AND person_id IN (
                         SELECT person_id
                         FROM dds_raw
@@ -410,12 +406,8 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                         HAVING COUNT(*) FILTER (
                             WHERE REPLACE(UPPER(TRIM(icd10_code)), '.', '') = 'Z581'
                         ) > 0
-                        ${selectedDiseaseCodes.length > 0 ? `AND COUNT(*) FILTER (
-                            WHERE ${icdCodePredicate('icd10_code', selectedDiseaseCodes).replace(/^AND\\s+/, '')}
-                        ) > 0` : ''}
                     )
-                `
-                : 'AND 1=0';
+                `;
         }
 
         // --- Build individual ICD10 filters for each disease group ---
@@ -441,6 +433,12 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     : 'AND 1=0';
             }
         });
+
+        const ddsFilteredDiseasePredicate = diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ'
+            ? 'TRUE'
+            : `
+                    ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR \n                    ')}
+                `;
 
         const sqlMain = `
             WITH 
@@ -473,9 +471,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 -- กรองเฉพาะแถวที่ตรงกับเงื่อนไข ICD10 ของแต่ละกลุ่มโรคเท่านั้น
                 SELECT d.*
                 FROM dds_base d
-                WHERE (
-                    ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR \n                    ')}
-                )
+                WHERE ${ddsFilteredDiseasePredicate}
             )
             SELECT 
                 COUNT(DISTINCT person_id)::DOUBLE as total_patients,
@@ -504,9 +500,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 ),
                 dds_filtered AS (
                     SELECT * FROM dds_base
-                    WHERE (
-                        ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR ')}
-                    )
+                    WHERE ${ddsFilteredDiseasePredicate}
                 ),
                 pm25_monthly AS (
                     SELECT TRIM(province) as prov, AVG(pm25) as pm25_avg
@@ -545,9 +539,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     ),
                     dds_filtered AS (
                         SELECT * FROM dds_base
-                        WHERE (
-                            ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR ')}
-                        )
+                        WHERE ${ddsFilteredDiseasePredicate}
                     ),
                     pm25_monthly AS (
                         SELECT TRIM(province) as prov, strftime(date, '%Y-%m') as dt, AVG(pm25) as pm25_avg
@@ -609,9 +601,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                         ),
                         dds_filtered AS (
                             SELECT * FROM dds_base
-                            WHERE (
-                                ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR ')}
-                            )
+                        WHERE ${ddsFilteredDiseasePredicate}
                         ),
                         pm25_district AS (
                             SELECT TRIM(province) as prov, TRIM(district) as dist, AVG(pm25) as pm25_avg
@@ -657,9 +647,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                             ),
                             dds_filtered AS (
                                 SELECT * FROM dds_base
-                                WHERE (
-                                    ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR ')}
-                                )
+                        WHERE ${ddsFilteredDiseasePredicate}
                             ),
                             pm25_subdistrict AS (
                                 SELECT TRIM(province) as prov, TRIM(district) as dist, TRIM(subdistrict) as subdist, AVG(pm25) as pm25_avg
