@@ -98,7 +98,7 @@ interface DuckDBRow {
 
 // Bump when dashboard-query logic changes so an in-memory cached result from a
 // previous query definition cannot keep rendering stale analytics.
-const DDS_QUERY_VERSION = '3';
+const DDS_QUERY_VERSION = '4';
 
 const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
 
@@ -396,8 +396,25 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 )
             `;
         } else if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
+            const selectedDiseaseCodes = allSelectedCodes.filter(
+                code => code.replace(/\./g, '').toUpperCase() !== 'Z581',
+            );
             ddsDiagnosisFilter = allSelectedCodes.length > 0
-                ? `AND (${icdCodePredicate('icd10_code', allSelectedCodes)})`
+                ? `
+                    AND (${icdCodePredicate('icd10_code', allSelectedCodes)})
+                    AND person_id IN (
+                        SELECT person_id
+                        FROM dds_raw
+                        WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters}
+                        GROUP BY person_id
+                        HAVING COUNT(*) FILTER (
+                            WHERE REPLACE(UPPER(TRIM(icd10_code)), '.', '') = 'Z581'
+                        ) > 0
+                        ${selectedDiseaseCodes.length > 0 ? `AND COUNT(*) FILTER (
+                            WHERE ${icdCodePredicate('icd10_code', selectedDiseaseCodes).replace(/^AND\\s+/, '')}
+                        ) > 0` : ''}
+                    )
+                `
                 : 'AND 1=0';
         }
 
