@@ -102,7 +102,7 @@ interface DuckDBRow {
 
 // Bump when dashboard-query logic changes so an in-memory cached result from a
 // previous query definition cannot keep rendering stale analytics.
-const DDS_QUERY_VERSION = '12';
+const DDS_QUERY_VERSION = '14';
 
 const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
 

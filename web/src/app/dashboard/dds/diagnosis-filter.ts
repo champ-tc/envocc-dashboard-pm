@@ -29,7 +29,7 @@ export function buildDiagnosisHaving(requiredAllCodes: string[], anyOfCodes: str
         .map((code) => `COUNT(*) FILTER (WHERE ${normalizedColumn} = '${code}') > 0`)
         .join('\n                        AND ');
     const anyPredicate = anyOfCodes.length > 0
-        ? `(${anyOfCodes.map((code) => `COUNT(*) FILTER (WHERE ${normalizedColumn} = '${code}') > 0`).join(' OR ')})`
+        ? `(${anyOfCodes.map((code) => `COUNT(*) FILTER (WHERE ${normalizedColumn} LIKE '${code}%') > 0`).join(' OR ')})`
         : '';
 
     return [allPredicates, anyPredicate].filter(Boolean).join('\n                        AND ');
