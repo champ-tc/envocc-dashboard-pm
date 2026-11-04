@@ -26,12 +26,17 @@ airflow/dags/dds/dashboard_dds.csv
 airflow/dags/dds/dashboard_dds.parquet
 airflow/dags/dds/icd10_code_counts_sorted.csv
 airflow/dags/dds/icd10_group_summary.csv
+airflow/dags/scripts/DiseaseGroup.json
 web/public/duckdb/dashboard_dds.csv
 web/public/duckdb/dashboard_dds.parquet
 web/public/duckdb/hdc.parquet
 web/public/duckdb/mid_year.csv
 web/public/duckdb/pm25.csv
 web/public/duckdb/pm25.parquet
+web/public/duckdb/DiseaseGroup.json
+web/public/duckdb/DiseaseGroup.xlsx
+web/public/duckdb/*
+web/data/duckdb/
 
 # Docker / Database
 postgres-data/

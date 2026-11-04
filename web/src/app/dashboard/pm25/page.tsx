@@ -13,6 +13,7 @@ import ExportImageButton from '@/components/dashboard/ExportImageButton';
 import { nearestChartPoint, prepareChartSeries } from '@/lib/dashboard-chart';
 import { areaKey, type MapAreas } from './map-area-data';
 import { CalendarDays, Check, ChevronDown } from 'lucide-react';
+import OpenSkyBackground from '@/components/shared/OpenSkyBackground';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -159,12 +160,20 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
-                <div className="truncate max-w-filter-label">
-                    {displayText}
-                </div>
-                <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
-            </div>
+            <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+                onClick={() => setIsOpen(!isOpen)}
+                className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left text-white font-normal ring-1 transition-all ${
+                    isOpen
+                        ? 'border-blue-400/70 bg-white/30 ring-blue-400/30'
+                        : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'
+                }`}
+            >
+                <span className="min-w-0 flex-1 truncate">{displayText}</span>
+                <ChevronDown aria-hidden="true" className={`size-4 shrink-0 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
+            </button>
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
@@ -267,10 +276,9 @@ const MultiLineChart = memo(function MultiLineChart({ title, dataGroup, loading 
     useEffect(() => { setHoveredPoint(null); }, [dataGroup, hiddenLabels]);
 
     return (
-        <div ref={chartRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative group ring-1 ring-white/10 overflow-hidden">
+        <div ref={chartRef} className="bg-neutral-900/25 backdrop-blur-2xl p-6 rounded-3xl border border-white/15 shadow-2xl ring-1 ring-white/10 hover:border-white/30 transition-all flex flex-col h-full relative group overflow-hidden">
             <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename={`pm25-trend-${title.includes('เขต') ? 'region' : title.includes('จังหวัด') ? 'province' : 'district'}`} /></div>
             <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase mb-8 shrink-0">
-                <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                 <PM25Text>{title}</PM25Text>
                 {!loading && labels.length > 0 && (
                     <span className="typo-label text-blue-400 bg-blue-500/10 px-3 py-1 rounded-xl border border-blue-500/20 shadow-inner">
@@ -435,10 +443,9 @@ function TopExceedRanking({ data, level = 'province', loading }: { data?: { area
     const areaLabel = level === 'subdistrict' ? 'ตำบล' : level === 'district' ? 'อำเภอ/เขต' : 'จังหวัด';
 
     return (
-        <div className="bg-[#3b3b3b] p-4 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full relative ring-1 ring-white/10 overflow-hidden">
+        <div className="bg-neutral-900/25 backdrop-blur-2xl p-4 rounded-3xl border border-white/15 shadow-2xl ring-1 ring-white/10 hover:border-white/30 transition-all flex flex-col h-full relative overflow-hidden">
             <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
                 <h4 className="typo-section section-title text-white flex items-center gap-3 uppercase">
-                    <div className="w-2 h-6 bg-linear-to-b from-orange-500 to-amber-400 rounded-full shadow-lg shadow-orange-500/40 shrink-0"></div>
                     10 อันดับ{areaLabel}ที่มีจำนวนวันเกินมาตรฐานมากที่สุด
                 </h4>
                 <span className="typo-chart text-orange-200 bg-orange-500/15 px-2.5 py-1 rounded-xl border border-orange-500/20 whitespace-nowrap">
@@ -714,12 +721,11 @@ export default function DashboardPM25() {
         return [key, { value: period ? period.days : summary.max, name: summary.name, period }];
     }));
     return (
-    <div ref={mapRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+    <div ref={mapRef} className="bg-neutral-900/25 backdrop-blur-2xl p-6 rounded-3xl border border-white/15 shadow-2xl ring-1 ring-white/10 hover:border-white/30 transition-all flex flex-col h-full min-w-0 relative">
         <div className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
                 <div className="flex items-center justify-between gap-3">
                 <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase">
-                    <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40 shrink-0"></div>
                     <PM25Text>{activeMap === 'avg' ? 'แผนที่ค่าฝุ่น PM2.5 เฉลี่ย 24 ชั่วโมง สูงสุด' : activeMap === 'streak37' ? 'ค่าฝุ่น PM2.5 มากกว่า 37.5 มคก./ลบ.ม.' : 'ค่าฝุ่น PM2.5 มากกว่า 75 มคก./ลบ.ม.'}</PM25Text>
                 </h4>
                 <ExportImageButton targetRef={mapRef} filename={`pm25-map-${activeMap}`} />
@@ -777,21 +783,8 @@ export default function DashboardPM25() {
     };
 
     return (
-        <div className="typo-body min-h-screen bg-slate-800 relative selection:bg-blue-500/30 overflow-x-hidden">
-            <div
-                aria-hidden="true"
-                className="pointer-events-none fixed inset-0 z-0"
-                style={{
-                    backgroundImage: "url('/img/background-optimized.jpg')",
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                }}
-            />
-            <div
-                aria-hidden="true"
-                className="pointer-events-none fixed inset-0 z-0 bg-slate-900/15"
-            />
+        <div className="typo-body min-h-screen relative selection:bg-blue-500/30 overflow-x-hidden">
+            <OpenSkyBackground />
             {loading && <DashboardLoading />}
 
             <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
@@ -815,7 +808,7 @@ export default function DashboardPM25() {
                 <DashboardBusyAlert message={busyMessage} />
 
                 {/* Filters Section - Exactly like HDC */}
-                <div className="bg-white/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/20 relative z-overlay">
+                <div className="bg-neutral-900/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/15 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 hover:border-white/30 transition-all relative z-overlay">
                     <DashboardDatePicker mode="day" label="จากวันที่" options={options.dates} value={filters.startDate} onChange={(v) => setFilters({ ...filters, startDate: v })} />
                     <DashboardDatePicker mode="day" label="ถึงวันที่" options={options.dates} value={filters.endDate} onChange={(v) => setFilters({ ...filters, endDate: v })} />
                     <MultiSelect label="เขตสุขภาพ" options={options.regions} selected={filters.regions} onChange={(val: string[]) => {
@@ -843,17 +836,16 @@ export default function DashboardPM25() {
                     ].map((stat, i) => (
                         <div key={i} className={`relative ${stat.isPrimary
                             ? "bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-5 rounded-3xl shadow-2xl border border-white/30 transition-all group min-h-32 flex flex-col justify-between"
-                            : 'bg-white/20 backdrop-blur-xl p-5 rounded-3xl shadow-xl border border-white/25 transition-all group ring-1 ring-white/15 min-h-32 flex flex-col justify-between hover:bg-white/25'}`}>
+                            : 'bg-neutral-900/25 backdrop-blur-2xl p-5 rounded-3xl shadow-2xl border border-white/15 transition-all group ring-1 ring-white/10 min-h-32 flex flex-col justify-between hover:border-white/30 hover:bg-neutral-900/35'}`}>
                             <div className={`typo-caption mb-2 ${stat.isPrimary ? 'text-blue-100/90' : 'text-white'}`}>
                                 {i === 2 ? <><PM25Text>จำนวนจังหวัดที่ค่าฝุ่น PM2.5 </PM25Text><span className="text-orange-300">เกินค่ามาตรฐาน (37.5 มคก./ลบ.ม.)</span></> : i === 3 ? <><PM25Text>จำนวนจังหวัดที่ค่าฝุ่น PM2.5 </PM25Text><span className="text-red-300">มากกว่า 75 มคก./ลบ.ม.</span></> : <PM25Text>{stat.label}</PM25Text>}
                             </div>
-                            <div className="typo-metric text-white tabular-nums flex items-end gap-2 drop-shadow-md">
+                            <div className="typo-metric text-white tabular-nums drop-shadow-md">
                                 {loading ? <div className={`h-9 w-24 animate-pulse rounded-lg ${stat.isPrimary ? 'bg-white/20' : 'bg-white/10'}`}></div> : i === 2 ? (
                                     <span className="flex items-baseline gap-2"><span>{stat.value?.toLocaleString()}</span><span className="typo-label">จังหวัด</span></span>
                                 ) : i === 3 ? (
                                     <span className="flex items-baseline gap-2"><span>{stat.value?.toLocaleString()}</span><span className="typo-label">จังหวัด</span></span>
                                 ) : stat.value?.toLocaleString()}
-                                {!stat.isPrimary && <div className="w-1.5 h-6 rounded-full mb-1" style={{ backgroundColor: stat.color }}></div>}
                             </div>
                             {i < 2 ? <div className="typo-chart uppercase mt-1 text-white">{stat.unit}</div> : (
                                 <button type="button" disabled={loading} onClick={(event) => openExceedDetails(i === 2 ? 37 : 75, event.currentTarget)} className={`typo-label mt-2 min-h-9 self-start rounded-lg px-3 text-white cursor-pointer border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${i === 2 ? 'border-orange-400/40 bg-orange-500/25 hover:bg-orange-500/40 focus-visible:outline-orange-300' : 'border-red-400/40 bg-red-500/25 hover:bg-red-500/40 focus-visible:outline-red-300'}`}>

@@ -20,10 +20,34 @@
 | --- | --- | --- |
 | `postgres-db-volume` | `/var/lib/postgresql/data` | Airflow metadata |
 | `postgres-etl-volume` | `/var/lib/postgresql/data` | ฐานข้อมูลแอปและ ETL |
-| `duckdb-data-volume` | Airflow: `/opt/airflow/data`<br>Web: `/app/public/duckdb` | CSV/Parquet ที่ Airflow และ Web ใช้ร่วมกัน |
+| `duckdb-data-volume` | Airflow: `/opt/airflow/data`<br>Web: `/app/data/duckdb` | CSV/Parquet/JSON ที่ Airflow และ Web ใช้ร่วมกัน |
 | `dds-input-volume` | Airflow: `/opt/airflow/input/dds`<br>Web: `/app/uploads/dds` | ไฟล์นำเข้าของ DDS |
 
-ไฟล์ใน `web/public/duckdb/` และ `airflow/dags/scripts/` เป็นข้อมูลตั้งต้นที่บรรจุใน image สำหรับสร้าง volume ครั้งแรก ข้อมูลใหม่ที่ Airflow สร้างขณะรันจะอยู่ใน `duckdb-data-volume`
+ไฟล์ใน `web/public/duckdb/` และ `airflow/dags/scripts/` เป็นข้อมูลตั้งต้นสำหรับสร้าง volume ครั้งแรก ข้อมูลใหม่ที่ Airflow สร้างขณะรันจะอยู่ใน `duckdb-data-volume`
+
+### DiseaseGroup.json (ไฟล์ภายนอก Git)
+
+ไฟล์ `DiseaseGroup.json` ไม่ถูก commit ใน Git และต้องนำไปวางเองในแต่ละเครื่องที่:
+
+```text
+airflow/dags/scripts/DiseaseGroup.json
+```
+
+เมื่อเริ่มระบบด้วย Docker Compose, `airflow-init` จะคัดลอกไฟล์เข้า shared volume ให้เอง:
+
+```text
+Airflow: /opt/airflow/data/DiseaseGroup.json
+Web:     /app/data/duckdb/DiseaseGroup.json
+```
+
+สำหรับเครื่องที่มี `duckdb-data-volume` อยู่แล้ว ให้คัดลอกไฟล์เข้า volume โดยตรงหลังจากวางไฟล์ใน source tree:
+
+```bash
+docker compose cp airflow/dags/scripts/DiseaseGroup.json airflow-webserver:/opt/airflow/data/DiseaseGroup.json
+docker compose restart web
+```
+
+ห้ามแก้ไฟล์ runtime ใน volume เป็นแหล่งหลัก และห้ามวางไฟล์ไว้ใน `web/public/duckdb` สำหรับ production
 
 > การสั่ง `docker compose down -v` จะลบ named volumes และข้อมูลถาวรทั้งหมด ควรสำรองข้อมูลก่อนใช้งานคำสั่งนี้
 

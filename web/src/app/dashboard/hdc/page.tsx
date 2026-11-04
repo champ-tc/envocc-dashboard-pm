@@ -13,6 +13,7 @@ import { PM25Text } from '@/components/PM25Mark';
 import CloudLoader from '@/components/CloudLoader';
 import ExportImageButton from '@/components/dashboard/ExportImageButton';
 import { Check, ChevronDown, ClipboardList } from 'lucide-react';
+import OpenSkyBackground from '@/components/shared/OpenSkyBackground';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -23,12 +24,20 @@ function SingleSelect({ label, options, selected, onChange }: { label: string, o
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
-                <div className="truncate max-w-36">
-                    {selected || 'กรุณาเลือก'}
-                </div>
-                <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
-            </div>
+            <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+                onClick={() => setIsOpen(!isOpen)}
+                className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left text-white font-normal ring-1 transition-all ${
+                    isOpen
+                        ? 'border-blue-400/70 bg-white/30 ring-blue-400/30'
+                        : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'
+                }`}
+            >
+                <span className="truncate max-w-36">{selected || 'กรุณาเลือก'}</span>
+                <ChevronDown aria-hidden="true" className={`size-4 shrink-0 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
+            </button>
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
@@ -69,7 +78,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
+            <div onClick={() => setIsOpen(!isOpen)} className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left text-white font-normal ring-1 transition-all ${isOpen ? 'border-blue-400/70 bg-white/30 ring-blue-400/30' : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'}`}>
                 <div className="truncate max-w-36">
                     {displayText}
                 </div>
@@ -134,7 +143,7 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
+            <div onClick={() => setIsOpen(!isOpen)} className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left text-white font-normal ring-1 transition-all ${isOpen ? 'border-blue-400/70 bg-white/30 ring-blue-400/30' : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'}`}>
                 <div className="truncate max-w-36">
                     {formatDate(value)}
                 </div>
@@ -192,7 +201,7 @@ function FilterSection({
     thaiMonthsShort 
 }: FilterProps) {
     return (
-        <div className="bg-white/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/20 relative z-40">
+        <div className="bg-neutral-900/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/15 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 items-end shrink-0 ring-1 ring-white/10 relative z-40">
             <DashboardDatePicker
                 label="จากเดือน" 
                 options={options?.dates || []} 
@@ -260,18 +269,6 @@ function StatCards({ data, loading }: StatCardsProps) {
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
 
-    const getHexColor = (colorName: string) => {
-        switch (colorName) {
-            case 'rose': return '#f43f5e';
-            case 'orange': return '#f97316';
-            case 'amber': return '#f59e0b';
-            case 'emerald': return '#10b981';
-            case 'blue': return '#3b82f6';
-            case 'purple': return '#a855f7';
-            default: return '#3b82f6';
-        }
-    };
-
     return (
         <div className="flex flex-col gap-4 shrink-0 relative z-30">
             <div>
@@ -289,18 +286,16 @@ function StatCards({ data, loading }: StatCardsProps) {
 
             {/* Bottom Row: Disease Group Stats */}
             <div className="flex items-center gap-3 mb-1 mt-2">
-                <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
                 <h4 className="typo-section section-title text-white uppercase">จำนวนการวินิจฉัยแยกตามกลุ่มโรค</h4>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 {top5Sorted.map((stat, i) => (
-                    <div key={stat.id || i} className="bg-white/20 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/25 transition-all group ring-1 ring-white/15 min-h-24 flex flex-col justify-between hover:bg-white/30">
+                    <div key={stat.id || i} className="bg-neutral-900/25 backdrop-blur-2xl p-5 rounded-3xl shadow-2xl border border-white/15 transition-all group ring-1 ring-white/10 min-h-24 flex flex-col justify-between hover:border-white/30 hover:bg-neutral-900/35">
                         <div className="typo-chart text-white uppercase mb-1 line-clamp-2" title={stat.label}>
                             {stat.label}
                         </div>
-                        <div className="typo-subtitle text-white tabular-nums flex items-end gap-2">
+                        <div className="typo-subtitle text-white tabular-nums">
                             {loading ? <div className="h-7 w-20 bg-white/10 animate-pulse rounded-lg"></div> : (stat.value ?? 0).toLocaleString()}
-                            <div className="w-1 h-5 rounded-full mb-0.5 shadow-sm" style={{ backgroundColor: getHexColor(stat.color) }}></div>
                         </div>
                     </div>
                 ))}
@@ -323,11 +318,10 @@ function MonthlyTrendChart({ data, loading, thaiMonthsFull, thaiMonthsShort }: M
     const monthLabelStep = Math.max(1, Math.ceil(data.length / 8));
 
     return (
-        <div ref={chartRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-chart lg:min-h-0">
+        <div ref={chartRef} className="bg-neutral-900/25 backdrop-blur-2xl p-6 rounded-3xl border border-white/15 shadow-2xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative transition-all duration-300 overflow-visible min-h-chart lg:min-h-0">
             <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename="hdc-monthly-trend" /></div>
             <div className="flex items-center justify-between mb-8 shrink-0">
                 <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase">
-                    <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                     <PM25Text>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text>
                 </h4>
             </div>
@@ -658,21 +652,8 @@ export default function DashboardHDC() {
     }, [filters, fetchData, user]);
 
     return (
-        <div className="typo-body min-h-screen bg-slate-800 relative selection:bg-blue-500/30 overflow-x-hidden">
-            <div
-                aria-hidden="true"
-                className="pointer-events-none fixed inset-0 z-0"
-                style={{
-                    backgroundImage: "url('/img/background-optimized.jpg')",
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                }}
-            />
-            <div
-                aria-hidden="true"
-                className="pointer-events-none fixed inset-0 z-0 bg-slate-900/15"
-            />
+        <div className="typo-body min-h-screen relative selection:bg-blue-500/30 overflow-x-hidden">
+            <OpenSkyBackground />
             {loading && <DashboardLoading />}
 
             <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
@@ -725,10 +706,9 @@ export default function DashboardHDC() {
                 <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     <MonthlyTrendChart data={data?.monthlyTrend || []} loading={loading} thaiMonthsFull={THAI_MONTHS_FULL} thaiMonthsShort={THAI_MONTHS_SHORT} />
 
-                    <div ref={mapRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 relative">
+                    <div ref={mapRef} className="bg-neutral-900/25 backdrop-blur-2xl p-6 rounded-3xl border border-white/15 shadow-2xl flex flex-col h-full ring-1 ring-white/10 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
                             <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase">
-                                <div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>
                                 จำนวนผู้ป่วยรายจังหวัด
                             </h4>
                             <ExportImageButton targetRef={mapRef} filename="hdc-map" />

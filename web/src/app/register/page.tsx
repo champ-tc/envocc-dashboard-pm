@@ -10,6 +10,7 @@ import {
     Eye, EyeOff, Lock
 } from 'lucide-react';
 import { WORKPLACE_TYPES, DDC_REGIONS, PERSONNEL_TYPES } from '@/lib/constants';
+import OpenSkyBackground from '@/components/shared/OpenSkyBackground';
 
 // --- Types & Interfaces ---
 interface LocationData {
@@ -20,8 +21,8 @@ interface LocationData {
 
 // --- UI Components ---
 const SectionTitle = ({ icon: Icon, num, title }: { icon: any, num: string, title: string }) => (
-    <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
-        <div className="typo-label w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200">
+    <div className="flex items-center gap-3 border-b border-slate-200 pb-4 mb-6">
+        <div className="typo-label w-8 h-8 rounded-full bg-linear-to-br from-blue-600 to-sky-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 font-semibold">
             {num}
         </div>
         <div className="flex items-center gap-2">
@@ -33,11 +34,13 @@ const SectionTitle = ({ icon: Icon, num, title }: { icon: any, num: string, titl
 
 const FormInput = ({ label, icon: Icon, required, ...props }: any) => (
     <div className="fieldset gap-2 py-0 w-full">
-        <label className="typo-label label px-1">
-            <span className="typo-chart text-slate-600 uppercase">
-                {label}{required && <span className="text-rose-500"> *</span>}
-            </span>
-        </label>
+        {label && (
+            <label className="typo-label label px-1">
+                <span className="typo-chart text-slate-700 uppercase">
+                    {label}{required && <span className="text-rose-500"> *</span>}
+                </span>
+            </label>
+        )}
         <div className="relative group">
             {Icon && (
                 <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
@@ -45,7 +48,7 @@ const FormInput = ({ label, icon: Icon, required, ...props }: any) => (
             <input
                 {...props}
                 required={required}
-                className={`typo-body-sm input h-12 w-full ${Icon ? 'pl-11' : ''} rounded-xl`}
+                className={`typo-body-sm input h-12 w-full ${Icon ? 'pl-11' : ''} rounded-xl border border-slate-200 bg-slate-50/70 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white transition-all`}
             />
         </div>
     </div>
@@ -54,14 +57,14 @@ const FormInput = ({ label, icon: Icon, required, ...props }: any) => (
 const FormSelect = ({ label, options, required, ...props }: any) => (
     <div className="fieldset gap-2 py-0 w-full">
         <label className="typo-label label px-1">
-            <span className="typo-chart text-slate-600 uppercase">
+            <span className="typo-chart text-slate-700 uppercase">
                 {label}{required && <span className="text-rose-500"> *</span>}
             </span>
         </label>
         <select
             {...props}
             required={required}
-            className="typo-body-sm select h-12 w-full rounded-xl"
+            className="typo-body-sm select h-12 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-slate-800 focus:border-blue-500 focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
         >
             {options}
         </select>
@@ -200,18 +203,14 @@ export default function RegisterPage() {
     const activeWp = useMemo(() => WORKPLACE_TYPES.find(w => w.label === form.workplaceType), [form.workplaceType]);
 
     return (
-        <div className="typo-body relative min-h-screen overflow-hidden bg-slate-900 text-white selection:bg-blue-500/30">
-
-            {/* Background */}
-            <div className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: "url('/img/background-optimized.jpg')" }} />
-            <div className="pointer-events-none absolute inset-0 z-0 bg-slate-900/55" />
+        <div className="typo-body relative min-h-screen overflow-hidden text-white selection:bg-blue-500/30">
+            <OpenSkyBackground />
             <div className="pointer-events-none absolute -left-24 top-1/4 z-0 h-72 w-72 rounded-full bg-blue-500/20 blur-hero-orb" />
             <div className="pointer-events-none absolute -right-24 bottom-1/4 z-0 h-72 w-72 rounded-full bg-cyan-400/15 blur-hero-orb" />
 
             {/* Back Button */}
             <div className="absolute top-6 left-6 z-50">
-                <Link href="/" className="typo-label group flex items-center gap-2 rounded-full border border-white/20 bg-slate-950/70 px-5 py-2.5 text-white shadow-lg backdrop-blur-xl transition-all hover:bg-slate-900">
+                <Link href="/" className="typo-label group flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-5 py-2.5 text-slate-700 shadow-md backdrop-blur-md transition-all hover:bg-white hover:text-blue-600">
                     <ChevronLeft className="w-5 h-5 group-hover:text-blue-600" />
                     <span className="hidden xs:inline">กลับหน้าหลัก</span>
                 </Link>
@@ -219,7 +218,7 @@ export default function RegisterPage() {
 
             {/* Main Content */}
             <div className="z-10 w-full max-w-6xl mx-auto px-4 pt-28 pb-20 relative">
-                <form onSubmit={handlePreSubmit} className="card overflow-hidden rounded-hero-card border border-white/50 bg-white/90 text-slate-900 shadow-2xl shadow-slate-950/50 backdrop-blur-2xl ring-1 ring-white/20">
+                <form onSubmit={handlePreSubmit} className="card overflow-hidden rounded-hero-card bg-white border border-slate-100 text-slate-800 shadow-2xl ring-1 ring-slate-900/5 transition-all">
                     <div className="card-body p-8 md:p-16">
 
                         {/* Header */}
@@ -309,7 +308,7 @@ export default function RegisterPage() {
                                     />
                                 </div>
 
-                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                                <div className="p-6 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4">
                                     <FormInput
                                         label="ชื่อผู้ใช้งาน (Username)"
                                         placeholder="ตั้งชื่อผู้ใช้งาน (ภาษาอังกฤษ/ตัวเลข)"
@@ -332,7 +331,7 @@ export default function RegisterPage() {
                                         <button
                                             type="button"
                                             onClick={() => setUi({ ...ui, showPass: !ui.showPass })}
-                                            className="typo-label btn btn-ghost btn-circle btn-sm absolute right-2 bottom-2 text-base-content/60"
+                                            className="typo-label btn btn-ghost btn-circle btn-sm absolute right-2 bottom-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50"
                                         >
                                             {ui.showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
@@ -429,7 +428,7 @@ export default function RegisterPage() {
                                     />
                                 </div>
 
-                                <div className="space-y-4 pt-4 border-t border-slate-100">
+                                <div className="space-y-4 pt-4 border-t border-slate-200">
                                     <FormSelect
                                         label="ประเภทบุคลากร"
                                         required
@@ -501,9 +500,9 @@ export default function RegisterPage() {
                             >
                                 {ui.checking ? <span className="loading loading-spinner" /> : 'ลงทะเบียนเข้าใช้งาน'}
                             </button>
-                            <p className="typo-label text-slate-500">
+                            <p className="typo-label text-slate-600">
                                 มีบัญชีอยู่แล้ว?
-                                <Link href="/login" className="typo-label link link-primary ml-2 text-blue-600">เข้าสู่ระบบที่นี่</Link>
+                                <Link href="/login" className="typo-label ml-2 text-blue-600 hover:text-blue-700 hover:underline">เข้าสู่ระบบที่นี่</Link>
                             </p>
                         </div>
                     </div>
@@ -513,24 +512,24 @@ export default function RegisterPage() {
             {/* Modals */}
             {ui.pdpa && (
                 <div className="modal modal-open">
-                    <div className="modal-box max-w-2xl bg-white rounded-dashboard-card p-8 shadow-2xl">
+                    <div className="modal-box max-w-2xl bg-white border border-slate-100 text-slate-800 rounded-dashboard-card p-8 shadow-2xl">
                         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
                             <ShieldCheck className="w-8 h-8 text-blue-600" />
                             <h3 className="typo-section text-slate-800">นโยบายความเป็นส่วนตัว (PDPA)</h3>
                         </div>
                         <div className="typo-body-sm py-2 space-y-4 text-slate-600 max-h-dashboard-tooltip overflow-y-auto pr-4">
-                            <p className="typo-body text-slate-700">วัตถุประสงค์ในการเก็บรวบรวมข้อมูลส่วนบุคคล</p>
+                            <p className="typo-body text-slate-800 font-medium">วัตถุประสงค์ในการเก็บรวบรวมข้อมูลส่วนบุคคล</p>
                             <ul className="list-disc pl-5 space-y-2">
                                 <li>เพื่อตรวจสอบและยืนยันตัวตนของผู้ใช้งานระบบฐานข้อมูล</li>
                                 <li>เพื่อใช้ในการติดต่อประสานงานกรณีพบข้อมูลที่ผิดปกติหรือต้องการสอบถามเพิ่มเติม</li>
                                 <li>เพื่อกำหนดสิทธิ์การเข้าถึงข้อมูลตามบทบาทและพื้นที่ที่รับผิดชอบ</li>
                             </ul>
-                            <p className="typo-body text-slate-700 mt-4">การรักษาความปลอดภัย</p>
+                            <p className="typo-body text-slate-800 font-medium mt-4">การรักษาความปลอดภัย</p>
                             <p className="typo-body">ระบบจะเก็บรักษาข้อมูลของท่านไว้เป็นความลับ และจะไม่มีการเปิดเผยข้อมูลส่วนบุคคลต่อสาธารณะหรือบุคคลที่สามโดยไม่ได้รับอนุญาต</p>
                         </div>
                         <div className="modal-action gap-3 mt-8">
-                            <button onClick={() => router.push('/')} className="typo-label btn btn-ghost rounded-xl px-8">ไม่ยินยอม</button>
-                            <button onClick={() => setUi({ ...ui, pdpa: false })} className="typo-label btn btn-primary rounded-xl px-10 shadow-lg shadow-blue-500/20">ยินยอมและรับทราบ</button>
+                            <button onClick={() => router.push('/')} className="typo-label btn btn-ghost text-slate-600 hover:bg-slate-100 rounded-xl px-8">ไม่ยินยอม</button>
+                            <button onClick={() => setUi({ ...ui, pdpa: false })} className="typo-label btn bg-linear-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white border-none rounded-xl px-10 shadow-lg shadow-blue-500/20">ยินยอมและรับทราบ</button>
                         </div>
                     </div>
                 </div>
@@ -538,13 +537,13 @@ export default function RegisterPage() {
 
             {ui.modal && (
                 <div className="modal modal-open">
-                    <div className="modal-box rounded-dashboard-card p-10 text-center bg-white shadow-2xl">
+                    <div className="modal-box rounded-dashboard-card p-10 text-center bg-white border border-slate-100 text-slate-800 shadow-2xl">
                         <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-6" />
                         <h3 className="typo-section text-slate-800 mb-4">ยืนยันข้อมูลการลงทะเบียน?</h3>
-                        <p className="typo-body-sm text-slate-500 mb-8">ข้อมูลจะถูกส่งไปยังผู้ดูแลระบบเพื่อตรวจสอบและอนุมัติการใช้งาน <br />โปรดตรวจสอบความถูกต้องของข้อมูลก่อนยืนยัน</p>
+                        <p className="typo-body-sm text-slate-600 mb-8">ข้อมูลจะถูกส่งไปยังผู้ดูแลระบบเพื่อตรวจสอบและอนุมัติการใช้งาน <br />โปรดตรวจสอบความถูกต้องของข้อมูลก่อนยืนยัน</p>
                         <div className="flex gap-4 justify-center">
-                            <button onClick={() => setUi({ ...ui, modal: false })} className="typo-label btn btn-ghost px-8 rounded-xl">กลับไปแก้ไข</button>
-                            <button onClick={handleRegister} disabled={ui.loading} className="typo-label btn btn-primary px-10 rounded-xl shadow-lg shadow-blue-500/20">
+                            <button onClick={() => setUi({ ...ui, modal: false })} className="typo-label btn btn-ghost text-slate-600 hover:bg-slate-100 px-8 rounded-xl">กลับไปแก้ไข</button>
+                            <button onClick={handleRegister} disabled={ui.loading} className="typo-label btn bg-linear-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white border-none px-10 rounded-xl shadow-lg shadow-blue-500/20">
                                 {ui.loading ? <span className="loading loading-spinner" /> : 'ยืนยันสมัครสมาชิก'}
                             </button>
                         </div>

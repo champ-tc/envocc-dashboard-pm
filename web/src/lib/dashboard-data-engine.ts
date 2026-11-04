@@ -23,7 +23,7 @@ let buildPromise: Promise<EngineSnapshot> | null = null;
 let buildingVersion: string | null = null;
 
 export function getDashboardDataFiles(): DashboardDataFiles {
-    const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
+    const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'data', 'duckdb');
     return {
         pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.parquet'),
         hdc: path.join(dataDir, process.env.HDC_DATA_FILE || 'hdc.parquet'),

@@ -6,6 +6,8 @@ import path from 'path';
 import { DDS_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
 import { cachedDashboardQuery, getDataVersion, stableCacheKey } from '@/lib/dashboard-runtime';
+import { applyDDSAccessScope, buildDDSFilteredDiseasePredicate, restrictDDSOptionsToScope } from './filter-utils';
+import { buildDiagnosisHaving, DDS_DIAGNOSIS_TYPES, getRequiredDiagnosisCodes } from './diagnosis-filter';
 
 export interface HierarchyItem {
     region: string;
@@ -21,6 +23,7 @@ export interface DDSOptions {
     diseases: string[];
     icd10_codes: string[];
     icd10_by_disease: Record<string, string[]>;
+    icd10_labels: Record<string, string>;
     diagnosisTypes: string[];
     hierarchy: HierarchyItem[];
 }
@@ -98,7 +101,7 @@ interface DuckDBRow {
 
 // Bump when dashboard-query logic changes so an in-memory cached result from a
 // previous query definition cannot keep rendering stale analytics.
-const DDS_QUERY_VERSION = '5';
+const DDS_QUERY_VERSION = '12';
 
 const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
 
@@ -122,10 +125,11 @@ let dbPromise: Promise<duckdbTypes.Database> | null = null;
 let loadedDataVersion: string | null = null;
 
 function getDDSDataFiles() {
-    const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
+    const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'data', 'duckdb');
 
     return {
         dds: path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.parquet'),
+        diseaseGroup: path.join(dataDir, 'DiseaseGroup.json'),
         pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.parquet'),
         midYear: path.join(dataDir, process.env.MID_YEAR_DATA_FILE || 'mid_year.csv'),
     };
@@ -138,6 +142,7 @@ function getDDSDataVersion(): string {
 const getDB = (): Promise<duckdbTypes.Database> => {
     const files = getDDSDataFiles();
     const ddsPath = files.dds;
+    const diseaseGroupPath = files.diseaseGroup;
     const pm25Path = files.pm25;
     const midYearPath = files.midYear;
     const currentDataVersion = getDDSDataVersion();
@@ -174,6 +179,7 @@ const getDB = (): Promise<duckdbTypes.Database> => {
             ].map(([p, r]) => `('${p}', '${r}')`).join(', ');
 
             const escapedDdsPath = ddsPath.replace(/'/g, "''");
+            const escapedDiseaseGroupPath = diseaseGroupPath.replace(/'/g, "''");
             const ddsReader = ddsPath.toLowerCase().endsWith('.parquet')
                 ? `read_parquet('${escapedDdsPath}')`
                 : `read_csv_auto('${escapedDdsPath}', ignore_errors=true)`;
@@ -190,13 +196,34 @@ const getDB = (): Promise<duckdbTypes.Database> => {
                 INSERT INTO region_map VALUES ${regionMapping};
 
                 CREATE TABLE dds_raw_en AS SELECT * FROM ${ddsReader};
+                CREATE TABLE disease_group_map AS
+                SELECT
+                    REPLACE(UPPER(TRIM(REPLACE("sub-code", '*', ''))), '.', '') AS icd_prefix,
+                    CASE TRIM("Disease Type")
+                        WHEN 'โรคทางเดินหายใจ' THEN 'respiratory'
+                        WHEN 'โรคหัวใจและหลอดเลือด' THEN 'circulatory'
+                        WHEN 'โรคผิวหนังอักเสบ' THEN 'skin'
+                        WHEN 'โรคตาอักเสบ' THEN 'eye'
+                        ELSE 'other'
+                    END AS disease_group
+                FROM read_json_auto('${escapedDiseaseGroupPath}');
                 CREATE TABLE pm25_raw_en AS SELECT * FROM ${pm25Reader};
                 
                 -- Create Thai-version views
-                CREATE TABLE dds_raw AS 
-                SELECT d.* EXCLUDE (province_name), COALESCE(m.th, d.province_name) as province_name, 'เขตสุขภาพที่ ' || CAST(county AS VARCHAR) as region
+                CREATE TABLE dds_raw AS
+                SELECT d.* EXCLUDE (province_name),
+                    COALESCE(m.th, d.province_name) as province_name,
+                    'เขตสุขภาพที่ ' || CAST(county AS VARCHAR) as region,
+                    COALESCE(g.disease_group, 'other') as disease_group
                 FROM dds_raw_en d
-                LEFT JOIN province_map m ON d.province_name = m.en;
+                LEFT JOIN province_map m ON d.province_name = m.en
+                LEFT JOIN LATERAL (
+                    SELECT disease_group
+                    FROM disease_group_map
+                    WHERE REPLACE(UPPER(TRIM(REPLACE(d.icd10_code, '.', ''))), '.', '') LIKE icd_prefix || '%'
+                    ORDER BY LENGTH(icd_prefix) DESC
+                    LIMIT 1
+                ) g ON TRUE;
 
                 CREATE TABLE pm25_raw AS 
                 SELECT p.* EXCLUDE (province, "Regional Health"), COALESCE(m.th, p.province) as province, COALESCE(r.region, p."Regional Health") as "Regional Health"
@@ -228,8 +255,14 @@ const getDB = (): Promise<duckdbTypes.Database> => {
 };
 
 export async function getFilterOptions(): Promise<DDSOptions> {
+    const user = await getOptionalUser();
     const version = getDDSDataVersion();
-    return cachedDashboardQuery(`dds:options:${version}`, async () => {
+    const scopeKey = user?.scope?.isProvince
+        ? { province: user.scope.province }
+        : user?.scope?.isRegion
+            ? { region: user.scope.region }
+            : null;
+    return cachedDashboardQuery(`dds:options:${version}:4:${stableCacheKey(scopeKey)}`, async () => {
         const db = await getDB();
         return new Promise((resolve, reject) => {
         // 1. ดึงข้อมูลวันที่ และรหัสโรคจาก dds_raw
@@ -258,18 +291,26 @@ export async function getFilterOptions(): Promise<DDSOptions> {
 
                 // 3. ดึง Mapping ICD10
                 db.all(`
-                    SELECT DISTINCT TRIM("Disease Type") as disease, TRIM(icd10_code) as code 
+                    SELECT DISTINCT
+                        disease_group as disease,
+                        TRIM(icd10_code) as code,
+                        TRIM("Disease Type") as disease_label
                     FROM dds_raw 
-                    WHERE "Disease Type" IS NOT NULL AND icd10_code IS NOT NULL
+                    WHERE icd10_code IS NOT NULL
                 `, (err3: Error | null, res3: DuckDBRow[]) => {
                     if (err3) return reject(err3);
 
                     const icd10_by_disease: Record<string, string[]> = {};
+                    const icd10_labels: Record<string, string> = {};
                     (res3 || []).forEach((row) => {
                         const disease = row.disease as string;
-                        const code = row.code as string;
+                        const code = (row.code as string).replace(/\./g, '').toUpperCase();
                         if (!icd10_by_disease[disease]) icd10_by_disease[disease] = [];
-                        icd10_by_disease[disease].push(code);
+                        if (!icd10_by_disease[disease].includes(code)) icd10_by_disease[disease].push(code);
+                        const diseaseLabel = row.disease_label as string;
+                        if (disease === 'other' && diseaseLabel && !icd10_labels[code]) {
+                            icd10_labels[code] = diseaseLabel;
+                        }
                     });
 
                     const row1 = res1[0];
@@ -288,20 +329,21 @@ export async function getFilterOptions(): Promise<DDSOptions> {
                         subdistrict: h.subdistrict as string
                     }));
 
-                    resolve({
+                    resolve(restrictDDSOptionsToScope({
                         dates: (row1.dates as string[]) || [],
                         regions,
                         provinces,
                         diseases: (row1.diseases as string[]) || [],
                         icd10_codes: (row1.icd10_codes as string[]) || [],
                         icd10_by_disease,
+                        icd10_labels,
                         diagnosisTypes: [
                             'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1',
                             'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97',
                             'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ'
                         ],
                         hierarchy
-                    });
+                    }, user?.scope));
                 });
             });
         });
@@ -310,28 +352,39 @@ export async function getFilterOptions(): Promise<DDSOptions> {
 }
 
 export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promise<DDSDashboardData> {
+    const user = await getOptionalUser();
+    const scopedFilters = applyDDSAccessScope({
+        ...filters,
+        regions: filters.regions || [],
+        provinces: filters.provinces || [],
+        districts: filters.districts || [],
+        subdistricts: filters.subdistricts || [],
+    }, user?.scope);
     const version = getDDSDataVersion();
-    const cacheKey = `dds:data:${DDS_QUERY_VERSION}:${version}:${stableCacheKey(filters)}`;
+    const cacheKey = `dds:data:${DDS_QUERY_VERSION}:${version}:${stableCacheKey(scopedFilters)}`;
     return cachedDashboardQuery(cacheKey, async () => {
         const db = await getDB();
         return new Promise((resolve, reject) => {
         let ddsDateFilter = 'AND 1=1';
         let pm25DateFilter = 'AND 1=1';
 
-        if (filters.startDate === 'ล่าสุด') {
+        if (scopedFilters.startDate === 'ล่าสุด') {
             ddsDateFilter = `AND (CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0')) = (SELECT MAX(CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0')) FROM dds_raw)`;
             pm25DateFilter = `AND strftime(date, '%Y-%m') = (SELECT MAX(CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0')) FROM dds_raw)`;
-        } else if (filters.startDate !== 'ทั้งหมด' && filters.startDate && filters.endDate) {
-            ddsDateFilter = `AND (CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0')) BETWEEN '${filters.startDate}' AND '${filters.endDate}'`;
-            pm25DateFilter = `AND strftime(date, '%Y-%m') BETWEEN '${filters.startDate}' AND '${filters.endDate}'`;
+        } else if (scopedFilters.startDate !== 'ทั้งหมด' && scopedFilters.startDate && scopedFilters.endDate) {
+            ddsDateFilter = `AND (CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0')) BETWEEN '${scopedFilters.startDate}' AND '${scopedFilters.endDate}'`;
+            pm25DateFilter = `AND strftime(date, '%Y-%m') BETWEEN '${scopedFilters.startDate}' AND '${scopedFilters.endDate}'`;
         }
 
-        const mappedRegions = filters.regions?.map((r: string) => r.replace('เขตสุขภาพที่ ', '').trim());
+        const mappedRegions = scopedFilters.regions?.map((r: string) => r.replace('เขตสุขภาพที่ ', '').trim());
         const regionsStr = mappedRegions?.length ? mappedRegions.join(',') : null;
-        const provincesStr = filters.provinces?.length ? filters.provinces.map((p: string) => `'${p.trim()}'`).join(',') : null;
-        const districtsStr = filters.districts?.length ? filters.districts.map((d: string) => `'${d.trim()}'`).join(',') : null;
-        const subdistrictsStr = filters.subdistricts?.length ? filters.subdistricts.map((s: string) => `'${s.trim()}'`).join(',') : null;
-        const diseasesStr = filters.diseases?.length ? filters.diseases.map((d: string) => `'${d.trim()}'`).join(',') : null;
+        const regionLabelsStr = scopedFilters.regions?.length
+            ? scopedFilters.regions.map((r: string) => `'${r.trim().replace(/'/g, "''")}'`).join(',')
+            : null;
+        const provincesStr = scopedFilters.provinces?.length ? scopedFilters.provinces.map((p: string) => `'${p.trim().replace(/'/g, "''")}'`).join(',') : null;
+        const districtsStr = scopedFilters.districts?.length ? scopedFilters.districts.map((d: string) => `'${d.trim().replace(/'/g, "''")}'`).join(',') : null;
+        const subdistrictsStr = scopedFilters.subdistricts?.length ? scopedFilters.subdistricts.map((s: string) => `'${s.trim().replace(/'/g, "''")}'`).join(',') : null;
+        const diseasesStr = scopedFilters.diseases?.length ? scopedFilters.diseases.map((d: string) => `'${d.trim().replace(/'/g, "''")}'`).join(',') : null;
         const ddsLocFilters = [
             regionsStr ? `AND county IN (${regionsStr})` : '',
             provincesStr ? `AND TRIM(province_name) IN (${provincesStr})` : '',
@@ -340,6 +393,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         ].join(' ');
 
         const pm25LocFilters = [
+            regionLabelsStr ? `AND TRIM("Regional Health") IN (${regionLabelsStr}, ${regionsStr?.split(',').map((r: string) => `'${r}'`).join(',') || "''"})` : '',
             provincesStr ? `AND TRIM(province) IN (${provincesStr})` : '',
             districtsStr ? `AND TRIM(district) IN (${districtsStr})` : '',
             subdistrictsStr ? `AND TRIM(subdistrict) IN (${subdistrictsStr})` : ''
@@ -354,48 +408,53 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         const pm25ProvinceFallbackLocFilters = provincesStr
             ? `AND TRIM(province) IN (${provincesStr})`
             : '';
-        const usePm25TrendFallback = Boolean(filters.districts?.length || filters.subdistricts?.length);
+        const usePm25TrendFallback = Boolean(scopedFilters.districts?.length || scopedFilters.subdistricts?.length);
 
-        const ddsDiseaseFilter = diseasesStr ? `AND TRIM("Disease Type") IN (${diseasesStr})` : '';
+        const ddsDiseaseFilter = scopedFilters.diagnosisType?.trim() === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ'
+            ? ''
+            : (diseasesStr ? `AND TRIM("Disease Type") IN (${diseasesStr})` : '');
         // --- Diagnosis Type Filter mapping ---
         let ddsDiagnosisFilter = 'AND 1=0'; // Default to nothing if no match found
-        const diagType = filters.diagnosisType?.trim();
+        const diagType = scopedFilters.diagnosisType?.trim();
 
-        const diagType1Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50"];
-        const diagType2Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L30.9", "L50", "Y97"];
+        const diagType1Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L309", "L50"];
+        const diagType2Codes = ["Z581", "J44", "J45", "J442", "I21", "I22", "I24", "H10", "L309", "L50", "Y97"];
 
-        const hasGroupedFilter = Boolean(filters.groupedIcd10 && typeof filters.groupedIcd10 === 'object');
+        const hasGroupedFilter = Boolean(scopedFilters.groupedIcd10 && typeof scopedFilters.groupedIcd10 === 'object');
         const allSelectedCodes = hasGroupedFilter
-            ? Object.values(filters.groupedIcd10!).flat()
-            : (filters.icd10_codes || []);
+            ? Object.values(scopedFilters.groupedIcd10!).flat()
+            : (scopedFilters.icd10_codes || []);
 
-        if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1') {
+        if (diagType === DDS_DIAGNOSIS_TYPES.lawWithZ581) {
             const activeCodes = hasGroupedFilter
                 ? allSelectedCodes.filter(c => diagType1Codes.includes(c))
                 : diagType1Codes;
+            const requiredCodes = getRequiredDiagnosisCodes(diagType, diagType1Codes);
+            const lawCodes = requiredCodes.filter((code) => code !== 'Z581' && code !== 'Y97');
             ddsDiagnosisFilter = activeCodes.length > 0
-                ? `AND (${icdCodePredicate('icd10_code', activeCodes)})`
+                ? `AND person_id IN (
+                       SELECT person_id FROM dds_raw
+                       WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters}
+                       GROUP BY person_id
+                       HAVING ${buildDiagnosisHaving(['Z581'], lawCodes)}
+                   )`
                 : 'AND 1=0';
-        } else if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97') {
+        } else if (diagType === DDS_DIAGNOSIS_TYPES.lawWithZ581AndY97) {
             const activeCodes = hasGroupedFilter
                 ? allSelectedCodes.filter(c => diagType2Codes.includes(c))
                 : diagType2Codes;
+            const requiredCodes = getRequiredDiagnosisCodes(diagType, diagType2Codes);
+            const lawCodes = requiredCodes.filter((code) => code !== 'Z581' && code !== 'Y97');
             ddsDiagnosisFilter = `
-                AND (${activeCodes.length > 0 ? icdCodePredicate('icd10_code', activeCodes) : '1=0'})
-                AND person_id IN (
+                    AND person_id IN (
                     SELECT person_id
                     FROM dds_raw
                     WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters}
                     GROUP BY person_id
-                    HAVING COUNT(*) FILTER (
-                        WHERE REPLACE(UPPER(TRIM(icd10_code)), '.', '') = 'Z581'
-                    ) > 0
-                    AND COUNT(*) FILTER (
-                        WHERE REPLACE(UPPER(TRIM(icd10_code)), '.', '') = 'Y97'
-                    ) > 0
+                    HAVING ${activeCodes.length > 0 ? buildDiagnosisHaving(['Z581', 'Y97'], lawCodes) : 'FALSE'}
                 )
             `;
-        } else if (diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ') {
+        } else if (diagType === DDS_DIAGNOSIS_TYPES.customWithZ581) {
             ddsDiagnosisFilter = `
                     -- Select people with Z58.1, then keep every ICD-10 row for them.
                     AND person_id IN (
@@ -403,9 +462,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                         FROM dds_raw
                         WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters}
                         GROUP BY person_id
-                        HAVING COUNT(*) FILTER (
-                            WHERE REPLACE(UPPER(TRIM(icd10_code)), '.', '') = 'Z581'
-                        ) > 0
+                        HAVING ${buildDiagnosisHaving(['Z581'])}
                     )
                 `;
         }
@@ -413,20 +470,36 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
         // --- Build individual ICD10 filters for each disease group ---
         const icdFilters: Record<string, string> = {};
         DDS_DISEASES.forEach(d => {
-            const groupCodes = d.codes || [];
+            const groupCodes = (d.codes || []).map(code => code.replace(/\./g, '').toUpperCase());
             let allowedGroupCodes = groupCodes;
-            if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1') {
+            if (diagType === DDS_DIAGNOSIS_TYPES.customWithZ581) {
+                // In custom mode the UI supplies every ICD-10 code found in
+                // this Disease Type; do not narrow it back to the legacy list.
+                allowedGroupCodes = [];
+            } else if (diagType === DDS_DIAGNOSIS_TYPES.lawWithZ581) {
                 allowedGroupCodes = groupCodes.filter(c => diagType1Codes.includes(c));
-            } else if (diagType === 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97') {
+            } else if (diagType === DDS_DIAGNOSIS_TYPES.lawWithZ581AndY97) {
                 allowedGroupCodes = groupCodes.filter(c => diagType2Codes.includes(c));
             }
 
-            if (hasGroupedFilter && d.id in filters.groupedIcd10!) {
-                const selectedCodes = filters.groupedIcd10![d.id] || [];
-                const activeCodes = selectedCodes.filter(c => allowedGroupCodes.includes(c));
+            if (hasGroupedFilter && d.id in scopedFilters.groupedIcd10!) {
+                const selectedCodes = scopedFilters.groupedIcd10![d.id] || [];
+                // Standard EnvOcc modes are limited to the legal-code list.
+                // Custom mode intentionally uses the complete DiseaseGroup map.
+                const normalizedSelectedCodes = selectedCodes.map(code => code.replace(/\./g, '').toUpperCase());
+                const activeCodes = diagType === DDS_DIAGNOSIS_TYPES.customWithZ581
+                    ? normalizedSelectedCodes
+                    : normalizedSelectedCodes.filter(code => allowedGroupCodes.includes(code));
                 icdFilters[d.id] = activeCodes.length > 0
                     ? `AND (${icdCodePredicate('icd', activeCodes)})`
                     : 'AND 1=0';
+            } else if (!hasGroupedFilter) {
+                // DiseaseGroup.json is the source of truth for the complete
+                // group. The legacy constants only contain a small subset of
+                // representative ICD-10 codes.
+                icdFilters[d.id] = d.id === 'health_status'
+                    ? `AND disease_group = 'other'`
+                    : `AND disease_group = '${d.id}'`;
             } else {
                 icdFilters[d.id] = allowedGroupCodes.length > 0
                     ? `AND (${icdCodePredicate('icd', allowedGroupCodes)})`
@@ -434,11 +507,15 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
             }
         });
 
-        const ddsFilteredDiseasePredicate = diagType === 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ'
-            ? 'TRUE'
-            : `
-                    ${DDS_DISEASES.map(d => `(1=1 ${icdFilters[d.id]})`).join(' OR \n                    ')}
-                `;
+        // Keep the row set aligned with the cards. Previously custom mode
+        // assigned every row that was not selected in a primary card to
+        // health_status via NOT(...), which made another card increase when a
+        // code was unchecked. Unselected codes must be excluded, not reclassified.
+        const visibleDiseaseIds = DDS_DISEASES.map(d => d.id);
+        const ddsFilteredDiseasePredicate = buildDDSFilteredDiseasePredicate(visibleDiseaseIds, icdFilters);
+        const totalVisitsExpression = visibleDiseaseIds.length > 0
+            ? `(${visibleDiseaseIds.map(id => `(SELECT ${id} FROM disease_visit_stats_calc)`).join(' + ')})`
+            : '0';
 
         const sqlMain = `
             WITH 
@@ -448,7 +525,8 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     TRIM(province_name) as prov, 
                     CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0') as dt,
                     TRIM("Disease Type") as diag,
-                    TRIM(icd10_code) as icd
+                    TRIM(icd10_code) as icd,
+                    disease_group
                 FROM dds_raw
                 WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters} ${ddsDiagnosisFilter} ${ddsDiseaseFilter}
             ),
@@ -461,10 +539,20 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters}
                 GROUP BY 1, 2
             ),
+            pm25_summary AS (
+                SELECT AVG(pm25)::DOUBLE as avg_pm25
+                FROM pm25_raw
+                WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters}
+            ),
             disease_stats_calc AS (
                 SELECT
                     ${DDS_DISEASES.map(d => `SUM(CASE WHEN 1=1 ${icdFilters[d.id]} THEN 1 ELSE 0 END)::DOUBLE as ${d.id}`).join(', ')},
                     SUM(CASE WHEN ${DDS_DISEASES.map(d => `NOT (1=1 ${icdFilters[d.id]})`).join(' AND ')} THEN 1 ELSE 0 END)::DOUBLE as other
+                FROM dds_base
+            ),
+            disease_visit_stats_calc AS (
+                SELECT
+                    ${DDS_DISEASES.map(d => `SUM(CASE WHEN 1=1 ${icdFilters[d.id]} THEN 1 ELSE 0 END)::DOUBLE as ${d.id}`).join(', ')}
                 FROM dds_base
             ),
             dds_filtered AS (
@@ -475,14 +563,13 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
             )
             SELECT 
                 COUNT(DISTINCT person_id)::DOUBLE as total_patients,
-                COUNT(*)::DOUBLE as total_visits,
+                ${totalVisitsExpression}::DOUBLE as total_visits,
                 (SELECT other FROM disease_stats_calc) as other_patients,
-                AVG(p.pm25_avg)::DOUBLE as avg_pm25,
+                (SELECT avg_pm25 FROM pm25_summary)::DOUBLE as avg_pm25,
                 COUNT(DISTINCT d.prov)::DOUBLE as province_count,
                 MAX(d.dt) as latest_date,
                 ${DDS_DISEASES.map(d => `(SELECT ${d.id} FROM disease_stats_calc) as ${d.id}`).join(', ')}
             FROM dds_filtered d
-            LEFT JOIN pm25_monthly p ON d.prov = p.prov AND d.dt = p.dt
         `;
 
         db.all(sqlMain, (err: Error | null, resMain: DuckDBRow[]) => {
@@ -494,7 +581,8 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
 
             const sqlProvinceList = `
                 WITH dds_base AS (
-                    SELECT TRIM(province_name) as prov, TRIM("Disease Type") as diag, TRIM(icd10_code) as icd,
+                    SELECT person_id, TRIM(province_name) as prov, TRIM("Disease Type") as diag, TRIM(icd10_code) as icd,
+                    disease_group,
                     CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0') as dt
                     FROM dds_raw WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters} ${ddsDiagnosisFilter} ${ddsDiseaseFilter}
                 ),
@@ -512,7 +600,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 )
                 SELECT 
                     d.prov as p, 
-                    COUNT(d.prov)::DOUBLE as patients,
+                    COUNT(DISTINCT d.person_id)::DOUBLE as patients,
                     MAX(m.pop)::DOUBLE as prov_pop,
                     MAX(p.pm25_avg)::DOUBLE as pm
                 FROM dds_filtered d
@@ -530,10 +618,12 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 const sqlTrend = `
                     WITH dds_base AS (
                         SELECT 
+                            person_id,
                             TRIM(province_name) as prov, 
                             CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0') as dt,
                             TRIM("Disease Type") as diag,
-                            TRIM(icd10_code) as icd
+                            TRIM(icd10_code) as icd,
+                            disease_group
                         FROM dds_raw 
                         WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters} ${ddsDiagnosisFilter} ${ddsDiseaseFilter}
                     ),
@@ -541,16 +631,16 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                         SELECT * FROM dds_base
                         WHERE ${ddsFilteredDiseasePredicate}
                     ),
-                    pm25_monthly AS (
-                        SELECT TRIM(province) as prov, strftime(date, '%Y-%m') as dt, AVG(pm25) as pm25_avg
+                    pm25_monthly_summary AS (
+                        SELECT strftime(date, '%Y-%m') as dt, AVG(pm25) as pm25_avg
                         FROM pm25_raw 
                         WHERE 1=1 ${pm25DateFilter} ${pm25LocFilters}
-                        GROUP BY 1, 2
+                        GROUP BY 1
                     ),
                     pm25_district_fallback_monthly AS (
                         SELECT strftime(date, '%Y-%m') as dt, MAX(pm25) as pm25_max
                         FROM pm25_raw
-                        WHERE 1=1 ${pm25DateFilter} ${filters.subdistricts?.length ? pm25DistrictFallbackLocFilters : 'AND 1=0'}
+                        WHERE 1=1 ${pm25DateFilter} ${scopedFilters.subdistricts?.length ? pm25DistrictFallbackLocFilters : 'AND 1=0'}
                         GROUP BY 1
                     ),
                     pm25_province_fallback_monthly AS (
@@ -561,11 +651,11 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     )
                     SELECT 
                         d.dt as month,
-                        COUNT(*)::DOUBLE as total,
-                        COALESCE(AVG(p.pm25_avg), MAX(df.pm25_max), MAX(pf.pm25_max), 0)::DOUBLE as avg_pm25,
-                        ${DDS_DISEASES.map(dis => `SUM(CASE WHEN 1=1 ${icdFilters[dis.id]} THEN 1 ELSE 0 END)::DOUBLE as ${dis.id}`).join(', ')}
+                        COUNT(DISTINCT d.person_id)::DOUBLE as total,
+                        COALESCE(MAX(ps.pm25_avg), MAX(df.pm25_max), MAX(pf.pm25_max), 0)::DOUBLE as avg_pm25,
+                        ${DDS_DISEASES.map(dis => `COUNT(DISTINCT d.person_id) FILTER (WHERE 1=1 ${icdFilters[dis.id]})::DOUBLE as ${dis.id}`).join(', ')}
                     FROM dds_filtered d
-                    LEFT JOIN pm25_monthly p ON d.prov = p.prov AND d.dt = p.dt
+                    LEFT JOIN pm25_monthly_summary ps ON d.dt = ps.dt
                     LEFT JOIN pm25_district_fallback_monthly df ON d.dt = df.dt
                     LEFT JOIN pm25_province_fallback_monthly pf ON d.dt = pf.dt
                     GROUP BY 1 ORDER BY 1 DESC LIMIT 12
@@ -595,7 +685,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
 
                     const sqlDistrictList = `
                         WITH dds_base AS (
-                            SELECT TRIM(province_name) as prov, TRIM(district_name) as dist, TRIM("Disease Type") as diag, TRIM(icd10_code) as icd
+                            SELECT person_id, TRIM(province_name) as prov, TRIM(district_name) as dist, TRIM("Disease Type") as diag, TRIM(icd10_code) as icd, disease_group
                             FROM dds_raw 
                             WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters} ${ddsDiagnosisFilter} ${ddsDiseaseFilter}
                         ),
@@ -612,7 +702,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                         SELECT 
                             d.prov as prov,
                             d.dist as dist,
-                            COUNT(*)::DOUBLE as patients,
+                            COUNT(DISTINCT d.person_id)::DOUBLE as patients,
                             MAX(p.pm25_avg)::DOUBLE as pm
                         FROM dds_filtered d
                         LEFT JOIN pm25_district p ON d.prov = p.prov AND d.dist = p.dist
@@ -641,7 +731,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
 
                         const sqlSubdistrictList = `
                             WITH dds_base AS (
-                                SELECT TRIM(province_name) as prov, TRIM(district_name) as dist, TRIM(subdistrict_name) as subdist, TRIM("Disease Type") as diag, TRIM(icd10_code) as icd
+                                SELECT person_id, TRIM(province_name) as prov, TRIM(district_name) as dist, TRIM(subdistrict_name) as subdist, TRIM("Disease Type") as diag, TRIM(icd10_code) as icd, disease_group
                                 FROM dds_raw 
                                 WHERE 1=1 ${ddsDateFilter} ${ddsLocFilters} ${ddsDiagnosisFilter} ${ddsDiseaseFilter}
                             ),
@@ -659,7 +749,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                                 d.prov as prov,
                                 d.dist as dist,
                                 d.subdist as subdist,
-                                COUNT(*)::DOUBLE as patients,
+                                COUNT(DISTINCT d.person_id)::DOUBLE as patients,
                                 MAX(p.pm25_avg)::DOUBLE as pm
                             FROM dds_filtered d
                             LEFT JOIN pm25_subdistrict p ON d.prov = p.prov AND d.dist = p.dist AND d.subdist = p.subdist

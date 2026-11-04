@@ -12,6 +12,7 @@ import { PM25Text } from '@/components/PM25Mark';
 import CloudLoader from '@/components/CloudLoader';
 import ExportImageButton from '@/components/dashboard/ExportImageButton';
 import { Check, ChevronDown } from 'lucide-react';
+import OpenSkyBackground from '@/components/shared/OpenSkyBackground';
 
 const DASHBOARD_ERROR_MESSAGE = 'ระบบประมวลผลข้อมูลไม่สำเร็จ กรุณากดลองใหม่ หากยังพบปัญหาโปรดแจ้งผู้ดูแลระบบ';
 
@@ -30,12 +31,20 @@ function SingleSelect({ label, options, selected, onChange }: { label?: string, 
     return (
         <div className="relative col-span-1">
             {label && <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>}
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
-                <div className="truncate max-w-36">
-                    {selected || 'กรุณาเลือก'}
-                </div>
-                <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
-            </div>
+            <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+                onClick={() => setIsOpen(!isOpen)}
+                className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left text-white font-normal ring-1 transition-all ${
+                    isOpen
+                        ? 'border-blue-400/70 bg-white/30 ring-blue-400/30'
+                        : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'
+                }`}
+            >
+                <span className="truncate max-w-36">{selected || 'กรุณาเลือก'}</span>
+                <ChevronDown aria-hidden="true" className={`size-4 shrink-0 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`} strokeWidth={2.5} />
+            </button>
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
@@ -107,23 +116,28 @@ function SearchableSingleSelect({
     return (
         <div ref={containerRef} className="relative col-span-1 w-full">
             {label && <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>}
-            <div
+            <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
                 onClick={() => {
                     if (!disabled) setIsOpen(!isOpen);
                 }}
-                className={`typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none flex justify-between items-center min-h-12 transition-all shadow-sm ring-1 ring-white/20 ${
-                    disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/30'
+                className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left text-white font-normal ring-1 transition-all ${
+                    disabled
+                        ? 'opacity-50 cursor-not-allowed border-white/30 bg-white/20 ring-white/20'
+                        : isOpen
+                        ? 'border-blue-400/70 bg-white/30 ring-blue-400/30'
+                        : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'
                 }`}
             >
-                <div className="truncate max-w-36">
-                    {displayLabel}
-                </div>
+                <span className="truncate max-w-36">{displayLabel}</span>
                 <ChevronDown
                     aria-hidden="true"
-                    className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`}
+                    className={`size-4 shrink-0 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : 'text-white/40'}`}
                     strokeWidth={2.5}
                 />
-            </div>
+            </button>
             {isOpen && !disabled && (
                 <>
                     <div
@@ -220,7 +234,7 @@ function SearchableSingleSelect({
 }
 
 // Custom MultiSelect
-function MultiSelect({ label, options, selected, onChange, placeholder = "ทั้งหมด", renderOption, searchPlaceholder = "ค้นหา" }: { label?: string, options: string[], selected: string[], onChange: (val: string[]) => void, placeholder?: string, renderOption?: (opt: string) => string, searchPlaceholder?: string }) {
+function MultiSelect({ label, options, selected, onChange, placeholder = "ทั้งหมด", renderOption, groupBy, groupParent, searchPlaceholder = "ค้นหา", showAllLabel = true }: { label?: string, options: string[], selected: string[], onChange: (val: string[]) => void, placeholder?: string, renderOption?: (opt: string) => string, groupBy?: (opt: string) => string, groupParent?: string, searchPlaceholder?: string, showAllLabel?: boolean }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchText, setSearchText] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
@@ -234,6 +248,23 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
             return opt.toLowerCase().includes(normalizedSearch) || displayText.includes(normalizedSearch);
         })
         : safeOptions;
+    const getGroupName = (opt: string) => groupBy ? groupBy(opt).trim() : '';
+    const groupedOptions = groupBy
+        ? [...filteredOptions].sort((a, b) => {
+            const groupOrder = getGroupName(a).localeCompare(getGroupName(b), 'th');
+            return groupOrder || a.localeCompare(b);
+        }).reduce<Array<{ type: 'parent' | 'group' | 'option'; value: string }>>((items, opt) => {
+            const group = getGroupName(opt);
+            if (groupParent && !items.some(item => item.type === 'parent' && item.value === groupParent)) {
+                items.push({ type: 'parent', value: groupParent });
+            }
+            if (!items.some(item => item.type === 'group' && item.value === group)) {
+                items.push({ type: 'group', value: group });
+            }
+            items.push({ type: 'option', value: opt });
+            return items;
+        }, [])
+        : filteredOptions.map(opt => ({ type: 'option' as const, value: opt }));
 
     useEffect(() => {
         if (!isOpen) return;
@@ -255,12 +286,12 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     );
     const displayText = safeSelected.length === 0
         ? (placeholder === 'ไม่เลือก' || safeOptions.length === 0 ? placeholder : 'ไม่เลือก')
-        : (isAllSelected ? 'ทั้งหมด' : safeSelected.map(getDisplayText).join(', '));
+        : (isAllSelected && showAllLabel ? 'ทั้งหมด' : safeSelected.map(getDisplayText).join(', '));
 
     return (
         <div ref={containerRef} className="relative col-span-1 w-full">
             {label && <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>}
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
+            <div onClick={() => setIsOpen(!isOpen)} className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left text-white font-normal ring-1 transition-all ${isOpen ? 'border-blue-400/70 bg-white/30 ring-blue-400/30' : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'}`}>
                 <div className="truncate max-w-36">
                     {displayText}
                 </div>
@@ -288,10 +319,43 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
                             </div>
                             <span className="typo-caption text-white">เลือกทั้งหมด</span>
                         </div>
-                        {filteredOptions.map((opt: string) => {
+                        {groupedOptions.map((item, index) => {
+                            if (item.type === 'parent') {
+                                const parentCodes = safeOptions;
+                                const isParentSelected = parentCodes.length > 0 && parentCodes.every(opt => safeSelected.includes(opt));
+                                return (
+                                    <div key={`parent-${item.value}`} onClick={() => onChange(isParentSelected ? safeSelected.filter(opt => !parentCodes.includes(opt)) : Array.from(new Set([...safeSelected, ...parentCodes])))} className="typo-caption flex items-center gap-3 px-3 pt-2 pb-2 text-white font-semibold cursor-pointer hover:bg-white/10">
+                                        <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center ${isParentSelected ? 'bg-blue-500 border-blue-400' : 'border-white/20'}`}>
+                                            {isParentSelected && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
+                                        </div>
+                                        <span>{item.value}</span>
+                                    </div>
+                                );
+                            }
+                            if (item.type === 'group') {
+                                const groupCodes = safeOptions.filter(opt => getGroupName(opt) === item.value);
+                                const selectedGroupCodes = groupCodes.filter(opt => safeSelected.includes(opt));
+                                const isGroupSelected = groupCodes.length > 0 && selectedGroupCodes.length === groupCodes.length;
+                                return (
+                                    <div
+                                        key={`group-${item.value}-${index}`}
+                                        onClick={() => onChange(isGroupSelected
+                                            ? safeSelected.filter(opt => !groupCodes.includes(opt))
+                                            : Array.from(new Set([...safeSelected, ...groupCodes]))
+                                        )}
+                                        className={`typo-caption flex items-center gap-3 px-3 pt-2 pb-1 pl-8 text-blue-300 font-semibold ${groupParent ? '' : 'border-t border-white/10'} cursor-pointer hover:bg-white/10`}
+                                    >
+                                        <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center ${isGroupSelected ? 'bg-blue-500 border-blue-400' : 'border-white/20'}`}>
+                                            {isGroupSelected && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
+                                        </div>
+                                        <span>{item.value}</span>
+                                    </div>
+                                );
+                            }
+                            const opt = item.value;
                             const isSelected = safeSelected.includes(opt);
                             return (
-                                <div key={opt} onClick={() => { if (isSelected) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); setSearchText(''); }} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition-all group">
+                                <div key={opt} onClick={() => { if (isSelected) onChange(safeSelected.filter((s: string) => s !== opt)); else onChange([...safeSelected, opt]); setIsOpen(false); setSearchText(''); }} className={`flex items-center gap-3 p-3 ${groupBy ? 'pl-14' : ''} hover:bg-white/10 rounded-xl cursor-pointer transition-all group`}>
                                     <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/30' : 'border-white/10 group-hover:border-white/30'}`}>
                                         {isSelected && <Check aria-hidden="true" className="size-3.5 text-white" strokeWidth={4} />}
                                     </div>
@@ -336,7 +400,7 @@ function CustomDatePicker({ label, options, value, onChange, thaiMonths }: { lab
     return (
         <div className="relative col-span-1">
             <label className="typo-label filter-label block uppercase text-white mb-2 ml-2">{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className="typo-caption w-full bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 hover:bg-white/30 transition-all shadow-sm ring-1 ring-white/20">
+            <div onClick={() => setIsOpen(!isOpen)} className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left text-white font-normal ring-1 transition-all ${isOpen ? 'border-blue-400/70 bg-white/30 ring-blue-400/30' : 'border-white/30 bg-white/20 ring-white/20 hover:bg-white/30'}`}>
                 <div className="truncate max-w-36">
                     {formatDate(value)}
                 </div>
@@ -412,7 +476,7 @@ const DISEASE_CARD_LABELS = Object.fromEntries(
 const DISEASE_ICD_OPTIONS: Record<string, string[]> = {
     'respiratory': ['J44', 'J45', 'J442'],
     'circulatory': ['I21', 'I22', 'I24'],
-    'skin': ['L30.9', 'L50'],
+    'skin': ['L309', 'L50'],
     'eye': ['H10'],
     'health_status': ['Z581', 'Y97']
 };
@@ -420,8 +484,19 @@ const DISEASE_ICD_OPTIONS: Record<string, string[]> = {
 const ENVOCC_WITH_Z581_TYPE = 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1';
 const CUSTOM_Z581_TYPE = 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ';
 
-const getDiagnosisCodes = (groupId: string, diagnosisType: string) => {
-    const baseCodes = DISEASE_ICD_OPTIONS[groupId] || [];
+const getDiagnosisCodes = (groupId: string, diagnosisType: string, codesByDisease: Record<string, string[]> = {}) => {
+    const card = DISEASE_CARDS.find(item => item.id === groupId);
+    const mappedCodes = card ? codesByDisease[card.id] || [] : [];
+    const baseCodes = diagnosisType === CUSTOM_Z581_TYPE
+        ? groupId === 'health_status'
+            ? Array.from(new Set(Object.values(codesByDisease).flat())).filter(code => {
+                const primaryCodes = DISEASE_CARDS
+                    .filter(item => item.id !== 'health_status')
+                    .flatMap(item => codesByDisease[item.id] || []);
+                return !primaryCodes.includes(code);
+            })
+            : mappedCodes
+        : DISEASE_ICD_OPTIONS[groupId] || mappedCodes;
     if (diagnosisType === ENVOCC_WITH_Z581_TYPE) {
         return groupId === 'health_status'
             ? baseCodes.filter(c => c === 'Z581')
@@ -437,7 +512,7 @@ export default function DDSDashboardPage() {
     const [data, setData] = useState<DDSDashboardData | null>(null);
     const [options, setOptions] = useState<DDSOptions>({
         dates: [], regions: [], provinces: [], diseases: [], icd10_codes: [],
-        icd10_by_disease: {}, diagnosisTypes: [], hierarchy: []
+        icd10_by_disease: {}, icd10_labels: {}, diagnosisTypes: [], hierarchy: []
     });
     const [loading, setLoading] = useState(true);
     const [busyMessage, setBusyMessage] = useState<string | null>(null);
@@ -472,6 +547,17 @@ export default function DDSDashboardPage() {
             }
             const sortedDates = [...opts.dates].sort((a, b) => b.localeCompare(a));
             setOptions({ ...opts, dates: sortedDates });
+
+            const mappedGroups = DISEASE_CARDS.reduce((acc, card) => {
+                acc[card.id] = getDiagnosisCodes(card.id, ENVOCC_WITH_Z581_TYPE, opts.icd10_by_disease);
+                return acc;
+            }, {} as Record<string, string[]>);
+            setGroupedIcd10(mappedGroups);
+            setFilters(prev => ({
+                ...prev,
+                icd10_codes: Object.values(mappedGroups).flat(),
+                groupedIcd10: mappedGroups
+            }));
 
             if (sortedDates.length) {
                 const latestDateStr = sortedDates[0];
@@ -668,21 +754,8 @@ export default function DDSDashboardPage() {
     };
 
     return (
-        <div className="typo-body min-h-screen bg-slate-800 relative selection:bg-blue-500/30 overflow-x-hidden">
-            <div
-                aria-hidden="true"
-                className="pointer-events-none fixed inset-0 z-0"
-                style={{
-                    backgroundImage: "url('/img/background-optimized.jpg')",
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                }}
-            />
-            <div
-                aria-hidden="true"
-                className="pointer-events-none fixed inset-0 z-0 bg-slate-900/15"
-            />
+        <div className="typo-body min-h-screen relative selection:bg-blue-500/30 overflow-x-hidden">
+            <OpenSkyBackground />
             {loading && <DashboardLoading />}
 
             <main aria-busy={loading} inert={loading} className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen flex flex-col gap-4">
@@ -718,7 +791,7 @@ export default function DDSDashboardPage() {
 
                 {/* Filters */}
                 <div className="relative z-toolbar">
-                    <div className="bg-white/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/20">
+                    <div className="bg-neutral-900/25 backdrop-blur-2xl p-4 rounded-3xl shadow-2xl border border-white/15 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 items-end shrink-0 ring-1 ring-white/10">
                         <DashboardDatePicker label="จากเดือน" options={options.dates} value={filters.startDate} onChange={(v) => setFilters(f => ({ ...f, startDate: v }))} />
                         <DashboardDatePicker label="ถึงเดือน" options={options.dates} value={filters.endDate} onChange={(v) => setFilters(f => ({ ...f, endDate: v }))} />
                         <SearchableSingleSelect
@@ -757,7 +830,7 @@ export default function DDSDashboardPage() {
                         />
                         <SingleSelect label="ประเภทวินิจฉัย" options={options.diagnosisTypes} selected={filters.diagnosisType} onChange={(val) => {
                             const nextGrouped = DISEASE_CARDS.reduce((acc, card) => {
-                                acc[card.id] = getDiagnosisCodes(card.id, val);
+                                acc[card.id] = getDiagnosisCodes(card.id, val, options.icd10_by_disease);
                                 return acc;
                             }, {} as Record<string, string[]>);
                             setGroupedIcd10(nextGrouped);
@@ -770,26 +843,24 @@ export default function DDSDashboardPage() {
                 <div className="flex flex-col gap-4 relative z-section-raised">
                     {/* Top Row: General Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/30 min-h-32 flex flex-col justify-between group overflow-hidden relative">
-                            <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                        <div className="bg-linear-to-br from-blue-600/90 to-sky-500/90 backdrop-blur-xl p-5 rounded-3xl shadow-2xl border border-white/30 min-h-32 flex flex-col justify-between group">
                             <div className="typo-section section-title text-blue-100 uppercase mb-1">จำนวนผู้ป่วยการวินิจฉัยโรคทั้งหมด</div>
                             <div className="typo-metric text-white tabular-nums my-2 flex items-end gap-3 drop-shadow-lg">
                                 {loading ? <div className="h-10 w-32 bg-white/20 animate-pulse rounded-xl"></div> : data?.totalPatients?.toLocaleString()}
                                 <div className="typo-label text-white uppercase mb-1.5">ราย</div>
                             </div>
-                            <div className="typo-chart text-white uppercase mt-auto bg-white/20 p-2.5 rounded-2xl border border-white/30 backdrop-blur-sm line-clamp-2">
+                            <div className="typo-chart text-white uppercase mt-auto">
                                 นับตามรายบุคคลที่ตรงตามตัวกรองการวินิจฉัย (Unique Patients)
                             </div>
                         </div>
 
-                        <div className="bg-white/20 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-white/25 min-h-32 flex flex-col justify-between group overflow-hidden relative ring-1 ring-white/15">
-                            <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                        <div className="bg-neutral-900/25 backdrop-blur-2xl p-5 rounded-3xl shadow-2xl border border-white/15 min-h-32 flex flex-col justify-between group ring-1 ring-white/10 transition-all hover:border-white/30 hover:bg-neutral-900/35">
                             <div className="typo-section section-title text-white uppercase mb-1">จำนวนการวินิจฉัยทั้งหมด</div>
-                            <div className="typo-metric text-blue-400 tabular-nums my-2 flex items-end gap-3">
+                            <div className="typo-metric text-white tabular-nums my-2 flex items-end gap-3 drop-shadow-md">
                                 {loading ? <div className="h-10 w-32 bg-white/10 animate-pulse rounded-xl"></div> : data?.totalVisits?.toLocaleString()}
                                 <div className="typo-label text-white uppercase mb-1.5">ครั้ง</div>
                             </div>
-                            <div className="typo-chart text-white uppercase mt-auto bg-white/15 p-2.5 rounded-2xl border border-white/20 line-clamp-2">
+                            <div className="typo-chart text-white uppercase mt-auto">
                                 รวมทุกรายการที่ตรงตามตัวกรองการวินิจฉัย
                             </div>
                         </div>
@@ -797,39 +868,43 @@ export default function DDSDashboardPage() {
 
                     {/* Bottom Row: Disease Group Stats */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 shrink-0">
-                        {DISEASE_CARDS.map((card, i) => {
+                        {DISEASE_CARDS
+                            .map((card, i) => {
                             const stat = data?.top5DiseaseStats?.find((s) => s.id === card.id) || { value: 0 };
-                            const cardOptions = getDiagnosisCodes(card.id, filters.diagnosisType);
+                            const cardOptions = getDiagnosisCodes(card.id, filters.diagnosisType, options.icd10_by_disease);
 
                             return (
-                                <div key={i} className="bg-white/20 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-white/25 min-h-32 flex flex-col justify-between relative hover:z-header group ring-1 ring-white/15 transition-all hover:bg-white/30">
+                                <div key={i} className="bg-neutral-900/25 backdrop-blur-2xl p-5 rounded-3xl shadow-2xl border border-white/15 min-h-32 flex flex-col justify-between relative hover:z-header group ring-1 ring-white/10 transition-all hover:border-white/30 hover:bg-neutral-900/35">
                                     <div className="typo-chart text-white uppercase mb-2" title={card.label}>{card.label}</div>
-                                    <div className="typo-metric text-white tabular-nums flex items-end gap-2 mb-3">
+                                    <div className="typo-metric text-white tabular-nums mb-3">
                                         {loading ? <div className="h-8 w-20 bg-white/10 animate-pulse rounded-lg"></div> : stat.value?.toLocaleString()}
-                                        <div className="w-1.5 h-6 rounded-full mb-1 shadow-lg" style={{ backgroundColor: card.color === 'rose' ? '#f43f5e' : (card.color === 'orange' ? '#f97316' : (card.color === 'emerald' ? '#10b981' : (card.color === 'blue' ? '#3b82f6' : '#a855f7'))) }}></div>
                                     </div>
                                     <div className="mt-auto relative z-20 w-full">
                                         <MultiSelect
                                             options={cardOptions}
                                             selected={groupedIcd10[card.id] || []}
                                             onChange={(val) => handleGroupedIcd10Change(card.id, val)}
+                                            groupBy={card.id === 'health_status' && filters.diagnosisType === CUSTOM_Z581_TYPE
+                                                ? (code: string) => options.icd10_labels[code] || 'รายการอื่นๆ'
+                                                : undefined}
                                             placeholder="ไม่เลือก"
+                                            showAllLabel={filters.diagnosisType === CUSTOM_Z581_TYPE}
                                             searchPlaceholder="ค้นหารหัสโรค"
                                         />
                                     </div>
                                 </div>
                             );
-                        })}
+                            })}
                     </div>
                 </div>
 
                 {/* Visualizations */}
                 <div className="grid grid-cols-1 lg:grid-cols-dashboard gap-4 flex-1 min-h-0 relative z-section">
                     {/* Monthly Trend Chart */}
-                    <div ref={chartRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
+                    <div ref={chartRef} className="bg-neutral-900/25 backdrop-blur-2xl p-6 rounded-3xl border border-white/15 shadow-2xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
                         <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename="dds-monthly-trend" /></div>
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-8 shrink-0">
-                            <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg"></div><PM25Text>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text></h4>
+                            <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase"><PM25Text>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text></h4>
                             {options.dates[0] && (
                                 <div className="typo-caption badge badge-warning badge-outline px-4 py-3">
                                     ข้อมูลล่าสุดในระบบ: {formatThaiMonthYear(options.dates[0])}
@@ -901,9 +976,9 @@ export default function DDSDashboardPage() {
                     </div>
 
                     {/* Thailand Map Section */}
-                    <div ref={mapRef} className="bg-[#3b3b3b] p-6 rounded-3xl border border-white/10 shadow-3xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
+                    <div ref={mapRef} className="bg-neutral-900/25 backdrop-blur-2xl p-6 rounded-3xl border border-white/15 shadow-2xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative">
                         <div className="flex items-center justify-between mb-8 shrink-0">
-                            <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase"><div className="w-2.5 h-8 bg-linear-to-b from-blue-500 to-sky-400 rounded-full shadow-lg shadow-blue-500/40"></div>{mapTitle}</h4>
+                            <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase">{mapTitle}</h4>
                             <div className="flex items-center gap-3"><div className="typo-caption bg-blue-500/10 text-blue-400 px-5 py-2 rounded-full border border-blue-500/20 uppercase">{mapAreaCount} พื้นที่</div><ExportImageButton targetRef={mapRef} filename="dds-map" /></div>
                         </div>
                         <div className="flex-1 w-full min-h-map relative rounded-xl overflow-hidden border border-white/5 ring-1 ring-white/10 bg-slate-800/50">

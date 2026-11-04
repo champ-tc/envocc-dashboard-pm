@@ -8,17 +8,8 @@ import { useState, useEffect } from 'react';
 
 export default function GuestNavbar() {
     const pathname = usePathname();
-    const [scrolled, setScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
 
     // Close mobile menu when resizing to desktop
     useEffect(() => {
@@ -40,17 +31,17 @@ export default function GuestNavbar() {
     const isRegister = pathname === '/register';
     const isHome = pathname === '/';
 
-    const isTransparent = isHome && !scrolled && !isMobileMenuOpen;
+    const isTransparent = isHome && !isMobileMenuOpen;
 
     const navClasses = isTransparent
         ? 'bg-transparent border-transparent'
-        : 'bg-white/95 backdrop-blur-md border-slate-200/50 shadow-sm';
+        : 'bg-slate-950/20 backdrop-blur-md border-white/15 shadow-lg';
 
-    const textColor = isTransparent ? 'text-white' : 'text-slate-900';
-    const linkColor = isTransparent ? 'text-white/90 hover:text-white' : 'text-slate-600 hover:text-blue-600';
+    const textColor = 'text-white';
+    const linkColor = 'text-white/90 hover:text-white';
 
     return (
-        <nav className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${navClasses}`}>
+        <nav className={`absolute top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${navClasses}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16 md:h-20">
                     {/* Logo Segment */}
@@ -99,11 +90,11 @@ export default function GuestNavbar() {
 
                             {isDropdownOpen && (
                                 <div className="absolute top-full left-0 pt-2 w-48 z-60 transition-all animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <div className={`rounded-2xl shadow-xl border border-slate-100 overflow-hidden py-2 ${isTransparent ? 'bg-white/95 backdrop-blur-md' : 'bg-white'}`}>
-                                        <Link href="/dashboard/hdc" onClick={() => setIsDropdownOpen(false)} className="typo-label block px-4 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all">
+                                    <div className="rounded-2xl shadow-xl border border-white/10 overflow-hidden bg-slate-900/95 py-2 backdrop-blur-md">
+                                        <Link href="/dashboard/hdc" onClick={() => setIsDropdownOpen(false)} className="typo-label block px-4 py-2.5 text-white hover:bg-white/10 hover:text-white transition-all">
                                             Health Data Center (HDC)
                                         </Link>
-                                        <Link href="/dashboard/dds" onClick={() => setIsDropdownOpen(false)} className="typo-label block px-4 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all">
+                                        <Link href="/dashboard/dds" onClick={() => setIsDropdownOpen(false)} className="typo-label block px-4 py-2.5 text-white hover:bg-white/10 hover:text-white transition-all">
                                             Digital Disease Surveillance (DDS)
                                         </Link>
                                     </div>
@@ -111,7 +102,7 @@ export default function GuestNavbar() {
                             )}
                         </div>
 
-                        <div className={`h-6 w-px ${isTransparent ? 'bg-white/20' : 'bg-slate-200'}`}></div>
+                        <div className="h-6 w-px bg-white/20"></div>
 
                         {isLogin ? (
                             <Link
@@ -167,30 +158,30 @@ export default function GuestNavbar() {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-white border-t border-slate-100 animate-in slide-in-from-top duration-300">
+                <div className="md:hidden bg-slate-950/35 border-t border-white/10 backdrop-blur-md animate-in slide-in-from-top duration-300">
                     <div className="px-4 pt-2 pb-6 space-y-1 shadow-lg">
                         <Link
                             href="/dashboard/pm25"
-                            className="typo-label block px-3 py-3 rounded-xl text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            className="typo-label block px-3 py-3 rounded-xl text-white hover:bg-white/10 hover:text-white transition-colors"
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             Dashboard ฝุ่น <PM25Mark />
                         </Link>
                         
                         <div className="py-2">
-                            <div className="typo-caption px-3 py-1 text-slate-400 uppercase">
+                            <div className="typo-caption px-3 py-1 text-white/55 uppercase">
                                 Dashboard ผู้ป่วย
                             </div>
                             <Link
                                 href="/dashboard/hdc"
-                                className="typo-label block px-3 py-3 rounded-xl text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                className="typo-label block px-3 py-3 rounded-xl text-white hover:bg-white/10 hover:text-white transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 Health Data Center (HDC)
                             </Link>
                             <Link
                                 href="/dashboard/dds"
-                                className="typo-label block px-3 py-3 rounded-xl text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                className="typo-label block px-3 py-3 rounded-xl text-white hover:bg-white/10 hover:text-white transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 Digital Disease Surveillance (DDS)
@@ -200,7 +191,7 @@ export default function GuestNavbar() {
                         <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
                             <Link
                                 href="/login"
-                                className="typo-label w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors"
+                                className="typo-label w-full flex items-center justify-center px-4 py-3 border border-white/20 rounded-xl text-white hover:bg-white/10 transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 เข้าสู่ระบบ

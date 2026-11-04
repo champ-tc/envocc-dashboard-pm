@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowUpRight, Database, FileCheck2, Gauge, MapPinned, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowUpRight, Database, FileCheck2, Gauge, MapPinned, Sparkles, UsersRound } from 'lucide-react';
 
 import { requireRoles } from '@/lib/auth';
 
@@ -41,25 +41,8 @@ export default async function AdminPage() {
                         </h1>
                         <p className="typo-body-sm mt-3 max-w-2xl text-slate-300">ศูนย์กลางสำหรับบริหารข้อมูลสุขภาพ สิ่งแวดล้อม และสิทธิ์การใช้งานในที่เดียว</p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3.5 backdrop-blur-md">
-                        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
-                            <ShieldCheck className="size-6" />
-                        </div>
-                        <div>
-                            <p className="typo-caption text-slate-400">สถานะระบบ</p>
-                            <p className="typo-label mt-1 flex items-center gap-2 text-white"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" /><span className="relative inline-flex size-2 rounded-full bg-emerald-400" /></span>พร้อมใช้งาน</p>
-                        </div>
-                    </div>
                 </div>
             </section>
-
-            <div className="auth-page-header">
-                <div>
-                    <p className="typo-caption mb-1 uppercase text-blue-600">Workspace</p>
-                    <h2 className="typo-subtitle text-slate-900">พื้นที่จัดการของคุณ</h2>
-                    <p className="typo-body auth-page-description">เครื่องมือและข้อมูลตามสิทธิ์ของบัญชี</p>
-                </div>
-            </div>
 
             <section className="grid auto-rows-fr grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {availableShortcuts.map((item) => {

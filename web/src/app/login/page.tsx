@@ -6,6 +6,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { ChevronLeft, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
 import { PM25Text } from '@/components/PM25Mark';
+import OpenSkyBackground from '@/components/shared/OpenSkyBackground';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -62,35 +63,31 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="typo-body relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-900 selection:bg-blue-500/30">
-            <div
-                className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: "url('/img/background-optimized.jpg')" }}
-            />
-            <div className="pointer-events-none absolute inset-0 bg-slate-900/55" />
-            <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-blue-500/20 blur-hero-orb" />
-            <div className="pointer-events-none absolute -right-24 bottom-1/4 h-72 w-72 rounded-full bg-cyan-400/15 blur-hero-orb" />
+        <div className="typo-body relative flex min-h-screen items-center justify-center overflow-hidden selection:bg-blue-500/30">
+            <OpenSkyBackground />
+            <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-blue-500/20 blur-hero-orb z-0" />
+            <div className="pointer-events-none absolute -right-24 bottom-1/4 h-72 w-72 rounded-full bg-cyan-400/15 blur-hero-orb z-0" />
 
-            <Link href="/" className="typo-body absolute left-4 top-4 z-50 btn btn-ghost gap-2 rounded-full border border-white/20 bg-slate-950/70 text-white shadow-lg backdrop-blur-xl hover:bg-slate-900 sm:left-6 sm:top-6">
+            <Link href="/" className="typo-body absolute left-4 top-4 z-50 btn btn-ghost gap-2 rounded-full border border-white/60 bg-white/80 text-slate-700 shadow-md backdrop-blur-md hover:bg-white hover:text-blue-600 sm:left-6 sm:top-6">
                 <ChevronLeft size={20} />
                 <span>กลับหน้าหลัก</span>
             </Link>
 
             <div className="z-10 w-full max-w-md px-4">
-                <div className="card rounded-auth-card border border-white/20 bg-slate-900/80 text-white shadow-2xl shadow-slate-950/50 backdrop-blur-2xl ring-1 ring-white/10">
+                <div className="card rounded-auth-card bg-white border border-slate-100 shadow-2xl ring-1 ring-slate-900/5 text-slate-800 transition-all">
                     <form onSubmit={onSubmit} className="card-body p-8 sm:p-12">
 
                         <div className="text-center mb-8">
                             <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-linear-to-br from-blue-600 to-sky-400 text-white shadow-xl shadow-blue-500/20 mb-6">
                                 <Lock size={40} />
                             </div>
-                            <h1 className="typo-title text-white">เข้าสู่ระบบ</h1>
-                            <p className="typo-body mt-2 text-white/60"><PM25Text>PM2.5 Patient Database</PM25Text></p>
+                            <h1 className="typo-title text-slate-800">เข้าสู่ระบบ</h1>
+                            <p className="typo-body mt-2 text-slate-500"><PM25Text>PM2.5 Patient Database</PM25Text></p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="fieldset gap-2 py-0">
-                                <label htmlFor="username" className="typo-label label px-1"><span className="typo-label text-white/70">ชื่อผู้ใช้งาน</span></label>
+                                <label htmlFor="username" className="typo-label label px-1"><span className="typo-label text-slate-700">ชื่อผู้ใช้งาน</span></label>
                                 <div className="relative">
                                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input
@@ -99,7 +96,7 @@ export default function LoginPage() {
                                         autoComplete="username"
                                         placeholder="Username"
                                         required
-                                        className="typo-body-sm input w-full rounded-2xl border-white/15 bg-white/10 pl-12 text-white placeholder:text-white/35 focus:border-blue-400 focus:bg-white/15"
+                                        className="typo-body-sm input w-full rounded-2xl border-slate-200 bg-slate-50/70 pl-12 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white transition-all"
                                         value={form.username}
                                         onChange={e => handleInputChange('username', e.target.value)}
                                     />
@@ -108,7 +105,7 @@ export default function LoginPage() {
 
                             <div className="fieldset gap-2 py-0">
                                 <div className="label px-1 flex justify-between">
-                                    <label htmlFor="password" className="typo-label text-white/70">รหัสผ่าน</label>
+                                    <label htmlFor="password" className="typo-label text-slate-700">รหัสผ่าน</label>
                                 </div>
                                 <div className="relative">
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -118,7 +115,7 @@ export default function LoginPage() {
                                         autoComplete="current-password"
                                         placeholder="Password"
                                         required
-                                        className="typo-body-sm input w-full rounded-2xl border-white/15 bg-white/10 pl-12 pr-12 text-white placeholder:text-white/35 focus:border-blue-400 focus:bg-white/15"
+                                        className="typo-body-sm input w-full rounded-2xl border-slate-200 bg-slate-50/70 pl-12 pr-12 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white transition-all"
                                         value={form.password}
                                         onChange={e => handleInputChange('password', e.target.value)}
                                     />
@@ -127,26 +124,26 @@ export default function LoginPage() {
                                         aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
                                         aria-pressed={showPassword}
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="typo-label btn btn-ghost btn-circle btn-sm absolute right-2 top-1/2 -translate-y-1/2 text-white/60"
+                                        className="typo-label btn btn-ghost btn-circle btn-sm absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                                     >
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
-                                <button type="button" onClick={() => toast('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน')} className="typo-caption link link-primary no-underline">ลืมรหัสผ่าน?</button>
+                                <button type="button" onClick={() => toast('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน')} className="typo-caption link text-blue-600 hover:text-blue-700 no-underline">ลืมรหัสผ่าน?</button>
                             </div>
                         </div>
 
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="typo-section btn mt-10 w-full h-14 bg-linear-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white border-none rounded-2xl shadow-lg shadow-blue-500/20 transition-all">
+                            className="typo-section btn mt-10 w-full h-14 bg-linear-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white border-none rounded-2xl shadow-lg shadow-blue-500/25 transition-all">
                             {isLoading ? <span className="loading loading-spinner" /> : <><LogIn size={20} className="mr-2" /> ลงชื่อเข้าใช้</>}
                         </button>
 
-                        <div className="mt-8 border-t border-white/10 pt-6 text-center">
-                            <p className="typo-body-sm text-white/60">
+                        <div className="mt-8 border-t border-slate-100 pt-6 text-center">
+                            <p className="typo-body-sm text-slate-500">
                                 ยังไม่มีบัญชีใช่หรือไม่?
-                                <Link href="/register" className="typo-label ml-2 text-blue-300 hover:text-blue-200 hover:underline">สมัครสมาชิกใหม่</Link>
+                                <Link href="/register" className="typo-label ml-2 text-blue-600 hover:text-blue-700 hover:underline">สมัครสมาชิกใหม่</Link>
                             </p>
                         </div>
                     </form>

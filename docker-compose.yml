@@ -88,7 +88,7 @@ services:
       DB_USER: ${ETL_POSTGRES_USER}
       DB_PASSWORD: ${ETL_POSTGRES_PASSWORD}
       DB_NAME: ${ETL_POSTGRES_DB}
-      DUCKDB_DATA_DIR: /app/public/duckdb
+      DUCKDB_DATA_DIR: /app/data/duckdb
       DASHBOARD_QUERY_CONCURRENCY: ${DASHBOARD_QUERY_CONCURRENCY:-2}
       DASHBOARD_QUERY_MAX_QUEUE: ${DASHBOARD_QUERY_MAX_QUEUE:-10}
       DASHBOARD_QUERY_QUEUE_TIMEOUT_MS: ${DASHBOARD_QUERY_QUEUE_TIMEOUT_MS:-8000}
@@ -103,7 +103,7 @@ services:
       AIRFLOW_API_BASE_URL: http://airflow-webserver:8080/airflow
       AIRFLOW_DDS_DAG_ID: dds_dashboard_pipeline
     volumes:
-      - duckdb-data-volume:/app/public/duckdb
+      - duckdb-data-volume:/app/data/duckdb
       - dds-input-volume:/app/uploads/dds
     depends_on:
       dds-input-init: { condition: service_completed_successfully }
@@ -227,7 +227,7 @@ services:
         mkdir -p "$${DUCKDB_DATA_DIR}"
         if [ -d /opt/airflow/dags/scripts ]; then
           find /opt/airflow/dags/scripts -maxdepth 1 -type f \
-            \( -name 'hdc*.csv' -o -name 'hdc*.parquet' \) \
+            \( -name 'hdc*.csv' -o -name 'hdc*.parquet' -o -name 'DiseaseGroup.json' \) \
             -exec cp -f {} "$${DUCKDB_DATA_DIR}/" \;
         else
           echo "[airflow-init] /opt/airflow/dags/scripts not found; skipping HDC seed copy"

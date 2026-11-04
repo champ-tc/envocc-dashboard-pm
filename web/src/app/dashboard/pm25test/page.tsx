@@ -54,7 +54,7 @@ const GLASS_THEMES: Record<GlassThemeId, GlassThemeConfig> = {
         rankingRowClass: 'relative flex min-h-0 items-center overflow-hidden rounded-2xl border border-white/10 bg-white/10 hover:bg-white/20 transition-colors px-3 py-1 group/row',
         rankingTextClass: 'text-white',
         filterLabelClass: 'typo-label filter-label block uppercase text-white mb-2 ml-2 drop-shadow-xs',
-        filterSelectClass: 'bg-white/10 border-white/20 text-white',
+        filterSelectClass: 'btn border-white/30 bg-white/20 ring-1 ring-white/20 text-white hover:bg-white/30',
     },
     'clear-dark': {
         id: 'clear-dark',
@@ -105,7 +105,7 @@ const GLASS_THEMES: Record<GlassThemeId, GlassThemeConfig> = {
         rankingRowClass: 'relative flex min-h-0 items-center overflow-hidden rounded-2xl border border-white/10 bg-white/10 hover:bg-white/20 transition-colors px-3 py-1 group/row',
         rankingTextClass: 'text-white',
         filterLabelClass: 'typo-label filter-label block uppercase text-white mb-2 ml-2 drop-shadow-xs',
-        filterSelectClass: 'bg-white/10 border-white/20 text-white',
+        filterSelectClass: 'btn border-white/30 bg-white/20 ring-1 ring-white/20 text-white hover:bg-white/30',
     },
     white: {
         id: 'white',
@@ -139,7 +139,7 @@ const GLASS_THEMES: Record<GlassThemeId, GlassThemeConfig> = {
         rankingRowClass: 'relative flex min-h-0 items-center overflow-hidden rounded-2xl border border-white/10 bg-white/10 hover:bg-white/20 transition-colors px-3 py-1 group/row',
         rankingTextClass: 'text-white',
         filterLabelClass: 'typo-label filter-label block uppercase text-white mb-2 ml-2 drop-shadow-xs',
-        filterSelectClass: 'bg-white/10 border-white/20 text-white',
+        filterSelectClass: 'btn border-white/30 bg-white/20 ring-1 ring-white/20 text-white hover:bg-white/30',
     },
     dark: {
         id: 'dark',
@@ -303,12 +303,20 @@ function MultiSelect({ label, options, selected, onChange, placeholder = "ทั
     return (
         <div className="relative col-span-1">
             <label className={`typo-label filter-label block uppercase mb-2 ml-2 ${isDarkText ? 'text-stone-800 font-medium' : 'text-white drop-shadow-xs'}`}>{label}</label>
-            <div onClick={() => setIsOpen(!isOpen)} className={`typo-caption w-full backdrop-blur-md rounded-2xl py-3.5 px-5 outline-none cursor-pointer flex justify-between items-center min-h-12 transition-all shadow-sm ${isDarkText ? 'bg-white/60 border border-stone-300/60 text-stone-900 ring-1 ring-stone-900/5 hover:bg-white/80' : 'bg-white/10 border border-white/15 text-white ring-1 ring-white/10 hover:bg-white/15'}`}>
-                <div className="truncate max-w-filter-label">
-                    {displayText}
-                </div>
-                <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : (isDarkText ? 'text-stone-500' : 'text-white/40')}`} strokeWidth={2.5} />
-            </div>
+            <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+                onClick={() => setIsOpen(!isOpen)}
+                className={`typo-caption btn min-h-12 w-full justify-between gap-2 rounded-2xl text-left font-normal ring-1 transition-all ${
+                    isDarkText
+                        ? (isOpen ? 'bg-white/80 border-stone-400/80 text-stone-900 ring-stone-900/10' : 'bg-white/60 border border-stone-300/60 text-stone-900 ring-stone-900/5 hover:bg-white/80')
+                        : (isOpen ? 'border-blue-400/70 bg-white/30 ring-blue-400/30 text-white' : 'border-white/30 bg-white/20 ring-white/20 text-white hover:bg-white/30')
+                }`}
+            >
+                <span className="min-w-0 flex-1 truncate">{displayText}</span>
+                <ChevronDown aria-hidden="true" className={`size-4 shrink-0 transition-transform duration-500 ${isOpen ? 'rotate-180 text-blue-400' : (isDarkText ? 'text-stone-500' : 'text-white/40')}`} strokeWidth={2.5} />
+            </button>
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-overlay" onClick={() => setIsOpen(false)}></div>
