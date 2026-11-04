@@ -15,9 +15,11 @@ export const dynamic = 'force-dynamic';
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const INPUT_DIR = process.env.DDS_INPUT_DIR || path.join(process.cwd(), 'uploads', 'dds');
 const TARGET_FILE = path.join(INPUT_DIR, 'original_dds.xlsx');
-const DATA_DIR = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'public', 'duckdb');
-const ETL_FILENAME = process.env.DDS_DOWNLOAD_FILE || 'dashboard_dds.csv';
-const ETL_FILE = path.join(DATA_DIR, ETL_FILENAME);
+const DATA_DIR = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'data', 'duckdb');
+const ETL_FILES = {
+    csv: process.env.DDS_DOWNLOAD_FILE || 'dashboard_dds.csv',
+    parquet: 'dashboard_dds.parquet',
+} as const;
 const AIRFLOW_DDS_DAG_ID = process.env.AIRFLOW_DDS_DAG_ID || 'dds_dashboard_pipeline';
 const AIRFLOW_REQUEST_TIMEOUT_MS = 10_000;
 const DEFAULT_AIRFLOW_BASE_URLS = [
@@ -265,14 +267,17 @@ export async function GET(request: Request) {
 
     const mode = new URL(request.url).searchParams.get('mode');
     if (mode === 'download') {
+        const format = new URL(request.url).searchParams.get('format') === 'parquet' ? 'parquet' : 'csv';
+        const etlFilename = ETL_FILES[format];
+        const etlFile = path.join(DATA_DIR, etlFilename);
         try {
-            const metadata = await stat(ETL_FILE);
-            const stream = Readable.toWeb(createReadStream(ETL_FILE)) as ReadableStream;
+            const metadata = await stat(etlFile);
+            const stream = Readable.toWeb(createReadStream(etlFile)) as ReadableStream;
             return new NextResponse(stream, {
                 headers: {
-                    'Content-Type': 'text/csv; charset=utf-8',
+                    'Content-Type': format === 'parquet' ? 'application/octet-stream' : 'text/csv; charset=utf-8',
                     'Content-Length': metadata.size.toString(),
-                    'Content-Disposition': `attachment; filename="${ETL_FILENAME}"`,
+                    'Content-Disposition': `attachment; filename="${etlFilename}"`,
                     'Cache-Control': 'private, no-store',
                 },
             });
@@ -284,7 +289,7 @@ export async function GET(request: Request) {
                 && error.code === 'ENOENT'
             ) {
                 return NextResponse.json(
-                    { error: `ยังไม่มีไฟล์ ${ETL_FILENAME} จาก pipeline` },
+                    { error: `ยังไม่มีไฟล์ ${etlFilename} จาก pipeline` },
                     { status: 404 },
                 );
             }
@@ -298,7 +303,8 @@ export async function GET(request: Request) {
 
     try {
         const metadata = await stat(TARGET_FILE);
-        const etlMetadata = await stat(ETL_FILE).catch(() => null);
+        const etlMetadata = await stat(path.join(DATA_DIR, ETL_FILES.csv)).catch(() => null);
+        const parquetMetadata = await stat(path.join(DATA_DIR, ETL_FILES.parquet)).catch(() => null);
         return NextResponse.json({
             exists: true,
             filename: 'original_dds.xlsx',
@@ -306,10 +312,24 @@ export async function GET(request: Request) {
             updatedAt: metadata.mtime.toISOString(),
             etl: etlMetadata ? {
                 exists: true,
-                filename: ETL_FILENAME,
+                filename: ETL_FILES.csv,
                 size: etlMetadata.size,
                 updatedAt: etlMetadata.mtime.toISOString(),
-            } : { exists: false },
+                parquet: parquetMetadata ? {
+                    exists: true,
+                    filename: ETL_FILES.parquet,
+                    size: parquetMetadata.size,
+                    updatedAt: parquetMetadata.mtime.toISOString(),
+                } : { exists: false },
+            } : {
+                exists: false,
+                parquet: parquetMetadata ? {
+                    exists: true,
+                    filename: ETL_FILES.parquet,
+                    size: parquetMetadata.size,
+                    updatedAt: parquetMetadata.mtime.toISOString(),
+                } : { exists: false },
+            },
         });
     } catch (error: unknown) {
         if (
@@ -318,15 +338,30 @@ export async function GET(request: Request) {
             && 'code' in error
             && error.code === 'ENOENT'
         ) {
-            const etlMetadata = await stat(ETL_FILE).catch(() => null);
+            const etlMetadata = await stat(path.join(DATA_DIR, ETL_FILES.csv)).catch(() => null);
+            const parquetMetadata = await stat(path.join(DATA_DIR, ETL_FILES.parquet)).catch(() => null);
             return NextResponse.json({
                 exists: false,
                 etl: etlMetadata ? {
                     exists: true,
-                    filename: ETL_FILENAME,
+                    filename: ETL_FILES.csv,
                     size: etlMetadata.size,
                     updatedAt: etlMetadata.mtime.toISOString(),
-                } : { exists: false },
+                    parquet: parquetMetadata ? {
+                        exists: true,
+                        filename: ETL_FILES.parquet,
+                        size: parquetMetadata.size,
+                        updatedAt: parquetMetadata.mtime.toISOString(),
+                    } : { exists: false },
+                } : {
+                    exists: false,
+                    parquet: parquetMetadata ? {
+                        exists: true,
+                        filename: ETL_FILES.parquet,
+                        size: parquetMetadata.size,
+                        updatedAt: parquetMetadata.mtime.toISOString(),
+                    } : { exists: false },
+                },
             });
         }
         console.error('DDS upload status error:', error);

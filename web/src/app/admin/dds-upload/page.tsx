@@ -15,6 +15,12 @@ type UploadStatus = {
         filename?: string;
         size?: number;
         updatedAt?: string;
+        parquet?: {
+            exists: boolean;
+            filename?: string;
+            size?: number;
+            updatedAt?: string;
+        };
     };
 };
 
@@ -205,13 +211,13 @@ export default function DdsUploadPage() {
             </div>
 
             <div className="auth-surface p-6 mt-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
                             <FileSpreadsheet className="w-6 h-6" />
                         </div>
                         <div>
-                            <h2 className="typo-subtitle text-slate-800">ไฟล์ CSV ที่ผ่าน ETL แล้ว</h2>
+                            <h2 className="typo-subtitle text-slate-800">ไฟล์ DDS ที่ผ่าน ETL แล้ว</h2>
                             {status?.etl?.exists ? (
                                 <p className="typo-body-sm text-slate-500">
                                     {status.etl.filename} · {formatFileSize(status.etl.size)} · {formatDate(status.etl.updatedAt)}
@@ -221,18 +227,24 @@ export default function DdsUploadPage() {
                             )}
                         </div>
                     </div>
-                    <a
-                        href={status?.etl?.exists ? '/api/admin/dds-upload?mode=download' : undefined}
-                        aria-disabled={!status?.etl?.exists}
-                        className={`typo-label inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-white transition-colors ${
-                            status?.etl?.exists
-                                ? 'bg-emerald-600 hover:bg-emerald-700'
-                                : 'pointer-events-none bg-slate-300'
-                        }`}
-                    >
-                        <Download className="w-5 h-5" />
-                        ดาวน์โหลด CSV
-                    </a>
+                    <div className="flex flex-wrap gap-3">
+                        <a
+                            href={status?.etl?.exists ? '/api/admin/dds-upload?mode=download&format=csv' : undefined}
+                            aria-disabled={!status?.etl?.exists}
+                            className={`typo-label inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-white transition-colors ${status?.etl?.exists ? 'bg-emerald-600 hover:bg-emerald-700' : 'pointer-events-none bg-slate-300'}`}
+                        >
+                            <Download className="w-5 h-5" />
+                            ดาวน์โหลด CSV
+                        </a>
+                        <a
+                            href={status?.etl?.parquet?.exists ? '/api/admin/dds-upload?mode=download&format=parquet' : undefined}
+                            aria-disabled={!status?.etl?.parquet?.exists}
+                            className={`typo-label inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-white transition-colors ${status?.etl?.parquet?.exists ? 'bg-blue-600 hover:bg-blue-700' : 'pointer-events-none bg-slate-300'}`}
+                        >
+                            <Download className="w-5 h-5" />
+                            ดาวน์โหลด Parquet
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

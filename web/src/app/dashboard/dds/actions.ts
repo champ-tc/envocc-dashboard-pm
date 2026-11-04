@@ -2,6 +2,7 @@
 
 import duckdb from 'duckdb';
 import type * as duckdbTypes from 'duckdb';
+import fs from 'fs';
 import path from 'path';
 import { DDS_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
@@ -105,7 +106,9 @@ const DDS_QUERY_VERSION = '12';
 
 const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
 
-function icdCodePredicate(column: string, codes: string[]): string {
+// ICD-10 definitions in DDS are category prefixes. A stored code such as
+// J449, L508, or H101 must therefore match J44, L50, or H10 respectively.
+function icd10StartsWithPredicate(column: string, codes: string[]): string {
     const normalizedColumn = normalizeIcdSql(column);
     const normalizedCodes = Array.from(new Set(codes.map(code => code.replace(/\./g, '').toUpperCase())));
 
@@ -114,11 +117,13 @@ function icdCodePredicate(column: string, codes: string[]): string {
     return normalizedCodes
         .map(code => {
             const escapedCode = code.replace(/'/g, "''");
-            // DDS stores the full ICD-10 code (for example J459/H109), while the
-            // dashboard disease definitions use category roots (J45/H10).
             return `${normalizedColumn} LIKE '${escapedCode}%'`;
         })
         .join(' OR ');
+}
+
+function icdCodePredicate(column: string, codes: string[]): string {
+    return icd10StartsWithPredicate(column, codes);
 }
 
 let dbPromise: Promise<duckdbTypes.Database> | null = null;
@@ -126,10 +131,15 @@ let loadedDataVersion: string | null = null;
 
 function getDDSDataFiles() {
     const dataDir = process.env.DUCKDB_DATA_DIR || path.join(process.cwd(), 'data', 'duckdb');
+    const localDiseaseGroupPath = path.join(dataDir, 'DiseaseGroup.json');
+    const sourceDiseaseGroupPath = path.join(process.cwd(), '..', 'airflow', 'dags', 'scripts', 'DiseaseGroup.json');
 
     return {
         dds: path.join(dataDir, process.env.DDS_DATA_FILE || 'dashboard_dds.parquet'),
-        diseaseGroup: path.join(dataDir, 'DiseaseGroup.json'),
+        // Docker mounts this file into the shared data volume. During local
+        // development the generated data files may exist without that mount,
+        // so use the repository source copy as a safe fallback.
+        diseaseGroup: fs.existsSync(localDiseaseGroupPath) ? localDiseaseGroupPath : sourceDiseaseGroupPath,
         pm25: path.join(dataDir, process.env.PM25_DATA_FILE || 'pm25.parquet'),
         midYear: path.join(dataDir, process.env.MID_YEAR_DATA_FILE || 'mid_year.csv'),
     };
