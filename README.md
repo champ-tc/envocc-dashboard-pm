@@ -33,21 +33,20 @@
 airflow/dags/scripts/DiseaseGroup.json
 ```
 
-เมื่อเริ่มระบบด้วย Docker Compose, `airflow-init` จะคัดลอกไฟล์เข้า shared volume ให้เอง:
+เมื่อเริ่มระบบด้วย Docker Compose, `web` จะ mount ไฟล์นี้เข้า shared data path โดยตรง และ `airflow-init` จะคัดลอกสำเนาเข้า shared volume สำหรับ Airflow:
 
 ```text
 Airflow: /opt/airflow/data/DiseaseGroup.json
 Web:     /app/data/duckdb/DiseaseGroup.json
 ```
 
-สำหรับเครื่องที่มี `duckdb-data-volume` อยู่แล้ว ให้คัดลอกไฟล์เข้า volume โดยตรงหลังจากวางไฟล์ใน source tree:
+หลังจากวางไฟล์ใน source tree ให้ recreate เฉพาะ Web เพื่อให้ Docker โหลด bind mount ใหม่:
 
 ```bash
-docker compose cp airflow/dags/scripts/DiseaseGroup.json airflow-webserver:/opt/airflow/data/DiseaseGroup.json
-docker compose restart web
+docker compose up -d --force-recreate web
 ```
 
-ห้ามแก้ไฟล์ runtime ใน volume เป็นแหล่งหลัก และห้ามวางไฟล์ไว้ใน `web/public/duckdb` สำหรับ production
+ไม่ต้องใช้ `docker compose cp` อีก และห้ามวางไฟล์ไว้ใน `web/public/duckdb` สำหรับ production
 
 > การสั่ง `docker compose down -v` จะลบ named volumes และข้อมูลถาวรทั้งหมด ควรสำรองข้อมูลก่อนใช้งานคำสั่งนี้
 

@@ -105,6 +105,10 @@ services:
     volumes:
       - duckdb-data-volume:/app/data/duckdb
       - dds-input-volume:/app/uploads/dds
+      # DiseaseGroup.json is managed outside Git. Mount the host-managed
+      # source file directly so the web container always sees the latest copy,
+      # even when airflow-init is not recreated.
+      - ./airflow/dags/scripts/DiseaseGroup.json:/app/data/duckdb/DiseaseGroup.json:ro
     depends_on:
       dds-input-init: { condition: service_completed_successfully }
     healthcheck:
