@@ -4,6 +4,15 @@ import React, { useState, useEffect } from 'react';
 
 export type SkyTime = 'morning' | 'evening' | 'night';
 
+const THAILAND_TIME_ZONE = 'Asia/Bangkok';
+
+const thailandClock = new Intl.DateTimeFormat('en-GB', {
+    timeZone: THAILAND_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+});
+
 /**
  * คำนวณช่วงเวลาท้องฟ้าตามเวลาที่กำหนด
  * - เช้า: 06:00 - 15:00 (360 - 900 นาที)
@@ -11,7 +20,12 @@ export type SkyTime = 'morning' | 'evening' | 'night';
  * - กลางคืน: 18:01 - 05:59 (1081 - 1439 หรือ 0 - 359 นาที)
  */
 export function getSkyTime(date: Date = new Date()): SkyTime {
-    const minutes = date.getHours() * 60 + date.getMinutes();
+    // Always use Thailand time. `date.getHours()` uses the user's local
+    // browser timezone, which can make production show the wrong sky state.
+    const parts = thailandClock.formatToParts(date);
+    const hour = Number(parts.find(part => part.type === 'hour')?.value ?? 0);
+    const minute = Number(parts.find(part => part.type === 'minute')?.value ?? 0);
+    const minutes = hour * 60 + minute;
     if (minutes >= 360 && minutes <= 900) {
         return 'morning';
     }
