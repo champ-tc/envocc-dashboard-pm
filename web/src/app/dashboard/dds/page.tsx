@@ -786,6 +786,7 @@ export default function DDSDashboardPage() {
                     }
                     className="relative z-header head head-dds"
                     titleClassName="head head-dds drop-shadow-md"
+                    allowTitleWrap
                 />
                 <DashboardBusyAlert message={busyMessage} />
 
@@ -917,7 +918,16 @@ export default function DDSDashboardPage() {
                             <div className="typo-chart chart-label absolute left-14 top-0 z-20 -translate-y-full pb-2 text-white whitespace-nowrap">จำนวนผู้ป่วย (ราย)</div>
                             <div className="typo-chart chart-label absolute right-14 top-0 z-20 -translate-y-full pb-2 text-rose-400/70 text-right whitespace-nowrap"><PM25Text>ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</PM25Text></div>
                             {!loading && data?.monthlyTrend && data.monthlyTrend.length > 0 && (() => {
-                                const maxVal = Math.max(...data.monthlyTrend.map(x => x.total || 0), 1);
+                                // Stacked segments can overlap by patient (one person may
+                                // have diagnoses in multiple disease groups). Scale the
+                                // bars from the rendered stack, not the unique-patient
+                                // total, otherwise flex-shrink compresses every bar to
+                                // nearly the same height.
+                                const stackTotal = (month: MonthlyTrendData) => DDS_DISEASES.reduce(
+                                    (sum, disease) => sum + Number(month[disease.id] || 0),
+                                    0,
+                                );
+                                const maxVal = Math.max(...data.monthlyTrend.map(stackTotal), 1);
                                 const pm25Max = Math.max(...data.monthlyTrend.map(x => x.avg_pm25 || 0), 50);
                                 return (
                                     <>
@@ -956,7 +966,7 @@ export default function DDSDashboardPage() {
                                                                     <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span className="typo-chart text-white uppercase">ผู้ป่วยรวม</span><span className="typo-subtitle text-blue-400">{(m.total || 0).toLocaleString()}</span></div>
                                                                 </div>
                                                                 <div className="w-full flex flex-col justify-end h-full max-w-6 transition-all duration-500 group-hover:scale-x-110">
-                                                                    {DDS_DISEASES.map(d => <div key={d.id} style={{ height: `${((Number(m[d.id] || 0)) / maxVal) * 100}%`, backgroundColor: d.hex }} className="w-full opacity-60 group-hover:opacity-100 shadow-sm first:rounded-t last:rounded-b"></div>)}
+                                                                    {DDS_DISEASES.map(d => <div key={d.id} style={{ height: `${((Number(m[d.id] || 0)) / maxVal) * 100}%`, backgroundColor: d.hex }} className="w-full shrink-0 opacity-60 group-hover:opacity-100 shadow-sm first:rounded-t last:rounded-b"></div>)}
                                                                 </div>
                                                             </div>
                                                             <span className="typo-chart chart-label absolute bottom-chart-label text-white whitespace-nowrap">{monthShortLabel}</span>

@@ -60,6 +60,7 @@ export default function DashboardNavbar({
     className = '',
     titleClassName = '',
     subtitleClassName = '',
+    allowTitleWrap = false,
     navClassName = 'self-end md:self-auto',
 }: {
     logos: DashboardNavbarLogo[];
@@ -68,6 +69,7 @@ export default function DashboardNavbar({
     className?: string;
     titleClassName?: string;
     subtitleClassName?: string;
+    allowTitleWrap?: boolean;
     navClassName?: string;
 }) {
     return (
@@ -95,7 +97,7 @@ export default function DashboardNavbar({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                    <h5 className={`typo-head head truncate whitespace-nowrap text-white ${titleClassName}`}>{title}</h5>
+                    <h5 className={`typo-head head text-white ${allowTitleWrap ? 'whitespace-normal break-words' : 'truncate whitespace-nowrap'} ${titleClassName}`}>{title}</h5>
                     <p className={`typo-caption truncate whitespace-nowrap uppercase text-blue-200 opacity-80 ${subtitleClassName}`}>{subtitle}</p>
                 </div>
             </div>
