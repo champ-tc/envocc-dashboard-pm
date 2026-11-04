@@ -8,7 +8,7 @@ import { DDS_DISEASES, PROVINCE_MAPPING } from '@/lib/constants';
 import { getOptionalUser } from '@/lib/auth';
 import { cachedDashboardQuery, getDataVersion, stableCacheKey } from '@/lib/dashboard-runtime';
 import { applyDDSAccessScope, buildDDSFilteredDiseasePredicate, restrictDDSOptionsToScope } from './filter-utils';
-import { buildDiagnosisHaving, DDS_DIAGNOSIS_TYPES, getRequiredDiagnosisCodes } from './diagnosis-filter';
+import { buildDiagnosisHaving, DDS_DIAGNOSIS_TYPES, getCountedDiagnosisCodes, getRequiredDiagnosisCodes } from './diagnosis-filter';
 
 export interface HierarchyItem {
     region: string;
@@ -487,9 +487,9 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                 // this Disease Type; do not narrow it back to the legacy list.
                 allowedGroupCodes = [];
             } else if (diagType === DDS_DIAGNOSIS_TYPES.lawWithZ581) {
-                allowedGroupCodes = groupCodes.filter(c => diagType1Codes.includes(c));
+                allowedGroupCodes = getCountedDiagnosisCodes(diagType, groupCodes.filter(c => diagType1Codes.includes(c)));
             } else if (diagType === DDS_DIAGNOSIS_TYPES.lawWithZ581AndY97) {
-                allowedGroupCodes = groupCodes.filter(c => diagType2Codes.includes(c));
+                allowedGroupCodes = getCountedDiagnosisCodes(diagType, groupCodes.filter(c => diagType2Codes.includes(c)));
             }
 
             if (hasGroupedFilter && d.id in scopedFilters.groupedIcd10!) {
@@ -661,9 +661,9 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     )
                     SELECT 
                         d.dt as month,
-                        COUNT(DISTINCT d.person_id)::DOUBLE as total,
+                        COUNT(*)::DOUBLE as total,
                         COALESCE(MAX(ps.pm25_avg), MAX(df.pm25_max), MAX(pf.pm25_max), 0)::DOUBLE as avg_pm25,
-                        ${DDS_DISEASES.map(dis => `COUNT(DISTINCT d.person_id) FILTER (WHERE 1=1 ${icdFilters[dis.id]})::DOUBLE as ${dis.id}`).join(', ')}
+                        ${DDS_DISEASES.map(dis => `COUNT(*) FILTER (WHERE 1=1 ${icdFilters[dis.id]})::DOUBLE as ${dis.id}`).join(', ')}
                     FROM dds_filtered d
                     LEFT JOIN pm25_monthly_summary ps ON d.dt = ps.dt
                     LEFT JOIN pm25_district_fallback_monthly df ON d.dt = df.dt

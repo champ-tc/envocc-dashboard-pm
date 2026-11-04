@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { getDashboardData, getFilterOptions, getCurrentUser, DDSOptions, DDSFilters, DDSDashboardData, MonthlyTrendData } from './actions';
 import { DDS_DISEASES } from '@/lib/constants';
+import { DDS_DIAGNOSIS_TYPES, getCountedDiagnosisCodes } from './diagnosis-filter';
 import DashboardNavbar from '@/components/dashboard/DashboardNavbar';
 import DashboardBusyAlert from '@/components/dashboard/DashboardBusyAlert';
 import DashboardLoading from '@/components/dashboard/DashboardLoading';
@@ -482,6 +483,7 @@ const DISEASE_ICD_OPTIONS: Record<string, string[]> = {
 };
 
 const ENVOCC_WITH_Z581_TYPE = 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1';
+const ENVOCC_WITH_Z581_AND_Y97_TYPE = 'การวินิจฉัยโรคตาม พ.ร.บ.EnvOcc ร่วมกับ Z58.1+Y97';
 const CUSTOM_Z581_TYPE = 'การวินิจฉัย Z58.1 ร่วมกับกลุ่มโรคที่ต้องการ';
 
 const getDiagnosisCodes = (groupId: string, diagnosisType: string, codesByDisease: Record<string, string[]> = {}) => {
@@ -497,10 +499,8 @@ const getDiagnosisCodes = (groupId: string, diagnosisType: string, codesByDiseas
             })
             : mappedCodes
         : DISEASE_ICD_OPTIONS[groupId] || mappedCodes;
-    if (diagnosisType === ENVOCC_WITH_Z581_TYPE) {
-        return groupId === 'health_status'
-            ? baseCodes.filter(c => c === 'Z581')
-            : baseCodes.filter(c => c !== 'Y97');
+    if (diagnosisType === ENVOCC_WITH_Z581_TYPE || diagnosisType === ENVOCC_WITH_Z581_AND_Y97_TYPE) {
+        return getCountedDiagnosisCodes(diagnosisType, baseCodes);
     }
     return baseCodes;
 };
@@ -601,6 +601,8 @@ export default function DDSDashboardPage() {
     const selectedProvince = filters.provinces.length === 1 ? filters.provinces[0] : '';
     const selectedDistrict = filters.districts.length === 1 ? filters.districts[0] : '';
     const selectedSubdistrict = filters.subdistricts.length === 1 ? filters.subdistricts[0] : '';
+    const hideOtherDiseaseCard = filters.diagnosisType === ENVOCC_WITH_Z581_TYPE
+        || filters.diagnosisType === ENVOCC_WITH_Z581_AND_Y97_TYPE;
 
     // Filtering Helpers
     const isAllRegions = filters.regions.length === 0 || ((options.regions?.length || 0) > 0 && filters.regions.length === options.regions.length);
@@ -868,8 +870,9 @@ export default function DDSDashboardPage() {
                     </div>
 
                     {/* Bottom Row: Disease Group Stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 shrink-0">
+                    <div className={`grid grid-cols-2 sm:grid-cols-3 ${hideOtherDiseaseCard ? 'xl:grid-cols-4' : 'xl:grid-cols-5'} gap-3 shrink-0`}>
                         {DISEASE_CARDS
+                            .filter((card) => !hideOtherDiseaseCard || card.id !== 'health_status')
                             .map((card, i) => {
                             const stat = data?.top5DiseaseStats?.find((s) => s.id === card.id) || { value: 0 };
                             const cardOptions = getDiagnosisCodes(card.id, filters.diagnosisType, options.icd10_by_disease);
@@ -905,7 +908,7 @@ export default function DDSDashboardPage() {
                     <div ref={chartRef} className="bg-neutral-900/25 backdrop-blur-2xl p-6 rounded-3xl border border-white/15 shadow-2xl flex flex-col h-full ring-1 ring-white/10 min-w-0 relative overflow-visible min-h-chart lg:min-h-0">
                         <div className="absolute right-4 top-4 z-40"><ExportImageButton targetRef={chartRef} filename="dds-monthly-trend" /></div>
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-8 shrink-0">
-                            <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase"><PM25Text>จำนวนผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text></h4>
+                            <h4 className="typo-section section-title text-white flex items-center gap-4 uppercase"><PM25Text>จำนวนการวินิจฉัยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 และค่าเฉลี่ยฝุ่น PM2.5 รายเดือน</PM25Text></h4>
                             {options.dates[0] && (
                                 <div className="typo-caption badge badge-warning badge-outline px-4 py-3">
                                     ข้อมูลล่าสุดในระบบ: {formatThaiMonthYear(options.dates[0])}
@@ -915,14 +918,10 @@ export default function DDSDashboardPage() {
                         <div className="flex-1 relative flex flex-col justify-end px-14 min-h-0">
                             <div className="absolute left-14 top-0 bottom-0 w-px bg-white/20 z-20" />
                             <div className="absolute right-14 top-0 bottom-0 w-px bg-white/20 z-20" />
-                            <div className="typo-chart chart-label absolute left-14 top-0 z-20 -translate-y-full pb-2 text-white whitespace-nowrap">จำนวนผู้ป่วย (ราย)</div>
+                            <div className="typo-chart chart-label absolute left-14 top-0 z-20 -translate-y-full pb-2 text-white whitespace-nowrap">จำนวนการวินิจฉัย (ครั้ง)</div>
                             <div className="typo-chart chart-label absolute right-14 top-0 z-20 -translate-y-full pb-2 text-rose-400/70 text-right whitespace-nowrap"><PM25Text>ค่าเฉลี่ยฝุ่น PM2.5 (มคก./ลบ.ม.)</PM25Text></div>
                             {!loading && data?.monthlyTrend && data.monthlyTrend.length > 0 && (() => {
-                                // Stacked segments can overlap by patient (one person may
-                                // have diagnoses in multiple disease groups). Scale the
-                                // bars from the rendered stack, not the unique-patient
-                                // total, otherwise flex-shrink compresses every bar to
-                                // nearly the same height.
+                                // Scale the bars from the rendered diagnosis-record stack.
                                 const stackTotal = (month: MonthlyTrendData) => DDS_DISEASES.reduce(
                                     (sum, disease) => sum + Number(month[disease.id] || 0),
                                     0,
@@ -963,7 +962,7 @@ export default function DDSDashboardPage() {
                                                                             <b className="typo-chart text-white">{(m[d.id] as number || 0).toLocaleString()} ราย</b>
                                                                         </div>
                                                                     ))}
-                                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span className="typo-chart text-white uppercase">ผู้ป่วยรวม</span><span className="typo-subtitle text-blue-400">{(m.total || 0).toLocaleString()}</span></div>
+                                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span className="typo-chart text-white uppercase">การวินิจฉัยรวม</span><span className="typo-subtitle text-blue-400">{(m.total || 0).toLocaleString()}</span></div>
                                                                 </div>
                                                                 <div className="w-full flex flex-col justify-end h-full max-w-6 transition-all duration-500 group-hover:scale-x-110">
                                                                     {DDS_DISEASES.map(d => <div key={d.id} style={{ height: `${((Number(m[d.id] || 0)) / maxVal) * 100}%`, backgroundColor: d.hex }} className="w-full shrink-0 opacity-60 group-hover:opacity-100 shadow-sm first:rounded-t last:rounded-b"></div>)}

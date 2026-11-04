@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
     buildDiagnosisHaving,
     DDS_DIAGNOSIS_TYPES,
+    getCountedDiagnosisCodes,
     getRequiredDiagnosisCodes,
 } from './diagnosis-filter';
 
@@ -27,5 +28,16 @@ test('custom mode requires Z58.1 only', () => {
     assert.deepEqual(
         getRequiredDiagnosisCodes(DDS_DIAGNOSIS_TYPES.customWithZ581, lawCodes),
         ['Z581'],
+    );
+});
+
+test('legal modes do not count Z581 or Y97 as diagnoses', () => {
+    assert.deepEqual(
+        getCountedDiagnosisCodes(DDS_DIAGNOSIS_TYPES.lawWithZ581, ['Z58.1', 'J44', 'Y97']),
+        ['J44'],
+    );
+    assert.deepEqual(
+        getCountedDiagnosisCodes(DDS_DIAGNOSIS_TYPES.lawWithZ581AndY97, ['Z581', 'Y97', 'J44']),
+        ['J44'],
     );
 });

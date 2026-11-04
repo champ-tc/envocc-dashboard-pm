@@ -3,6 +3,7 @@ import { MapContainer, GeoJSON, useMap, Pane } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import L from 'leaflet';
+import { LocateFixed } from 'lucide-react';
 import { PROVINCE_MAPPING } from '@/lib/constants';
 import { PM25Text } from '@/components/PM25Mark';
 import { loadTambonBoundaries, needsTambonBoundaries } from '@/lib/dashboard-map-data';
@@ -55,7 +56,7 @@ function Legend({ config }: { config: ThailandMapProps['legendConfig'] }) {
     );
 }
 
-function MapResizer({ geoData, tambonGeoData, filters }: { geoData: any, tambonGeoData: any, filters: any }) {
+function MapResizer({ geoData, tambonGeoData, filters, onResetBounds }: { geoData: any, tambonGeoData: any, filters: any, onResetBounds: (bounds: L.LatLngBounds) => void }) {
     const map = useMap();
     const lastBoundsRef = useRef<string>('');
 
@@ -88,12 +89,35 @@ function MapResizer({ geoData, tambonGeoData, filters }: { geoData: any, tambonG
         }
 
         const boundsKey = targetBounds.toBBoxString();
+        onResetBounds(targetBounds);
         if (boundsKey !== lastBoundsRef.current) {
             map.fitBounds(targetBounds, { padding: [40, 40], maxZoom: 13, duration: 1.2 });
             lastBoundsRef.current = boundsKey;
         }
-    }, [filters.provinces, filters.districts, filters.subdistricts, geoData, tambonGeoData, map]);
+    }, [filters.provinces, filters.districts, filters.subdistricts, geoData, tambonGeoData, map, onResetBounds]);
     return null;
+}
+
+function RecenterControl({ bounds }: { bounds: L.LatLngBounds | null }) {
+    const map = useMap();
+
+    const recenter = () => {
+        if (!bounds?.isValid()) return;
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13, duration: 0.8 });
+    };
+
+    return (
+        <button
+            type="button"
+            className="btn btn-md btn-square bg-white/95 text-slate-700 shadow-lg border border-slate-200 hover:bg-white hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+            onClick={recenter}
+            disabled={!bounds}
+            aria-label="จัดมุมมองแผนที่กลับไปยังพื้นที่เดิม"
+            title="จัดมุมมองกลับ"
+        >
+            <LocateFixed size={18} strokeWidth={2.25} aria-hidden="true" />
+        </button>
+    );
 }
 
 export default function ThailandMap({ data, stations = [], filters, getColor, legendConfig, popupUnit = 'หน่วย', renderPopup, interactive = true, focusSelectedSubdistricts = false, requireDistrictForTambons = false, visibleProvinces, resolveAreaData }: ThailandMapProps) {
@@ -105,6 +129,7 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
     const [loadingTambon, setLoadingTambon] = useState(false);
     const geoJsonRef = useRef<any>(null);
     const tambonGeoJsonRef = useRef<any>(null);
+    const [resetBounds, setResetBounds] = useState<L.LatLngBounds | null>(null);
     const center: [number, number] = [13.736717, 100.523186];
     const bounds: L.LatLngBoundsExpression = [[5.0, 97.0], [21.0, 106.0]];
 
@@ -522,6 +547,9 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                     maxBoundsViscosity={1.0}
                     attributionControl={false}
                 >
+                <div className="absolute top-4 right-4 z-map-overlay">
+                    <RecenterControl bounds={resetBounds} />
+                </div>
                 {/* Local geography backdrop: no external basemap tiles or API key dependency. */}
                 <Pane name="geography" style={{ zIndex: 300 }}>
                     {geoData && <GeoJSON data={geoData} interactive={false} style={() => ({ fillColor: '#cbd5e1', fillOpacity: 0.7, color: focusSelectedSubdistricts ? '#1e293b' : '#475569', weight: 1.2 })} />}
@@ -548,7 +576,12 @@ export default function ThailandMap({ data, stations = [], filters, getColor, le
                         />
                     )}
                 </Pane>
-                <MapResizer geoData={geoData} tambonGeoData={displayTambonData} filters={isAllProvincesSelected ? { ...filters, provinces: [], districts: [] } : (visibleProvinces ? { ...filters, provinces: visibleProvinces } : filters)} />
+                <MapResizer
+                    geoData={geoData}
+                    tambonGeoData={displayTambonData}
+                    filters={isAllProvincesSelected ? { ...filters, provinces: [], districts: [] } : (visibleProvinces ? { ...filters, provinces: visibleProvinces } : filters)}
+                    onResetBounds={setResetBounds}
+                />
                 </MapContainer>
             </div>
             <Legend config={legendConfig} />

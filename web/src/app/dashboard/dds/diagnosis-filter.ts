@@ -23,6 +23,17 @@ export function getRequiredDiagnosisCodes(diagnosisType: string | undefined, law
     return [];
 }
 
+/** Codes that should contribute to diagnosis totals after a person matches a mode. */
+export function getCountedDiagnosisCodes(diagnosisType: string | undefined, codes: string[]): string[] {
+    const normalizedCodes = Array.from(new Set(codes.map((code) => code.replace(/\./g, '').toUpperCase())));
+
+    if (diagnosisType === DDS_DIAGNOSIS_TYPES.lawWithZ581 || diagnosisType === DDS_DIAGNOSIS_TYPES.lawWithZ581AndY97) {
+        return normalizedCodes.filter((code) => code !== 'Z581' && code !== 'Y97');
+    }
+
+    return normalizedCodes;
+}
+
 export function buildDiagnosisHaving(requiredAllCodes: string[], anyOfCodes: string[] = [], column = 'icd10_code'): string {
     const normalizedColumn = `REPLACE(UPPER(TRIM(${column})), '.', '')`;
     const allPredicates = requiredAllCodes
