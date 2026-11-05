@@ -1,5 +1,9 @@
 # หน้าหลัก `/`
 
+## กติกาก่อนแก้ไข
+
+ต้องอ่านไฟล์นี้และ `web/AGENTS.md` ก่อนแก้ `web/src/app/page.tsx` ทุกครั้ง หากเปลี่ยน behavior หรือ visual contract ต้องอัปเดตไฟล์นี้ใน change เดียวกัน
+
 ## สิ่งที่ต้องคงไว้
 
 - [ ] `GuestNavbar` และลิงก์ไป Login/Register ทำงาน

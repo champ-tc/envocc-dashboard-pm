@@ -30,6 +30,7 @@ const registerSchema = z.object({
     personnelType: requiredText("กรุณาระบุประเภทบุคลากร"),
     position: requiredText("กรุณาระบุตำแหน่ง"),
     level: z.string().trim().optional(),
+    role: z.enum(['user_general', 'user_region', 'user_province', 'user_envocc']),
 }).superRefine((data, context) => {
     const workplaceType = WORKPLACE_TYPES.find((item) => item.label === data.workplaceType);
 
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
         await db.insert(users).values({
             ...validatedData,
             password: hashedPassword, // ใช้รหัสผ่านที่เข้ารหัสแล้ว
-            role: 'user',
+            role: validatedData.role,
             status: 'pending' // ต้องรอ Admin อนุมัติ
         });
 

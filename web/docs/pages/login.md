@@ -1,5 +1,9 @@
 # Login — `/login`
 
+## กติกาก่อนแก้ไข
+
+ต้องอ่านไฟล์นี้และ `web/AGENTS.md` ก่อนแก้ `web/src/app/login/` ทุกครั้ง หากเปลี่ยน behavior หรือ visual contract ต้องอัปเดตไฟล์นี้ใน change เดียวกัน
+
 ## สิ่งที่ต้องคงไว้
 
 - [ ] username และ password เป็น required และมี autocomplete ที่เหมาะสม
@@ -7,7 +11,7 @@
 - [ ] ป้องกัน submit ซ้ำและแสดง loading/toast
 - [ ] จัดการ response ที่ไม่ใช่ JSON และ HTTP 429 ได้
 - [ ] login สำเร็จตั้ง session ผ่าน API แล้ว redirect ตาม role
-- [ ] admin roles ไป `/admin`; role อื่นไป `/user`
+- [ ] role ผู้ดูแลที่ระบบรองรับไป `/admin`; role อื่นไป `/user`
 - [ ] login ล้มเหลวคงข้อมูลที่กรอกและแสดง error
 - [ ] ลิงก์กลับหน้าหลักและสมัครสมาชิกยังอยู่
 - [ ] พื้นหลัง `OpenSkyBackground` และ layering ของ login card ยังอยู่และอ่านได้

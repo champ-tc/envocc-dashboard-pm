@@ -1,5 +1,9 @@
 # Dashboard HDC — `/dashboard/hdc`
 
+## กติกาก่อนแก้ไข
+
+ต้องอ่านไฟล์นี้, `web/src/app/dashboard/hdc/README.md` และ `web/AGENTS.md` ก่อนแก้ `web/src/app/dashboard/hdc/` ทุกครั้ง หากเปลี่ยน behavior หรือ visual contract ต้องอัปเดตเอกสารทั้งสองไฟล์ใน change เดียวกัน
+
 ## ตัวกรองและเงื่อนไข
 
 - [ ] ช่วงวันที่เริ่มต้น/สิ้นสุด

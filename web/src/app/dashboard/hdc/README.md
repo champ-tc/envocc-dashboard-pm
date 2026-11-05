@@ -1,5 +1,7 @@
 # HDC Dashboard — รายละเอียดหน้าจอ
 
+> กติกาบังคับ: ต้องอ่านไฟล์นี้, `web/docs/pages/dashboard-hdc.md` และ `web/AGENTS.md` ก่อนแก้หน้า HDC ทุกครั้ง และต้องอัปเดตเอกสารเมื่อ behavior หรือ visual contract เปลี่ยน
+
 เอกสารนี้อธิบายหน้าจอ `/dashboard/hdc` ตาม implementation ปัจจุบัน
 
 ## ภาพรวมและพื้นหลัง

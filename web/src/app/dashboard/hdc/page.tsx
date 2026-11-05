@@ -678,8 +678,8 @@ export default function DashboardHDC() {
                     ]}
                     title={<PM25Text>การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 ประเทศไทย</PM25Text>}
                     subtitle={
-                        user?.role === 'admin_province' ? `ผู้ดูแลระบบระดับจังหวัด: ${user.workplaceProvince}` :
-                        user?.role === 'admin_region' ? `ผู้ดูแลระบบระดับเขต: ${user.ddcRegion}` :
+                        (user?.role === 'admin_province' || user?.role === 'user_province') ? `ผู้ดูแลระบบระดับจังหวัด: ${user.workplaceProvince}` :
+                        (user?.role === 'admin_region' || user?.role === 'user_region') ? `ผู้ดูแลระบบระดับเขต: ${user.ddcRegion}` :
                         'ระบบคลังข้อมูลด้านการแพทย์และสุขภาพ (HDC)'
                     }
                     className="relative z-header head head-hdc"

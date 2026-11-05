@@ -24,7 +24,7 @@ async function getSessionPayload() {
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const payload = await getSessionPayload();
     // Only admin or superadmin can modify roles
-    if (!payload || (payload.role !== 'admin' && payload.role !== 'superadmin')) {
+    if (!payload || payload.role !== 'superadmin') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -51,7 +51,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const payload = await getSessionPayload();
     // Only admin or superadmin can delete users
-    if (!payload || (payload.role !== 'admin' && payload.role !== 'superadmin')) {
+    if (!payload || payload.role !== 'superadmin') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

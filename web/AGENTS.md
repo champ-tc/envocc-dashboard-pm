@@ -8,6 +8,21 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 **Note: For global system rules and inter-service communication, refer to the [Root AGENTS.md](../AGENTS.md).**
 
+## Page documentation is mandatory
+
+Before modifying any listed page, read both the page's documentation file and this file. The documentation is a behavior and presentation contract, not optional background information. If the requested change conflicts with the documented behavior, stop and ask for confirmation before changing the contract.
+
+| Page | Route | Required documentation |
+|---|---|---|
+| Home | `/` | `web/docs/pages/home.md` |
+| Register | `/register` | `web/docs/pages/register.md` |
+| Login | `/login` | `web/docs/pages/login.md` |
+| PM2.5 | `/dashboard/pm25` | `web/docs/pages/dashboard-pm25.md` and `web/src/app/dashboard/pm25/README.md` |
+| HDC | `/dashboard/hdc` | `web/docs/pages/dashboard-hdc.md` and `web/src/app/dashboard/hdc/README.md` |
+| DDS | `/dashboard/dds` | `web/docs/pages/dashboard-dds.md` and `web/src/app/dashboard/dds/README.md` |
+
+When a page's intended behavior, data contract, layout, interaction, or visual rule changes, update its required documentation in the same change. For shared components used by multiple pages, read and verify every affected page document before editing.
+
 ## Development Conventions
 - **Server Components**: Use Server Components by default for better performance and SEO.
 - **Client Components**: Use `"use client"` only for interactive UI elements (e.g., Maps, Charts, Forms).

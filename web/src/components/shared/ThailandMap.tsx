@@ -89,11 +89,14 @@ function MapResizer({ geoData, tambonGeoData, filters, onResetBounds }: { geoDat
         }
 
         const boundsKey = targetBounds.toBBoxString();
+        if (boundsKey === lastBoundsRef.current) return;
+
+        // Store the key before updating the parent. The parent update causes a
+        // render, and this effect may run again with a newly-created bounds
+        // object that represents the same geographic area.
+        lastBoundsRef.current = boundsKey;
         onResetBounds(targetBounds);
-        if (boundsKey !== lastBoundsRef.current) {
-            map.fitBounds(targetBounds, { padding: [40, 40], maxZoom: 13, duration: 1.2 });
-            lastBoundsRef.current = boundsKey;
-        }
+        map.fitBounds(targetBounds, { padding: [40, 40], maxZoom: 13, duration: 1.2 });
     }, [filters.provinces, filters.districts, filters.subdistricts, geoData, tambonGeoData, map, onResetBounds]);
     return null;
 }

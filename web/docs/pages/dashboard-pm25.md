@@ -1,5 +1,9 @@
 # Dashboard PM2.5 — `/dashboard/pm25`
 
+## กติกาก่อนแก้ไข
+
+ต้องอ่านไฟล์นี้, `web/src/app/dashboard/pm25/README.md` และ `web/AGENTS.md` ก่อนแก้ `web/src/app/dashboard/pm25/` ทุกครั้ง หากเปลี่ยน behavior หรือ visual contract ต้องอัปเดตเอกสารทั้งสองไฟล์ใน change เดียวกัน
+
 ## ตัวกรองและเงื่อนไข
 
 - [ ] วันที่เริ่มต้น/สิ้นสุดยังอยู่ และอยู่ในช่วงวันที่ข้อมูลรองรับ

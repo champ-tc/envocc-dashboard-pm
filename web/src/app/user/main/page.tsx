@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { requireRoles } from '@/lib/auth';
 
 export default async function UserMainPage() {
-    const session = await requireRoles(['user']);
+    const session = await requireRoles(['user', 'user_general', 'user_region', 'user_province', 'user_envocc']);
 
     return (
         <div className="auth-page">

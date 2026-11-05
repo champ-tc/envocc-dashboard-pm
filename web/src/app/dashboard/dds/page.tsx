@@ -782,8 +782,8 @@ export default function DDSDashboardPage() {
                     ]}
                     title={<PM25Text>การเฝ้าระวังสถานการณ์ฝุ่น PM2.5 และผู้ป่วยโรคที่เกี่ยวข้องกับการรับสัมผัสฝุ่น PM2.5 ประเทศไทย</PM25Text>}
                     subtitle={
-                        user?.role === 'admin_province' ? `จังหวัด: ${user.workplaceProvince}` :
-                        user?.role === 'admin_region' ? `เขต: ${user.ddcRegion}` :
+                        (user?.role === 'admin_province' || user?.role === 'user_province') ? `จังหวัด: ${user.workplaceProvince}` :
+                        (user?.role === 'admin_region' || user?.role === 'user_region') ? `เขต: ${user.ddcRegion}` :
                         'ระบบเฝ้าระวังทางระบาดวิทยา Digital Disease Surveillance (DDS)'
                     }
                     className="relative z-header head head-dds"
@@ -937,18 +937,19 @@ export default function DDSDashboardPage() {
                                             {[...Array(5)].map((_, i) => <span key={i}>{Math.round(pm25Max * (1 - i / 4)).toLocaleString()}</span>)}
                                         </div>
                                         <div className="absolute inset-x-14 inset-y-0 flex flex-col justify-between opacity-20">{[...Array(5)].map((_, i) => <div key={i} className="w-full h-px bg-white/10"></div>)}</div>
-                                        <div className="flex-1 relative">
-                                            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full z-30 pointer-events-none overflow-visible">
-                                                <polyline points={data.monthlyTrend.map((m, i) => `${(i + 0.5) * (100 / data.monthlyTrend.length)},${100 - (pm25Max > 0 ? (m.avg_pm25 / pm25Max) * 100 : 0)}`).join(' ')} fill="none" stroke="#f43f5e" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-                                            </svg>
-                                            <div className="flex items-end justify-between gap-0.5 relative h-full w-full overflow-visible">
+                                        <div className={`flex-1 relative min-w-0 overflow-visible ${data.monthlyTrend.length > 18 ? 'mb-12' : 'mb-7'}`}>
+                                            <div className="relative h-full w-full">
+                                                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full z-30 pointer-events-none overflow-visible">
+                                                    <polyline points={data.monthlyTrend.map((m, i) => `${(i + 0.5) * (100 / data.monthlyTrend.length)},${100 - (pm25Max > 0 ? (m.avg_pm25 / pm25Max) * 100 : 0)}`).join(' ')} fill="none" stroke="#f43f5e" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                                                </svg>
+                                                <div className="flex items-end justify-between gap-0.5 relative h-full w-full overflow-visible">
                                                 {data.monthlyTrend.map((m, i) => {
                                                     const parts = m.month?.split('-');
                                                     const monthLabel = parts && parts.length >= 2 ? `${THAI_MONTHS_FULL[parseInt(parts[1]) - 1]} ${(parseInt(parts[0]) + 543).toString().slice(-2)}` : m.month;
                                                     const monthShortLabel = parts && parts.length >= 2 ? `${THAI_MONTHS_SHORT[parseInt(parts[1]) - 1]} ${(parseInt(parts[0]) + 543).toString().slice(-2)}` : m.month;
                                                     const yPm25 = pm25Max > 0 ? (m.avg_pm25 / pm25Max) * 100 : 0;
                                                     return (
-                                                        <div key={i} className="flex-1 flex flex-col items-center group h-full relative z-10 hover:z-header">
+                                                        <div key={i} className="flex-1 min-w-0 flex flex-col items-center group h-full relative z-10 hover:z-header">
                                                             <div className="flex-1 w-full flex items-end justify-center relative">
                                                                 <div className="absolute w-2 h-2 bg-rose-500 rounded-full z-40 shadow-sm transition-all group-hover:scale-150 group-hover:bg-white group-hover:ring-4 group-hover:ring-rose-500/30" style={{ bottom: `${yPm25}%`, left: '50%', transform: 'translate(-50%, 50%)' }}></div>
                                                                 <div className={`absolute top-chart-tooltip ${i < data.monthlyTrend.length / 2 ? 'left-0' : 'right-0'} bg-slate-900/98 backdrop-blur-3xl text-white p-4 rounded-3xl opacity-0 group-hover:opacity-100 transition-all duration-300 z-map-overlay pointer-events-none shadow-2xl min-w-tooltip-sm border border-white/20`}>
@@ -968,7 +969,23 @@ export default function DDSDashboardPage() {
                                                                     {DDS_DISEASES.map(d => <div key={d.id} style={{ height: `${((Number(m[d.id] || 0)) / maxVal) * 100}%`, backgroundColor: d.hex }} className="w-full shrink-0 opacity-60 group-hover:opacity-100 shadow-sm first:rounded-t last:rounded-b"></div>)}
                                                                 </div>
                                                             </div>
-                                                            <span className="typo-chart chart-label absolute bottom-chart-label text-white whitespace-nowrap">{monthShortLabel}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                                </div>
+                                            </div>
+                                            <div className="absolute inset-x-0 top-full mt-1 h-7 flex" aria-hidden="true">
+                                                {data.monthlyTrend.map((m, i) => {
+                                                    const [year, month] = m.month.split('-').map(Number);
+                                                    const label = `${THAI_MONTHS_SHORT[month - 1]} ${(year + 543).toString().slice(-2)}`;
+                                                    return (
+                                                        <div key={m.month} className="relative flex-1 min-w-0">
+                                                            <span
+                                                                className="typo-chart chart-label absolute left-1/2 top-0 -translate-x-1/2 text-white whitespace-nowrap"
+                                                                style={{ fontSize: data.monthlyTrend.length > 18 ? '8px' : 'clamp(8px, 0.72vw, 12px)' }}
+                                                            >
+                                                                {label}
+                                                            </span>
                                                         </div>
                                                     );
                                                 })}

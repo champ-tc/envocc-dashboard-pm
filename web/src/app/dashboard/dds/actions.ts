@@ -102,7 +102,9 @@ interface DuckDBRow {
 
 // Bump when dashboard-query logic changes so an in-memory cached result from a
 // previous query definition cannot keep rendering stale analytics.
-const DDS_QUERY_VERSION = '14';
+// Bump when the SQL result shape or trend window changes so stale cached
+// dashboard responses cannot hide the complete selected date range.
+const DDS_QUERY_VERSION = '18';
 
 const normalizeIcdSql = (column: string) => `REPLACE(UPPER(TRIM(${column})), '.', '')`;
 
@@ -625,6 +627,16 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     return reject(errList);
                 }
 
+                const trendStart = scopedFilters.startDate && scopedFilters.startDate !== 'ล่าสุด' && scopedFilters.startDate !== 'ทั้งหมด'
+                    ? scopedFilters.startDate
+                    : null;
+                const trendEnd = scopedFilters.endDate && scopedFilters.endDate !== 'ทั้งหมด'
+                    ? scopedFilters.endDate
+                    : null;
+                const trendRange = trendStart && trendEnd
+                    ? `SELECT strftime(month_start, '%Y-%m') AS dt FROM generate_series(CAST('${trendStart}-01' AS DATE), CAST('${trendEnd}-01' AS DATE), INTERVAL 1 MONTH) AS months(month_start)`
+                    : `SELECT DISTINCT CAST(year AS VARCHAR) || '-' || LPAD(CAST(month AS VARCHAR), 2, '0') AS dt FROM dds_raw WHERE year IS NOT NULL AND month IS NOT NULL`;
+
                 const sqlTrend = `
                     WITH dds_base AS (
                         SELECT 
@@ -640,6 +652,15 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                     dds_filtered AS (
                         SELECT * FROM dds_base
                         WHERE ${ddsFilteredDiseasePredicate}
+                    ),
+                    dds_monthly AS (
+                        SELECT dt, COUNT(*)::DOUBLE AS total,
+                            ${DDS_DISEASES.map(dis => `COUNT(*) FILTER (WHERE 1=1 ${icdFilters[dis.id]})::DOUBLE as ${dis.id}`).join(', ')}
+                        FROM dds_filtered
+                        GROUP BY dt
+                    ),
+                    month_axis AS (
+                        ${trendRange}
                     ),
                     pm25_monthly_summary AS (
                         SELECT strftime(date, '%Y-%m') as dt, AVG(pm25) as pm25_avg
@@ -659,16 +680,17 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                         WHERE 1=1 ${pm25DateFilter} ${usePm25TrendFallback ? pm25ProvinceFallbackLocFilters : 'AND 1=0'}
                         GROUP BY 1
                     )
-                    SELECT 
-                        d.dt as month,
-                        COUNT(*)::DOUBLE as total,
-                        COALESCE(MAX(ps.pm25_avg), MAX(df.pm25_max), MAX(pf.pm25_max), 0)::DOUBLE as avg_pm25,
-                        ${DDS_DISEASES.map(dis => `COUNT(*) FILTER (WHERE 1=1 ${icdFilters[dis.id]})::DOUBLE as ${dis.id}`).join(', ')}
-                    FROM dds_filtered d
-                    LEFT JOIN pm25_monthly_summary ps ON d.dt = ps.dt
-                    LEFT JOIN pm25_district_fallback_monthly df ON d.dt = df.dt
-                    LEFT JOIN pm25_province_fallback_monthly pf ON d.dt = pf.dt
-                    GROUP BY 1 ORDER BY 1 DESC LIMIT 12
+                    SELECT
+                        a.dt as month,
+                        COALESCE(d.total, 0)::DOUBLE as total,
+                        COALESCE(ps.pm25_avg, df.pm25_max, pf.pm25_max, 0)::DOUBLE as avg_pm25,
+                        ${DDS_DISEASES.map(dis => `COALESCE(d.${dis.id}, 0)::DOUBLE as ${dis.id}`).join(', ')}
+                    FROM month_axis a
+                    LEFT JOIN dds_monthly d ON a.dt = d.dt
+                    LEFT JOIN pm25_monthly_summary ps ON a.dt = ps.dt
+                    LEFT JOIN pm25_district_fallback_monthly df ON a.dt = df.dt
+                    LEFT JOIN pm25_province_fallback_monthly pf ON a.dt = pf.dt
+                    ORDER BY a.dt ASC
                 `;
 
                 db.all(sqlTrend, (errTrend: Error | null, resTrend: DuckDBRow[]) => {
@@ -808,7 +830,7 @@ export async function getDashboardData(filters: Partial<DDSFilters> = {}): Promi
                                     };
                                     DDS_DISEASES.forEach(d => { mapped[d.id] = Number(m[d.id]) || 0; });
                                     return mapped;
-                                }).reverse(),
+                                }),
                                 provinceAverages,
                                 districtAverages,
                                 subdistrictAverages,

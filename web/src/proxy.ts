@@ -23,14 +23,14 @@ export async function proxy(request: NextRequest) {
         const role = payload.role;
 
         if (publicAuthRoutes.includes(pathname)) {
-            if (role === 'admin' || role === 'adminenvocc' || role === 'admin_department' || role === 'superadmin') {
+            if (role === 'adminenvocc' || role === 'admin_department' || role === 'superadmin') {
                 return NextResponse.redirect(new URL('/admin', request.url));
             }
             return NextResponse.redirect(new URL('/user', request.url));
         }
 
         if (isAdminRoute) {
-            if (role !== 'admin' && role !== 'adminenvocc' && role !== 'admin_department' && role !== 'superadmin') {
+            if (role !== 'adminenvocc' && role !== 'admin_department' && role !== 'superadmin') {
                 return NextResponse.redirect(new URL('/user', request.url));
             }
             if (isSuperadminRoute && role !== 'superadmin') {
@@ -39,7 +39,7 @@ export async function proxy(request: NextRequest) {
         }
 
         if (isUserRoute) {
-            const userRoles = ['user', 'admin_region', 'admin_province'];
+            const userRoles = ['user', 'user_general', 'user_region', 'user_province', 'user_envocc', 'admin_region', 'admin_province'];
             if (!userRoles.includes(role)) {
                 return NextResponse.redirect(new URL('/admin', request.url));
             }

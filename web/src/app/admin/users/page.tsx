@@ -161,9 +161,12 @@ export default function UserManagementPage() {
                                             <option value="superadmin">Superadmin</option>
                                             <option value="admin_department">ผู้ดูแลระดับกรม</option>
                                             <option value="adminenvocc">Admin EnvOcc</option>
-                                            <option value="admin">Admin</option>
                                             <option value="admin_region">ผู้ดูแลระดับเขต</option>
                                             <option value="admin_province">ผู้ดูแลระดับจังหวัด</option>
+                                            <option value="user_general">ผู้ใช้งานทั่วไป</option>
+                                            <option value="user_region">Admin สคร.</option>
+                                            <option value="user_province">ผู้ใช้งานระดับจังหวัด</option>
+                                            <option value="user_envocc">เจ้าหน้าที่ใน EnvOcc</option>
                                             <option value="user">User</option>
                                         </select>
                                     </td>

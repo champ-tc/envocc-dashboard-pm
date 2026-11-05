@@ -90,7 +90,7 @@ export default function RegisterPage() {
         prefix: '', name: '', phone: '', email: '', idCard: '', username: '', password: '',
         province: '', district: '', subDistrict: '',
         workplaceType: '', workplace: '', personnelType: '', position: '', level: '',
-        workplaceProvince: '', ddcRegion: ''
+        workplaceProvince: '', ddcRegion: '', role: 'user_general'
     });
 
     // Location Data State
@@ -309,6 +309,20 @@ export default function RegisterPage() {
                                 </div>
 
                                 <div className="p-6 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4">
+                                    <FormSelect
+                                        label="ประเภทผู้ใช้งาน"
+                                        required
+                                        value={form.role}
+                                        onChange={(e: any) => handleInputChange('role', e.target.value)}
+                                        options={
+                                            <>
+                                                <option value="user_general">ผู้ใช้งานทั่วไป</option>
+                                                <option value="user_region">Admin สคร.</option>
+                                                <option value="user_province">ผู้ดูแลระดับจังหวัด</option>
+                                                <option value="user_envocc">เจ้าหน้าที่ใน EnvOcc</option>
+                                            </>
+                                        }
+                                    />
                                     <FormInput
                                         label="ชื่อผู้ใช้งาน (Username)"
                                         placeholder="ตั้งชื่อผู้ใช้งาน (ภาษาอังกฤษ/ตัวเลข)"

@@ -28,9 +28,9 @@ function withScope<T extends typeof users.$inferSelect>(user: T) {
     return {
         ...user,
         scope: {
-            isGlobal: user.role === 'superadmin' || user.role === 'admin_department' || user.role === 'adminenvocc' || user.role === 'admin',
-            isRegion: user.role === 'admin_region',
-            isProvince: user.role === 'admin_province',
+            isGlobal: user.role === 'superadmin' || user.role === 'admin_department' || user.role === 'adminenvocc' || user.role === 'user_envocc',
+            isRegion: user.role === 'admin_region' || user.role === 'user_region',
+            isProvince: user.role === 'admin_province' || user.role === 'user_province',
             region: user.ddcRegion,
             province: user.workplaceProvince,
         },

@@ -5,7 +5,9 @@
 ## กติกากลาง
 
 - [ ] แก้เฉพาะ scope ที่ระบุ ไม่ลบ component, route, action, API หรือ data field ที่ไม่ได้อยู่ใน scope
-- [ ] อ่านเอกสารของหน้าที่จะแก้ก่อนเริ่ม และอัปเดตเอกสารเมื่อ behavior เปลี่ยนโดยตั้งใจ
+- [ ] อ่าน `web/AGENTS.md` และเอกสารบังคับของหน้าที่จะแก้ก่อนเริ่มทุกครั้ง: `/` → `web/docs/pages/home.md`, `/register` → `web/docs/pages/register.md`, `/login` → `web/docs/pages/login.md`, `/dashboard/pm25` → `web/docs/pages/dashboard-pm25.md` + `web/src/app/dashboard/pm25/README.md`, `/dashboard/hdc` → `web/docs/pages/dashboard-hdc.md` + `web/src/app/dashboard/hdc/README.md`, `/dashboard/dds` → `web/docs/pages/dashboard-dds.md` + `web/src/app/dashboard/dds/README.md`
+- [ ] การลบหรือเปลี่ยน diagnosis rule, ICD-10, mapping, fallback, role scope หรือวิธีนับ ต้องมีคำสั่งผู้ใช้โดยตรง; หากไม่มีให้คง behavior เดิมและหยุดเพื่อขอการยืนยันเมื่อเอกสารกับโค้ดขัดแย้งกัน
+- [ ] อัปเดตเอกสารของหน้าที่แก้ใน change เดียวกันเมื่อ behavior, data contract, layout, interaction หรือ visual rule เปลี่ยนโดยตั้งใจ
 - [ ] ตัวกรองของ PM2.5, DDS และ HDC แยก state และแยก URL/query กัน
 - [ ] ตัวกรองทุกตัวอยู่ใน URL/query ที่อ่านกลับได้ และ URL ที่แชร์ให้ผลลัพธ์เดียวกัน
 - [ ] Refresh, Back/Forward และเปิด URL เดิมใหม่ต้องคืนค่าตัวกรองเดิม
@@ -34,5 +36,6 @@
 - [ ] ทดสอบ error/empty/loading โดยยืนยันว่า filter ไม่ถูกล้าง
 - [ ] ทดสอบ desktop และ mobile
 - [ ] ตรวจ diff ว่าไม่มีการลบเงื่อนไขหรือ fallback โดยไม่ตั้งใจ
+- [ ] สำหรับ DDS ตรวจ diff เทียบกับ diagnosis contract ใน README และยืนยันว่าไม่มีเงื่อนไข `Z58.1`, `Y97`, EnvOcc หรือ custom diagnosis หายไปโดยไม่ได้รับอนุญาต
 - [ ] ถ้าแก้ shared component/data mapping ให้ตรวจ checklist ของทุกหน้าที่ใช้สิ่งนั้น ไม่ใช่เฉพาะหน้าที่เปิดแก้
 
