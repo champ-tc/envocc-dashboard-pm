@@ -937,7 +937,7 @@ export default function DDSDashboardPage() {
                                             {[...Array(5)].map((_, i) => <span key={i}>{Math.round(pm25Max * (1 - i / 4)).toLocaleString()}</span>)}
                                         </div>
                                         <div className="absolute inset-x-14 inset-y-0 flex flex-col justify-between opacity-20">{[...Array(5)].map((_, i) => <div key={i} className="w-full h-px bg-white/10"></div>)}</div>
-                                        <div className={`flex-1 relative min-w-0 overflow-visible ${data.monthlyTrend.length > 18 ? 'mb-12' : 'mb-7'}`}>
+                                        <div className={`flex-1 relative min-w-0 overflow-visible ${data.monthlyTrend.length > 15 ? 'mb-10' : 'mb-7'}`}>
                                             <div className="relative h-full w-full">
                                                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full z-30 pointer-events-none overflow-visible">
                                                     <polyline points={data.monthlyTrend.map((m, i) => `${(i + 0.5) * (100 / data.monthlyTrend.length)},${100 - (pm25Max > 0 ? (m.avg_pm25 / pm25Max) * 100 : 0)}`).join(' ')} fill="none" stroke="#f43f5e" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
@@ -974,15 +974,15 @@ export default function DDSDashboardPage() {
                                                 })}
                                                 </div>
                                             </div>
-                                            <div className="absolute inset-x-0 top-full mt-1 h-7 flex" aria-hidden="true">
+                                            <div className={`absolute inset-x-0 top-full ${data.monthlyTrend.length > 15 ? 'mt-1 h-14' : 'mt-2 h-7'} flex`} aria-hidden="true">
                                                 {data.monthlyTrend.map((m, i) => {
                                                     const [year, month] = m.month.split('-').map(Number);
                                                     const label = `${THAI_MONTHS_SHORT[month - 1]} ${(year + 543).toString().slice(-2)}`;
                                                     return (
                                                         <div key={m.month} className="relative flex-1 min-w-0">
                                                             <span
-                                                                className="typo-chart chart-label absolute left-1/2 top-0 -translate-x-1/2 text-white whitespace-nowrap"
-                                                                style={{ fontSize: data.monthlyTrend.length > 18 ? '8px' : 'clamp(8px, 0.72vw, 12px)' }}
+                                                                className={`typo-chart chart-label absolute left-1/2 text-white whitespace-nowrap ${data.monthlyTrend.length > 15 ? 'top-1/2 -translate-x-1/2 -translate-y-1/2 origin-center -rotate-90' : 'top-0 -translate-x-1/2'}`}
+                                                                style={{ fontSize: data.monthlyTrend.length > 15 ? '8px' : 'clamp(8px, 0.72vw, 12px)' }}
                                                             >
                                                                 {label}
                                                             </span>
