@@ -10,8 +10,8 @@ export default function Navbar({
     onToggleSidebar?: () => void 
 }) {
     const isUser = ['user', 'user_general', 'user_region', 'user_province', 'user_envocc'].includes(session?.role);
-    const roleLabel = session?.role === 'superadmin'
-        ? 'ผู้ดูแลระบบสูงสุด'
+    const roleLabel = session?.role === 'admin'
+        ? 'ผู้ดูแลระบบ'
         : session?.role === 'admin_department'
             ? 'ผู้ดูแลระบบระดับกรม'
         : session?.role === 'adminenvocc'

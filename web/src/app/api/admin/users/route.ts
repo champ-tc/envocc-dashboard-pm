@@ -37,8 +37,8 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
     const payload = await getSessionPayload();
-    // Only admin or superadmin can modify roles
-    if (!payload || payload.role !== 'superadmin') {
+    // Only admin can modify roles
+    if (!payload || payload.role !== 'admin') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -60,8 +60,8 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
     const payload = await getSessionPayload();
-    // Only admin or superadmin can delete users
-    if (!payload || payload.role !== 'superadmin') {
+    // Only admin can delete users
+    if (!payload || payload.role !== 'admin') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

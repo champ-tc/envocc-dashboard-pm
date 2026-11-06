@@ -4,18 +4,18 @@ import { ArrowUpRight, Database, FileCheck2, Gauge, MapPinned, Sparkles, UsersRo
 import { requireRoles } from '@/lib/auth';
 
 const shortcuts = [
-    { href: '/admin/requests', label: 'คำขอข้อมูล', description: 'ตรวจสอบและอนุมัติคำขอ', icon: FileCheck2, roles: ['adminenvocc', 'admin_department', 'superadmin'] },
-    { href: '/admin/users', label: 'ผู้ใช้งาน', description: 'จัดการสิทธิ์และสถานะบัญชี', icon: UsersRound, roles: ['superadmin'] },
-    { href: '/admin/stations', label: 'สถานีตรวจวัด', description: 'จัดการข้อมูลสถานี Air4Thai', icon: MapPinned, roles: ['superadmin'] },
-    { href: '/admin/pm25-hourly', label: 'ค่าฝุ่นรายชั่วโมง', description: 'ตรวจสอบและแก้ไขข้อมูล', icon: Gauge, roles: ['superadmin'] },
-    { href: '/admin/dds-upload', label: 'ข้อมูล DDS', description: 'อัปโหลดไฟล์เข้าสู่ pipeline', icon: Database, roles: ['superadmin'] },
+    { href: '/admin/requests', label: 'คำขอข้อมูล', description: 'ตรวจสอบและอนุมัติคำขอ', icon: FileCheck2, roles: ['adminenvocc', 'admin_department', 'admin'] },
+    { href: '/admin/users', label: 'ผู้ใช้งาน', description: 'จัดการสิทธิ์และสถานะบัญชี', icon: UsersRound, roles: ['admin'] },
+    { href: '/admin/stations', label: 'สถานีตรวจวัด', description: 'จัดการข้อมูลสถานี Air4Thai', icon: MapPinned, roles: ['admin'] },
+    { href: '/admin/pm25-hourly', label: 'ค่าฝุ่นรายชั่วโมง', description: 'ตรวจสอบและแก้ไขข้อมูล', icon: Gauge, roles: ['admin'] },
+    { href: '/admin/dds-upload', label: 'ข้อมูล DDS', description: 'อัปโหลดไฟล์เข้าสู่ pipeline', icon: Database, roles: ['admin'] },
 ];
 
 export default async function AdminPage() {
-    const session = await requireRoles(['adminenvocc', 'admin_department', 'superadmin']);
+    const session = await requireRoles(['adminenvocc', 'admin_department', 'admin']);
     const availableShortcuts = shortcuts.filter((item) => item.roles.includes(session.role || ''));
-    const roleLabel = session.role === 'superadmin'
-        ? 'ผู้ดูแลระบบสูงสุด'
+    const roleLabel = session.role === 'admin'
+        ? 'ผู้ดูแลระบบ'
         : session.role === 'admin_department'
             ? 'ผู้ดูแลระบบระดับกรม'
         : session.role === 'adminenvocc'

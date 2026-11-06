@@ -6,6 +6,6 @@ export default async function HdcDownloadLayout({
 }: {
     children: React.ReactNode;
 }) {
-    await requireRoles(['superadmin']);
+    await requireRoles(['admin']);
     return children;
 }

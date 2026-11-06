@@ -1,5 +1,6 @@
 import {
     date,
+    boolean,
     doublePrecision,
     index,
     integer,
@@ -21,6 +22,12 @@ export const users = pgTable('users', {
     idCard: varchar('id_card', { length: 20 }),
     username: varchar('username', { length: 100 }),
     password: text('password').notNull(),
+    // TOTP/2FA fields used by otplib. Secrets remain nullable until enrollment is completed.
+    otpSecret: text('otp_secret'),
+    otpEnabled: boolean('otp_enabled').notNull().default(false),
+    otpVerifiedAt: timestamp('otp_verified_at'),
+    otpLastUsedAt: timestamp('otp_last_used_at'),
+    otpRecoveryCodes: text('otp_recovery_codes'),
     province: varchar('province', { length: 150 }),
     district: varchar('district', { length: 150 }),
     subDistrict: varchar('sub_district', { length: 150 }),
@@ -31,7 +38,7 @@ export const users = pgTable('users', {
     level: varchar('level', { length: 100 }),
     workplaceProvince: varchar('workplace_province', { length: 150 }), // สิทธิ์เข้าถึงระดับจังหวัด
     ddcRegion: varchar('ddc_region', { length: 150 }), // สิทธิ์เข้าถึงระดับเขต (สคร.)
-    role: varchar('role', { enum: ['superadmin', 'admin_department', 'adminenvocc', 'admin_region', 'admin_province', 'user', 'user_general', 'user_region', 'user_province', 'user_envocc'] }).default('user_general'),
+    role: varchar('role', { enum: ['admin', 'admin_department', 'adminenvocc', 'admin_region', 'admin_province', 'user', 'user_general', 'user_region', 'user_province', 'user_envocc'] }).default('user_general'),
     status: varchar('status', { enum: ['pending', 'approved'] }).default('pending'),
     createdAt: timestamp('created_at').defaultNow(),
 });

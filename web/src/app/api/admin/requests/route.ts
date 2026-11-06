@@ -13,7 +13,7 @@ async function checkAdmin() {
         const secretKey = process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is not defined'); })();
         const SECRET = new TextEncoder().encode(secretKey);
         const { payload } = await jwtVerify(token, SECRET);
-        return payload.role === 'adminenvocc' || payload.role === 'admin_department' || payload.role === 'superadmin';
+        return payload.role === 'adminenvocc' || payload.role === 'admin_department' || payload.role === 'admin';
     } catch {
         return false;
     }

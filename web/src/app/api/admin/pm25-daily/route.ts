@@ -52,7 +52,7 @@ async function isSuperadmin() {
     try {
         const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is not defined'); })());
         const { payload } = await jwtVerify(token, secret);
-        return payload.role === 'superadmin';
+        return payload.role === 'admin';
     } catch {
         return false;
     }

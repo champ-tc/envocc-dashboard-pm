@@ -6,6 +6,6 @@ export default async function DdsUploadLayout({
 }: {
     children: React.ReactNode;
 }) {
-    await requireRoles(['superadmin']);
+    await requireRoles(['admin']);
     return children;
 }

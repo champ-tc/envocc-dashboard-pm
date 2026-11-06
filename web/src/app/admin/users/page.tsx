@@ -158,7 +158,7 @@ export default function UserManagementPage() {
                                             value={user.role || 'user'}
                                             onChange={(e) => handleUpdate(user.id, 'role', e.target.value)}
                                         >
-                                            <option value="superadmin">Superadmin</option>
+                                            <option value="admin">Admin</option>
                                             <option value="admin_department">ผู้ดูแลระดับกรม</option>
                                             <option value="adminenvocc">Admin EnvOcc</option>
                                             <option value="admin_region">ผู้ดูแลระดับเขต</option>

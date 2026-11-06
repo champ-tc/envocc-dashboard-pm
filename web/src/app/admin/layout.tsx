@@ -6,7 +6,7 @@ export default async function Layout({
 }: {
     children: React.ReactNode;
 }) {
-    const session = await requireRoles(['adminenvocc', 'admin_department', 'superadmin']);
+    const session = await requireRoles(['adminenvocc', 'admin_department', 'admin']);
 
     return (
         <div className="authenticated-font">

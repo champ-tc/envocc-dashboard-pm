@@ -23,17 +23,17 @@ export async function proxy(request: NextRequest) {
         const role = payload.role;
 
         if (publicAuthRoutes.includes(pathname)) {
-            if (role === 'adminenvocc' || role === 'admin_department' || role === 'superadmin') {
+            if (role === 'admin' || role === 'adminenvocc' || role === 'admin_department') {
                 return NextResponse.redirect(new URL('/admin', request.url));
             }
             return NextResponse.redirect(new URL('/user', request.url));
         }
 
         if (isAdminRoute) {
-            if (role !== 'adminenvocc' && role !== 'admin_department' && role !== 'superadmin') {
+            if (role !== 'admin' && role !== 'adminenvocc' && role !== 'admin_department') {
                 return NextResponse.redirect(new URL('/user', request.url));
             }
-            if (isSuperadminRoute && role !== 'superadmin') {
+            if (isSuperadminRoute && role !== 'admin') {
                 return NextResponse.redirect(new URL('/admin', request.url));
             }
         }

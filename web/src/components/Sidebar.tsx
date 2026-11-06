@@ -42,8 +42,8 @@ export default function Sidebar({
     const pathname = usePathname();
     const router = useRouter();
     const safeRole = role || 'user';
-    const isAdmin = safeRole === 'adminenvocc' || safeRole === 'admin_department' || safeRole === 'superadmin';
-    const isSuperAdmin = safeRole === 'superadmin';
+    const isAdmin = safeRole === 'admin' || safeRole === 'adminenvocc' || safeRole === 'admin_department';
+    const isSuperAdmin = safeRole === 'admin';
     const homePath = isAdmin ? '/admin' : '/user/main';
     const profilePath = isAdmin ? '/admin/profile' : '/user/profile';
     const handleLogout = async () => {
